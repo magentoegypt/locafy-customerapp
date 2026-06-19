@@ -1,5 +1,4 @@
 import 'package:country_code_picker/country_code_picker.dart';
-import 'package:country_code_picker/country_codes.dart';
 import 'package:flutter/material.dart';
 import 'package:magentoegypt/ajstoreui/core/app_export.dart';
 import 'package:inspireui/inspireui.dart';
@@ -61,16 +60,18 @@ class _StateUserUpdate extends BaseScreen<UserUpdateScreen> {
               : null,
         );
       }
-      if((user?.phoneNumber ?? "").isNotEmpty) {
-        try{
-          final result = CountryCode().parsePhoneNumberDynamic(user?.phoneNumber ?? '');
-          // String? phoneWithoutCOde = user?.phoneNumber?.substring(
-          //     2, (user.phoneNumber?.length ?? 0));
-          userPhone = TextEditingController(text: result["localNumber"]);
-          countryCode = CountryCode.fromDialCode(result["countryCode"] ?? "+20");
-        }catch(e){
-          userPhone = TextEditingController(text: '');
+      if ((user?.phoneNumber ?? '').isNotEmpty) {
+        final dialCode = countryCode?.dialCode ??
+            (LoginSMSConstants.dialCodeDefault.isNotEmpty
+                ? LoginSMSConstants.dialCodeDefault
+                : '+20');
+        final dialDigits = dialCode.replaceAll('+', '');
+        var localNumber = (user?.phoneNumber ?? '').trim().replaceFirst('+', '');
+        if (dialDigits.isNotEmpty && localNumber.startsWith(dialDigits)) {
+          localNumber = localNumber.substring(dialDigits.length);
         }
+        userPhone = TextEditingController(text: localNumber);
+        countryCode = CountryCode.fromDialCode(dialCode);
       }else{
         userPhone = TextEditingController(text: '');
       }

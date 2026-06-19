@@ -3,7 +3,7 @@
 # Download the .apk (and iOS output) from the run's "Artifacts" section.
 #
 # Project facts:
-#   - Flutter 3.24.3  (Dart 3.5.3 — satisfies the Dart 3.2.3+ requirement)
+#   - Flutter 3.32.8
 #   - Android applicationId: com.magentoegyptpro.ajstore  (matches google-services.json)
 #   - Release keystore: configs/ajstore-keystore.jks  alias=ajstore
 #   - iOS bundle: com.magentoegypt.ajstore   (matches GoogleService-Info.plist)
@@ -16,7 +16,7 @@ on:
     tags: ['v*']            # also triggers on version tags like v1.0.0
 
 env:
-  FLUTTER_VERSION: '3.24.3'   # Dart 3.5.3 — change here to update everywhere
+  FLUTTER_VERSION: '3.32.8'
 
 jobs:
   # ---------------------------------------------------------------------------
