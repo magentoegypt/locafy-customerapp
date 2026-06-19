@@ -17,7 +17,7 @@ dependencies:
   dio: ^5.2.1
   logger: ^1.4.0
   flutter_svg: ^2.0.6
-  http: ^0.13.6
+  http: ^1.2.0
   flutter_secure_storage: ^8.0.0
   plugin_platform_interface: ^2.1.4
   easy_debounce: ^2.0.3
