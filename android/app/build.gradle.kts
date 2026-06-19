@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,7 +7,7 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val envProps = java.util.Properties().apply {
+val envProps = Properties().apply {
     val envPropsFile = rootProject.file("../configs/env.props")
     if (envPropsFile.exists()) {
         envPropsFile.inputStream().use { load(it) }
