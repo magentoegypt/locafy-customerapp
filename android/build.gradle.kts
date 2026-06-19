@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 allprojects {
     repositories {
         google()
@@ -21,6 +23,10 @@ subprojects {
         if (project.extensions.findByName("android") != null) {
             val androidExtension = project.extensions.getByName("android")
             if (androidExtension is com.android.build.gradle.BaseExtension) {
+                androidExtension.compileSdkVersion(36)
+                androidExtension.compileOptions.sourceCompatibility = JavaVersion.VERSION_17
+                androidExtension.compileOptions.targetCompatibility = JavaVersion.VERSION_17
+
                 if (androidExtension.namespace == null) {
                     androidExtension.namespace = project.group.toString()
                 }
@@ -30,6 +36,12 @@ subprojects {
                 }
             }
         }
+    }
+}
+
+subprojects {
+    tasks.withType<KotlinCompile>().configureEach {
+        kotlinOptions.jvmTarget = JavaVersion.VERSION_17.toString()
     }
 }
 
