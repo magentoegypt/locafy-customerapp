@@ -5,6 +5,13 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val envProps = java.util.Properties().apply {
+    val envPropsFile = rootProject.file("../configs/env.props")
+    if (envPropsFile.exists()) {
+        envPropsFile.inputStream().use { load(it) }
+    }
+}
+
 android {
     namespace = "app.locafy"
     compileSdk = flutter.compileSdkVersion
@@ -40,10 +47,10 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = "android"
-            keyPassword = "123456"
-            storePassword = "123456"
-            storeFile = file("../android.jks")
+            keyAlias = envProps.getProperty("keyAlias", "ajstore")
+            keyPassword = envProps.getProperty("keyPassword", "magentoegypt123456ajstore")
+            storePassword = envProps.getProperty("storePassword", "magentoegypt123456ajstore")
+            storeFile = rootProject.file("../configs/${envProps.getProperty("storeFile", "ajstore-keystore.jks")}")
         }
     }
 

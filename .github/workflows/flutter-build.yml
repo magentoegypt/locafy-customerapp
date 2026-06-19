@@ -5,7 +5,7 @@
 # Project facts:
 #   - Flutter 3.24.3  (Dart 3.5.3 — satisfies the Dart 3.2.3+ requirement)
 #   - Android applicationId: com.magentoegyptpro.ajstore  (matches google-services.json)
-#   - Release keystore: android/android.jks  alias=android  password=123456
+#   - Release keystore: configs/ajstore-keystore.jks  alias=ajstore
 #   - iOS bundle: com.magentoegypt.ajstore   (matches GoogleService-Info.plist)
 
 name: Flutter build
@@ -138,5 +138,16 @@ jobs:
       - name: Build iOS (no code signing)
         run: flutter build ios --release --no-codesign
 
-      - name: Confirm iOS build output
-        run: ls -lh build/ios/iphoneos/Runner.app
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p build/ios/ipa/Payload
+          cp -R build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -qry Runner-unsigned.ipa Payload
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-ipa
+          path: build/ios/ipa/Runner-unsigned.ipa
+          if-no-files-found: error
