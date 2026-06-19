@@ -73,7 +73,7 @@ class BasicSelection extends StatelessWidget {
         ),
 
         DropdownButtonFormField<String>(
-          initialValue: validValue,
+          value: validValue,
           isExpanded: true,
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

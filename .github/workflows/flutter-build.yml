@@ -46,6 +46,13 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Patch Flare for Dart 3
+        shell: bash
+        run: |
+          while IFS= read -r file; do
+            perl -0pi -e 's/hashValues\(bundle, name\)/Object.hash(bundle, name)/g' "$file"
+          done < <(grep -rl 'hashValues(bundle, name)' "$PUB_CACHE/git" || true)
+
       - name: Analyze (warnings only — does not fail the build)
         run: flutter analyze --no-fatal-infos || true
 
@@ -86,6 +93,13 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Patch Flare for Dart 3
+        shell: bash
+        run: |
+          while IFS= read -r file; do
+            perl -0pi -e 's/hashValues\(bundle, name\)/Object.hash(bundle, name)/g' "$file"
+          done < <(grep -rl 'hashValues(bundle, name)' "$PUB_CACHE/git" || true)
 
       - name: Install CocoaPods dependencies
         run: cd ios && pod install && cd ..

@@ -79,8 +79,10 @@ dependencies:
   html_unescape:
   http:
   image_picker: ^0.8.6+1
-  extended_image: ^8.0.3
-  wechat_assets_picker:
+  extended_image: ^10.0.1
+  wechat_assets_picker: ^10.1.2
+  photo_manager: ^3.9.0
+  photo_manager_image_provider: ^2.2.0
 
   inspireui:
     path: packages/inspireui/
@@ -131,8 +133,6 @@ dev_dependencies:
 dependency_overrides:
   path: ^1.9.0
   intl: ^0.19.0
-  photo_manager: ^3.6.4
-  photo_manager_image_provider: ^2.2.0
 
 #  Run this script to generate the app icon: flutter pub run flutter_launcher_icons:main
 
