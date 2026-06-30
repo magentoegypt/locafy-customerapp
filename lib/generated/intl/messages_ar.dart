@@ -136,7 +136,9 @@ class MessageLookup extends MessageLookupByLibrary {
         "afternoon": MessageLookupByLibrary.simpleMessage("بعد الظهر"),
         "agree": MessageLookupByLibrary.simpleMessage("موافقة"),
         "agreeWithPrivacy":
-            MessageLookupByLibrary.simpleMessage("موافق على الخصوصية"),
+            MessageLookupByLibrary.simpleMessage("سياسة الخصوصية والشروط"),
+        "passwordNotMatch": MessageLookupByLibrary.simpleMessage(
+            "كلمة المرور وتأكيد كلمة المرور غير متطابقتين"),
         "albanian": MessageLookupByLibrary.simpleMessage("الألبانية"),
         "all": MessageLookupByLibrary.simpleMessage("الكل"),
         "allBrands": MessageLookupByLibrary.simpleMessage("جميع الماركات"),
@@ -417,7 +419,7 @@ class MessageLookup extends MessageLookupByLibrary {
             MessageLookupByLibrary.simpleMessage("تحرير معلومات المنتج"),
         "editWithoutColon": MessageLookupByLibrary.simpleMessage("تصحيح"),
         "egypt": MessageLookupByLibrary.simpleMessage("مصر"),
-        "email": MessageLookupByLibrary.simpleMessage("الإيميل"),
+        "email": MessageLookupByLibrary.simpleMessage("البريد الإلكتروني"),
         "emailDeleteDescription": MessageLookupByLibrary.simpleMessage(
             "سيؤدي حذف حسابك إلى إلغاء اشتراكك من جميع القوائم البريدية."),
         "emailDoesNotExist": MessageLookupByLibrary.simpleMessage(
@@ -1023,6 +1025,15 @@ class MessageLookup extends MessageLookupByLibrary {
             MessageLookupByLibrary.simpleMessage("البحث عن عنوان"),
         "secondsAgo": m23,
         "seeAll": MessageLookupByLibrary.simpleMessage("اظهار الكل"),
+        "welcomeToLocafyMarket":
+            MessageLookupByLibrary.simpleMessage("مرحباً بك في متجر لوكافاي"),
+        "changeLanguageTitle":
+            MessageLookupByLibrary.simpleMessage("تغيير اللغة"),
+        "signOut": MessageLookupByLibrary.simpleMessage("تسجيل الخروج"),
+        "mustLoginToWishlist": MessageLookupByLibrary.simpleMessage(
+            "يجب عليك تسجيل الدخول أو التسجيل لإضافة عناصر إلى قائمة أمنياتك."),
+        "goToShoppingCart":
+            MessageLookupByLibrary.simpleMessage("اذهب إلى سلة التسوق"),
         "seeNewAppConfig": MessageLookupByLibrary.simpleMessage(
             "استمر في رؤية المحتوى الجديد على تطبيقك."),
         "seeOrder": MessageLookupByLibrary.simpleMessage("انظر الطلب"),
@@ -1229,7 +1240,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "vendorInfo": MessageLookupByLibrary.simpleMessage("معلومات البائع"),
         "verificationCode":
             MessageLookupByLibrary.simpleMessage("رمز التحقق (6 أرقام)"),
-        "verifySMSCode": MessageLookupByLibrary.simpleMessage("تحقق من الرمز"),
+        "verifySMSCode": MessageLookupByLibrary.simpleMessage("تأكيد"),
         "viaWallet": MessageLookupByLibrary.simpleMessage("عبر المحفظة"),
         "video": MessageLookupByLibrary.simpleMessage("فيديو"),
         "vietnamese": MessageLookupByLibrary.simpleMessage("الفيتنامية"),

@@ -6,6 +6,7 @@ import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:inspireui/extensions/string_extension.dart';
 import 'package:magentoegypt/app.dart';
 import 'package:magentoegypt/common/events.dart';
@@ -375,6 +376,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                               nextNode: emailNode,
                                               showCancelIcon: true,
                                               onChanged: (value) => phoneNumber = value,
+                                              inputFormatters: [
+                                                FilteringTextInputFormatter
+                                                    .digitsOnly,
+                                                LengthLimitingTextInputFormatter(
+                                                    10),
+                                              ],
                                               decoration: InputDecoration(
                                                 labelText: S.of(context).phoneNumber,
                                                 hintText:

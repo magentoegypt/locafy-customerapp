@@ -124,21 +124,36 @@ class _WishListState extends State<ProductWishListScreen> with AppBarMixin {
                                 .removeToWishlist(model.products[index]);
                           },
                           onAddToCart: () async {
-                            if (model.products[index].isPurchased &&
-                                model.products[index].isDownloadable!) {
-                              Tools.launchURL(model.products[index].files![0]!);
+                            final product = model.products[index];
+                            if (product.isPurchased &&
+                                product.isDownloadable!) {
+                              Tools.launchURL(product.files![0]!);
+                              return;
+                            }
+                            // Configurable products (those carrying selectable
+                            // attributes/variants) must open the full product
+                            // page so the user can pick the required options.
+                            // Simple products are added to the cart directly.
+                            final isConfigurable =
+                                (product.attributes?.isNotEmpty ?? false) ||
+                                    product.isVariableProduct;
+                            if (isConfigurable) {
+                              Navigator.of(context).pushNamed(
+                                RouteList.productDetail,
+                                arguments: product,
+                              );
                               return;
                             }
                             var msg =
                             await Provider.of<CartModel>(context, listen: false)
                                 .addProductToCart(
                               context: context,
-                              product: model.products[index],
+                              product: product,
                               quantity: 1,
                             );
                             if (msg.isEmpty) {
                               msg =
-                              '${model.products[index].name} ${S.of(context).addToCartSucessfully}';
+                              '${product.name} ${S.of(context).addToCartSucessfully}';
                             }
                             Tools.showSnackBar(
                                 ScaffoldMessenger.of(context), msg);

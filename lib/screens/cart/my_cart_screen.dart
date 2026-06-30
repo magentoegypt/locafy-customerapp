@@ -211,7 +211,8 @@ class _MyCartState extends State<MyCart> with SingleTickerProviderStateMixin {
                     ),
                   ),
                 ),
-              Padding(
+              if (totalCartQuantity > 0)
+                Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10.0,
                   vertical: 10.0,

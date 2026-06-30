@@ -468,7 +468,11 @@ class SubItem extends StatelessWidget {
                   ),
                 if(hasChild)
                   IconButton(
-                      icon: const Icon(Icons.keyboard_arrow_right),
+                      icon: Icon(
+                        Directionality.of(context) == TextDirection.rtl
+                            ? Icons.keyboard_arrow_left
+                            : Icons.keyboard_arrow_right,
+                      ),
                       onPressed: () {
                         showProductList(context);
                       })

@@ -368,7 +368,9 @@ class DefaultConfig {
       'visible': true,
       'position': 1,
       'editable': true,
-      'required': true,
+      // Email is optional at checkout to match the website. When left empty a
+      // default email is assigned during order submission (see Address).
+      'required': false,
       'defaultValue': '',
     },
     {

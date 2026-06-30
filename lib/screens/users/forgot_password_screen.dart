@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:inspireui/extensions.dart';
 import 'package:magentoegypt/core/colors.dart';
 import 'package:magentoegypt/screens/users/reset_password_screen.dart';
@@ -24,6 +25,9 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordState extends State<ForgotPasswordScreen> {
   final TextEditingController forgotPasswordController =
       TextEditingController();
+  // Separate controller for the email field so its value is never shared
+  // with (swapped into) the phone field and vice versa.
+  final TextEditingController emailController = TextEditingController();
   String selectedCode = '20'; // default value
   bool isSubmitting = false;
   bool isLoginOTP = true;
@@ -34,7 +38,8 @@ class _ForgotPasswordState extends State<ForgotPasswordScreen> {
       currentFocus.unfocus();
     }
 
-    var userName = forgotPasswordController.text;
+    var userName =
+        isLoginOTP ? forgotPasswordController.text : emailController.text;
     if(isLoginOTP){
       if(userName.trim().isEmpty){
         unawaited(
@@ -125,6 +130,7 @@ class _ForgotPasswordState extends State<ForgotPasswordScreen> {
   @override
   void dispose() {
     forgotPasswordController.dispose();
+    emailController.dispose();
     super.dispose();
   }
 
@@ -228,6 +234,10 @@ class _ForgotPasswordState extends State<ForgotPasswordScreen> {
                                 decoration:
                                 InputDecoration(labelText: S.of(context).phone),
                                 keyboardType: TextInputType.phone,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(10),
+                                ],
                                 controller: forgotPasswordController,
                               ),
                             )
@@ -266,7 +276,7 @@ class _ForgotPasswordState extends State<ForgotPasswordScreen> {
                         const SizedBox(height: 6),
                         TextField(
                           autocorrect: false,
-                          controller: forgotPasswordController,
+                          controller: emailController,
                           keyboardType: TextInputType.emailAddress,
                           // decoration: InputDecoration(
                           //   hintText: S.of(context).username,
