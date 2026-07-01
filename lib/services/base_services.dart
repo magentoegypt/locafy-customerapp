@@ -713,7 +713,8 @@ abstract class BaseServices {
     return null;
   }
 
-  Future<List<Product>?>? getShoppingList(CartModel model) async {
+  Future<List<Product>?>? getShoppingList(CartModel model,
+      {bool replace = false}) async {
     return null;
   }
 

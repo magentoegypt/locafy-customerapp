@@ -235,6 +235,23 @@ class CartModelMagento
     notifyListeners();
   }
 
+  /// Re-fetch the cart from the server so items added, removed or updated on
+  /// another platform (web / iOS) are reflected without having to log out and
+  /// back in. Only the product lines are replaced (see getShoppingList);
+  /// coupon, shipping, payment and notes are preserved. On network failure the
+  /// current cart is kept. Guests keep their local cart and are skipped.
+  @override
+  Future<void> reloadCartFromServer() async {
+    if (user?.loggedIn != true) return;
+    // replace: true resets the product lines to the server's state (removing
+    // items deleted elsewhere) only after a successful fetch — no flicker and
+    // no data loss on network failure.
+    await Services().api.getShoppingList(this, replace: true);
+    // Ensure the UI updates even when the server cart is now empty (nothing
+    // for getShoppingList to add back).
+    notifyListeners();
+  }
+
   @override
   void setOrderNotes(String note) {
     notes = note;
