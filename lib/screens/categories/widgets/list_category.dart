@@ -92,7 +92,11 @@ class _ListCategoryState extends State<ListCategory>
                 children: [
                   ListTile(
                     title: Text(item.displayName),
-                    trailing: const Icon(Icons.keyboard_arrow_right),
+                    trailing: Icon(
+                      Directionality.of(context) == TextDirection.rtl
+                          ? Icons.keyboard_arrow_left
+                          : Icons.keyboard_arrow_right,
+                    ),
                     subtitle: model.isLoading
                         ? const Align(
                             alignment: Alignment.centerLeft,

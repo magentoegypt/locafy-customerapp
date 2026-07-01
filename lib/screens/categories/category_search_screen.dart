@@ -24,6 +24,7 @@ class CategorySearch extends StatefulWidget {
   String isComingFrom = "";
   String? newCategoryId = "";
   String selectedId = "";
+  String selectedCategoryName = "";
    CategorySearch({super.key,this.isNavigation = false,this.isComingFrom = "",this.newCategoryId});
 
   @override
@@ -158,6 +159,7 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
                       if(widget.selectedId.isNotEmpty){
                         setState(() {
                           widget.selectedId = "";
+                          widget.selectedCategoryName = "";
                         });
                       }else {
                         Navigator.pop(context);
@@ -168,7 +170,11 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
                     'assets/images/logo.png',
                     width: 150,
                     height: 50,
-                  ):AppbarTitle(text: S.of(context).search),
+                  ):AppbarTitle(
+                      text: widget.selectedId.isNotEmpty &&
+                              widget.selectedCategoryName.isNotEmpty
+                          ? widget.selectedCategoryName
+                          : S.of(context).search),
                   Selector<CartModel, int>(
                     selector: (_, model) => model.totalCartQuantity,
                     builder: (context, totalCart, child) {
@@ -527,6 +533,7 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
                 }else{
                   setState(() {
                     widget.selectedId = category.id ?? "";
+                    widget.selectedCategoryName = category.name ?? "";
                   });
                 }
               },

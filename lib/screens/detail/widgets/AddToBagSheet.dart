@@ -115,11 +115,15 @@ class AddToBagSheet extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               // Product details
-              Column(
+              Expanded(
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     product?.name ?? "",
+                    softWrap: true,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -143,6 +147,7 @@ class AddToBagSheet extends StatelessWidget {
                   Services().widget.renderDetailPrice(context, product!, getProductPrice()),
                 ],
               ),
+              ),
             ],
           ),
 
@@ -165,9 +170,9 @@ class AddToBagSheet extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text(
-                'Go to the shopping cart',
-                style: TextStyle(color: Colors.white, fontSize: 16),
+              child: Text(
+                S.of(context).goToShoppingCart,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
               ),
             ),
           ),

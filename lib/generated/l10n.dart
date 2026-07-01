@@ -70,6 +70,56 @@ class S {
     );
   }
 
+  /// `Welcome to Locafy Market`
+  String get welcomeToLocafyMarket {
+    return Intl.message(
+      'Welcome to Locafy Market',
+      name: 'welcomeToLocafyMarket',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Change language`
+  String get changeLanguageTitle {
+    return Intl.message(
+      'Change language',
+      name: 'changeLanguageTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign Out`
+  String get signOut {
+    return Intl.message(
+      'Sign Out',
+      name: 'signOut',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You must login or register to add items to your wishlist.`
+  String get mustLoginToWishlist {
+    return Intl.message(
+      'You must login or register to add items to your wishlist.',
+      name: 'mustLoginToWishlist',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Go to the shopping cart`
+  String get goToShoppingCart {
+    return Intl.message(
+      'Go to the shopping cart',
+      name: 'goToShoppingCart',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Feature Products`
   String get featureProducts {
     return Intl.message(

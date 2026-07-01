@@ -329,7 +329,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "couponMsgSuccess": MessageLookupByLibrary.simpleMessage(
             "Congratulations! Coupon code applied successfully"),
         "createAccount": MessageLookupByLibrary.simpleMessage("Create account"),
-        "newcreateAccount": MessageLookupByLibrary.simpleMessage("Create account"),
+        "newcreateAccount": MessageLookupByLibrary.simpleMessage("Register"),
         "sizeGuide": MessageLookupByLibrary.simpleMessage("Size Guide"),
     "newAccount": MessageLookupByLibrary.simpleMessage("New Account"),
         "createAccountMessage": MessageLookupByLibrary.simpleMessage(
@@ -1037,6 +1037,15 @@ class MessageLookup extends MessageLookupByLibrary {
             MessageLookupByLibrary.simpleMessage("Searching Address"),
         "secondsAgo": m23,
         "seeAll": MessageLookupByLibrary.simpleMessage("See All"),
+        "welcomeToLocafyMarket":
+            MessageLookupByLibrary.simpleMessage("Welcome to Locafy Market"),
+        "changeLanguageTitle":
+            MessageLookupByLibrary.simpleMessage("Change language"),
+        "signOut": MessageLookupByLibrary.simpleMessage("Sign Out"),
+        "mustLoginToWishlist": MessageLookupByLibrary.simpleMessage(
+            "You must login or register to add items to your wishlist."),
+        "goToShoppingCart":
+            MessageLookupByLibrary.simpleMessage("Go to the shopping cart"),
         "seeNewAppConfig": MessageLookupByLibrary.simpleMessage(
             "Continue to see new content on your app."),
         "seeOrder": MessageLookupByLibrary.simpleMessage("See Order"),

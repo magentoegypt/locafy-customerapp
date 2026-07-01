@@ -173,7 +173,7 @@ class Address {
         'city': block,//city,
         'firstname': firstName,
         'lastname': lastName,
-        'email': email,
+        'email': emailOrDefault,
         'telephone': phoneNumber,
         'same_as_billing': 1
       }
@@ -198,14 +198,28 @@ class Address {
   }
 
   bool isValid() {
+    // Email is intentionally NOT required here — it is optional at checkout to
+    // match the website, and a default is assigned in toMagentoJson when empty.
     return firstName!.isNotEmpty &&
         lastName!.isNotEmpty &&
-        email!.isNotEmpty &&
         street!.isNotEmpty &&
         city!.isNotEmpty &&
         state!.isNotEmpty &&
         country!.isNotEmpty &&
         phoneNumber!.isNotEmpty;
+  }
+
+  /// Returns the customer email, or a generated default when the customer did
+  /// not provide one (matching the website's "assign a default email"
+  /// behaviour). Uses the phone number when available to keep it unique.
+  String get emailOrDefault {
+    if (email != null && email!.trim().isNotEmpty) {
+      return email!.trim();
+    }
+    final phone = (phoneNumber ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+    return phone.isNotEmpty
+        ? '$phone@locafy.market'
+        : 'guest@locafy.market';
   }
 
   Map<String, String?> toJsonEncodable() {

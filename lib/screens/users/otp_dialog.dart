@@ -133,6 +133,10 @@ class OtpDialog  {
                 ),
                 Spacer(),
                 ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
                   onPressed: () {
                     // Handle OTP submission
                     if (pinCodeController.text.trim().length == 6 && pinCodeController.text.trim() == currentOtp) {

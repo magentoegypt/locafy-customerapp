@@ -371,9 +371,9 @@ class _SimpleLayoutState extends State<SimpleLayout>
                           ),
                         ),
                       ),
-                      if (!Services().widget.enableShoppingCart(
-                              product.copyWith(isRestricted: false)) &&
-                          product.shortDescription != null &&
+                      // Always show the short product description (like the
+                      // website) whenever the product provides one.
+                      if (product.shortDescription != null &&
                           product.shortDescription!.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 15.0),

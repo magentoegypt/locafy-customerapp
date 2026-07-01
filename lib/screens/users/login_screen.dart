@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:magentoegypt/screens/users/otp_dialog.dart';
 import 'package:magentoegypt/widgets/auth/social_login_button_row.dart';
 import 'package:provider/provider.dart';
@@ -372,6 +373,12 @@ class _LoginPageState extends BaseScreen<LoginScreen>
                                               decoration:
                                               InputDecoration(labelText: S.of(context).phone),
                                               keyboardType: TextInputType.phone,
+                                              inputFormatters: [
+                                                FilteringTextInputFormatter
+                                                    .digitsOnly,
+                                                LengthLimitingTextInputFormatter(
+                                                    10),
+                                              ],
                                               controller: username,
                                             ),
                                           )

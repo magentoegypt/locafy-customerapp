@@ -10,7 +10,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:inspireui/icons/icon_picker.dart';
 import 'package:inspireui/inspireui.dart';
-import 'package:magentoegypt/ajstoreui/widgets/app_bar/appbar_title.dart';
 import 'package:magentoegypt/core/colors.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -110,7 +109,6 @@ class SettingScreenState extends State<SettingScreen>
       title:  S.of(context).aboutLocafy,
       items: [
         SectionItem(title: S.of(context).aboutUs, url: "https://stg.locafy.market/eg-en/about-us"),
-        SectionItem(title: S.of(context).ourSellers, url: "https://stg.locafy.market/eg-en/csmarketplace/vshops/index/?search="),
       ],
     ),
     Section(
@@ -139,6 +137,60 @@ class SettingScreenState extends State<SettingScreen>
       ],
     ),
   ];
+
+  /// Opens a [SectionItem] from the My Account / Support lists.
+  /// Full http(s) urls open in an authenticated WebView; the known
+  /// route-keys map to their native screens.
+  void _openSectionItem(SectionItem item) {
+    final url = item.url;
+    if (url.isEmpty) return;
+    if (url.startsWith('http')) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              WebView(auth: true, url: url, title: item.title),
+        ),
+      );
+      return;
+    }
+    switch (url) {
+      case 'myOrders':
+        {
+          final currentUser =
+              Provider.of<UserModel>(context, listen: false).user;
+          FluxNavigate.pushNamed(RouteList.orders, arguments: currentUser);
+        }
+        break;
+      case 'myWishList':
+        MainTabControlDelegate.getInstance().tabAnimateTo(2);
+        break;
+      case 'addressBook':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WebView(
+                auth: true,
+                url: 'https://stg.locafy.market/eg-en/customer/address/',
+                title: item.title),
+          ),
+        );
+        break;
+      case 'accountInformation':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WebView(
+                auth: true,
+                url: 'https://stg.locafy.market/eg-en/customer/account/',
+                title: item.title),
+          ),
+        );
+        break;
+      default:
+        break;
+    }
+  }
 
   void checkAddPostRole() {
     for (var legitRole in addPostAccessibleRoles) {
@@ -1051,10 +1103,7 @@ class SettingScreenState extends State<SettingScreen>
                                   vertical: 6.0 //isTitle ? 0.0 : itemPadding,
                               ),
                               child: GestureDetector(
-                                onTap: () {
-                                  // Handle navigation here
-
-                                },
+                                onTap: () => _openSectionItem(item),
                                 child: Text(
                                   item.title,
                                   style: const TextStyle(
@@ -1130,7 +1179,7 @@ class SettingScreenState extends State<SettingScreen>
                                       height: 48,
                                       child: OutlinedButton(
                                         style: OutlinedButton.styleFrom(
-                                          side: const BorderSide(color: Colors.red, width: 2),
+                                          side: const BorderSide(color: Colors.black, width: 2),
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(8),
                                           ),
@@ -1142,7 +1191,7 @@ class SettingScreenState extends State<SettingScreen>
                                         child: Text(
                                           S.of(context).newcreateAccount,
                                           style: const TextStyle(
-                                            color: Colors.red,
+                                            color: Colors.black,
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -1203,11 +1252,7 @@ class SettingScreenState extends State<SettingScreen>
                               ),
                               child: _SettingItem(
                                 title:section.title,
-                                onTap: () async {
-                                  setState(() {
-
-                                  });
-                                },
+                                onTap: () => _openSectionItem(section),
                               ),
                             );
                           },
@@ -1385,8 +1430,8 @@ class SettingScreenState extends State<SettingScreen>
                           child: TextButton(
                             onPressed: _onLogout,
                             child: Text(
-                              "Sign Out",
-                              style: TextStyle(
+                              S.of(context).signOut,
+                              style: const TextStyle(
                                 color: Colors.black,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
@@ -1431,7 +1476,7 @@ class SettingScreenState extends State<SettingScreen>
     final result = await FluxNavigate.pushNamed(
       RouteList.deleteAccount,
       arguments: DeleteAccountArguments(
-        confirmCaptcha: "",
+        confirmCaptcha: "PERMANENTLY DELETE",
         userToken:
             Provider.of<UserModel>(context, listen: false).user?.cookie ?? '',
       ),
@@ -1589,7 +1634,14 @@ class HeaderSettingScreen extends StatelessWidget {
           //   height: 50,
           // ),
           if(items.isEmpty)
-          AppbarTitle(text: S.of(context).generalSettings,),
+          Text(
+            S.of(context).generalSettings,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
           Spacer()
           // const Icon(
           //   CupertinoIcons.search,
