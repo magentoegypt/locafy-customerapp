@@ -1,5 +1,6 @@
 import 'package:inspireui/inspireui.dart';
 import '../../../common/config.dart';
+import '../../../common/constants.dart';
 
 class MagentoHelper {
   static String? getCustomAttribute(customAttributes, attribute) {
@@ -16,11 +17,9 @@ class MagentoHelper {
   }
 
   static String getProductImageUrlByName(domain, imageName) {
-    // latest provided by FLuxstore Support
-    return '$domain/media/catalog/product$imageName';
-
-    // previous within Code
-    //return '$domain/pub/media/catalog/product$imageName';
+    // Media is served by the CDN (kMediaDomain), not the API domain, because
+    // staging has no media files. Same host is used for live and staging.
+    return '$kMediaDomain/media/catalog/product$imageName';
   }
 
   static String getProductImageUrl(domain, item, [attribute = 'thumbnail']) {
@@ -37,7 +36,7 @@ class MagentoHelper {
   static String getCategoryImageUrl(domain, item, [attribute = 'image']) {
     final imageName = getCustomAttribute(item['custom_attributes'], attribute);
     if (imageName != null) {
-      return '$domain/pub/media/catalog/category/$imageName';
+      return '$kMediaDomain/media/catalog/category/$imageName';
     }
     return '';
   }

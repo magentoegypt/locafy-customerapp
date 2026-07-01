@@ -321,8 +321,8 @@ class MagentoService extends BaseServices {
             category.parent = '0';
             if (item['image'] != null) {
               category.image = item['image'].toString().contains('media/')
-                  ? "$domain/${item["image"]}"
-                  : "$domain/pub/media/catalog/category/${item["image"]}";
+                  ? "$kMediaDomain/${item["image"]}"
+                  : "$kMediaDomain/media/catalog/category/${item["image"]}";
             }
             list.add(category);
             if(category.brandIds.isNotEmpty){
@@ -1929,7 +1929,8 @@ class MagentoService extends BaseServices {
 
   //calling for cart list 
   @override
-  Future<List<Product>?>? getShoppingList(CartModel model) async {
+  Future<List<Product>?>? getShoppingList(CartModel model,
+      {bool replace = false}) async {
     print('Bearer ${UserBox().userInfo?.cookie}');
     try {
       var response = await httpGet(
@@ -1944,6 +1945,19 @@ class MagentoService extends BaseServices {
       var list = <Product>[];
       if (response.statusCode == 200) {
         list = (body as List).map((i) => Product.fromShopJson(i,domain)).toList();
+        // When refreshing an existing cart (replace), reset the in-memory
+        // product lines to the server's current state first so quantities are
+        // not duplicated and items removed on another platform disappear.
+        // Coupon / shipping / payment / notes are preserved. Done only after
+        // the fetch succeeds so a network error never blanks a cart that still
+        // exists on the server. Default (login path) keeps the original merge
+        // behaviour untouched.
+        if (replace) {
+          model.productsInCart.clear();
+          model.item.clear();
+          model.productVariationInCart.clear();
+          model.productsMetaDataInCart.clear();
+        }
         model.shoppingList = list;
         list.forEach((product){
           model.addProductToCart(product: product,quantity: product.shopQuantity,isFromApi: true);

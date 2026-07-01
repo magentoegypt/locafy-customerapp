@@ -195,7 +195,7 @@ class ProductVariation {
     }
 
     String getProductImageUrlByName(domain, imageName) {
-      return '$domain/pub/media/catalog/product$imageName';
+      return '$kMediaDomain/media/catalog/product$imageName';
     }
 
     id = parsedJson['id'].toString();

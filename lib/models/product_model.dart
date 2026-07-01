@@ -65,7 +65,7 @@ class ProductModel with ChangeNotifier {
     }
     variationsFeatureImages = [];
     selectedVariation?.allimages.forEach((element){
-      var fullUrl = "https://stg.locafy.market/media/catalog/product"+element;
+      var fullUrl = "$kMediaDomain/media/catalog/product"+element;
       if(!variationsFeatureImages.contains(fullUrl)) {
         variationsFeatureImages.add(fullUrl);
       }
