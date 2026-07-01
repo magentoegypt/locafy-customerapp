@@ -11,6 +11,7 @@ import 'package:magentoegypt/screens/detail/widgets/product_cart_buttons.dart';
 import 'package:magentoegypt/screens/detail/widgets/product_common_info.dart';
 import 'package:magentoegypt/screens/detail/widgets/product_image_carasoul.dart';
 import 'package:magentoegypt/widgets/product/widgets/heart_button.dart';
+import 'package:magentoegypt/widgets/product/widgets/store_name.dart';
 import 'package:provider/provider.dart';
 
 import '../../../common/config.dart';
@@ -332,6 +333,17 @@ class _SimpleLayoutState extends State<SimpleLayout>
                                 ? const SizedBox()
                                 : ProductTitle(product),
                           ),
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              left: 15,
+                              right: 15,
+                              bottom: 4,
+                            ),
+                            child: StoreName(
+                              product: product,
+                              hide: false,
+                            ),
+                          ),
                         ],
                       ),
                       if (Services().widget.enableShoppingCart(
@@ -371,10 +383,7 @@ class _SimpleLayoutState extends State<SimpleLayout>
                           ),
                         ),
                       ),
-                      if (!Services().widget.enableShoppingCart(
-                              product.copyWith(isRestricted: false)) &&
-                          product.shortDescription != null &&
-                          product.shortDescription!.isNotEmpty)
+                      if (product.shortDescription?.isNotEmpty ?? false)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 15.0),
                           child: ProductShortDescription(product),
@@ -476,7 +485,7 @@ class _SimpleLayoutState extends State<SimpleLayout>
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
-                    product.size_chart ?? "https://stg.locafy.market/media/ced/csmarketplace/default/updated_size_chart_3_480x480.png", // replace this with your image URL
+                    product.size_chart ?? "$kMediaDomain/media/ced/csmarketplace/default/updated_size_chart_3_480x480.png", // replace this with your image URL
                     fit: BoxFit.contain,
                   ),
                 ),
