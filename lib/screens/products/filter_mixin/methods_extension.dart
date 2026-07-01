@@ -100,7 +100,11 @@ extension ProductsFilterMixinMethodExtension on ProductsFilterMixin {
     maxPrice = null;
     page = 1;
     attribute = null;
-    search = null;
+    // Route an incoming search keyword (e.g. from a search-results
+    // navigation) through the working name/SKU "like" filter. The backend's
+    // full-text `q=` parameter (sent separately as `searchText`) 500s when
+    // combined with searchCriteria filters, so it must not be relied on.
+    search = config?.searchText;
     filterSortBy = const FilterSortBy();
 
     categoryId = config?.category;

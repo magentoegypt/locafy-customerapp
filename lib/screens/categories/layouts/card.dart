@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:inspireui/extensions/build_context_ext.dart';
 import 'package:inspireui/inspireui.dart' show Skeleton;
 import 'package:provider/provider.dart';
 import 'package:transparent_image/transparent_image.dart';
@@ -389,8 +390,14 @@ class SubItem extends StatelessWidget {
   final String seeAll;
   final int level;
   final bool hasChild;
+  // Overrides what the trailing arrow does when tapped. Defaults to opening
+  // the category's product list (same as tapping the row); callers that need
+  // the arrow to drill into child categories instead (see category_search_screen)
+  // can supply their own handler without affecting other SubItem usages.
+  final void Function(BuildContext context)? onArrowTap;
 
-  const SubItem(this.category, {this.seeAll = '', this.level = 0, this.hasChild = true});
+  const SubItem(this.category,
+      {this.seeAll = '', this.level = 0, this.hasChild = true, this.onArrowTap});
 
   void showProductList(BuildContext context) {
     Navigator.of(context).pushNamed(
@@ -468,9 +475,15 @@ class SubItem extends StatelessWidget {
                   ),
                 if(hasChild)
                   IconButton(
-                      icon: const Icon(Icons.keyboard_arrow_right),
+                      icon: Icon(context.isRtl
+                          ? Icons.keyboard_arrow_left
+                          : Icons.keyboard_arrow_right),
                       onPressed: () {
-                        showProductList(context);
+                        if (onArrowTap != null) {
+                          onArrowTap!(context);
+                        } else {
+                          showProductList(context);
+                        }
                       })
               ],
             ),

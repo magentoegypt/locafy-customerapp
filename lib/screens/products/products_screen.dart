@@ -150,7 +150,6 @@ class ProductsScreenState extends State<ProductsScreen>
       listingLocation: listingLocationId,
       include: include,
       search: search,
-      searchText: productConfig.searchText
     );
   }
 

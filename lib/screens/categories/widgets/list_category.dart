@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:inspireui/extensions/build_context_ext.dart';
 import 'package:inspireui/inspireui.dart';
 import 'package:provider/provider.dart';
 
@@ -92,7 +93,9 @@ class _ListCategoryState extends State<ListCategory>
                 children: [
                   ListTile(
                     title: Text(item.displayName),
-                    trailing: const Icon(Icons.keyboard_arrow_right),
+                    trailing: Icon(context.isRtl
+                        ? Icons.keyboard_arrow_left
+                        : Icons.keyboard_arrow_right),
                     subtitle: model.isLoading
                         ? const Align(
                             alignment: Alignment.centerLeft,
