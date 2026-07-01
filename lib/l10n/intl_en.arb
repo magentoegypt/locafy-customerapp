@@ -155,7 +155,7 @@
 	"loginToYourAccount": "Login to your account",
 	"createAnAccount": "Create an account",
 	"createAccount": "Create account",
-	"newcreateAccount": "Create Account",
+	"newcreateAccount": "Register",
 	"createAccountMessage": "Get many benefits: register faster, save more than one address, track orders, and more.",
 	"couponCode": "Coupon code",
 	"remove": "Remove",
@@ -884,5 +884,11 @@
     "selectPaymentMethod": "Select payment method",
     "includesDeliveryFee": "Includes delivery fee",
     "totalAmount": "Total amount",
-    "generateOtp": "Generate OTP"
+    "generateOtp": "Generate OTP",
+    "welcomeToLocafyMarket": "Welcome to Locafy Market",
+    "changeLanguageTitle": "Change language",
+    "signOut": "Sign Out",
+    "mustLoginToWishlist": "You must login or register to add items to your wishlist.",
+    "goToShoppingCart": "Go to the shopping cart",
+    "noCustomerWithMobile": "There is no customer registered with this number."
 }

@@ -136,7 +136,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "afternoon": MessageLookupByLibrary.simpleMessage("بعد الظهر"),
         "agree": MessageLookupByLibrary.simpleMessage("موافقة"),
         "agreeWithPrivacy":
-            MessageLookupByLibrary.simpleMessage("موافق على الخصوصية"),
+            MessageLookupByLibrary.simpleMessage("سياسة الخصوصية والشروط"),
         "albanian": MessageLookupByLibrary.simpleMessage("الألبانية"),
         "all": MessageLookupByLibrary.simpleMessage("الكل"),
         "allBrands": MessageLookupByLibrary.simpleMessage("جميع الماركات"),
@@ -417,7 +417,7 @@ class MessageLookup extends MessageLookupByLibrary {
             MessageLookupByLibrary.simpleMessage("تحرير معلومات المنتج"),
         "editWithoutColon": MessageLookupByLibrary.simpleMessage("تصحيح"),
         "egypt": MessageLookupByLibrary.simpleMessage("مصر"),
-        "email": MessageLookupByLibrary.simpleMessage("الإيميل"),
+        "email": MessageLookupByLibrary.simpleMessage("البريد الإلكتروني"),
         "emailDeleteDescription": MessageLookupByLibrary.simpleMessage(
             "سيؤدي حذف حسابك إلى إلغاء اشتراكك من جميع القوائم البريدية."),
         "emailDoesNotExist": MessageLookupByLibrary.simpleMessage(
@@ -1229,7 +1229,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "vendorInfo": MessageLookupByLibrary.simpleMessage("معلومات البائع"),
         "verificationCode":
             MessageLookupByLibrary.simpleMessage("رمز التحقق (6 أرقام)"),
-        "verifySMSCode": MessageLookupByLibrary.simpleMessage("تحقق من الرمز"),
+        "verifySMSCode": MessageLookupByLibrary.simpleMessage("تأكيد"),
         "viaWallet": MessageLookupByLibrary.simpleMessage("عبر المحفظة"),
         "video": MessageLookupByLibrary.simpleMessage("فيديو"),
         "vietnamese": MessageLookupByLibrary.simpleMessage("الفيتنامية"),
@@ -1346,5 +1346,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "discountCoupons": MessageLookupByLibrary.simpleMessage("كوبونات الخصم"),
     "returnMerchandiseAuthorization": MessageLookupByLibrary.simpleMessage("طلب إرجاع المنتجات"),
     "signOut": MessageLookupByLibrary.simpleMessage("تسجيل الخروج"),
+    "passwordNotMatch": MessageLookupByLibrary.simpleMessage(
+        "كلمة المرور وتأكيد كلمة المرور غير متطابقتين"),
+    "welcomeToLocafyMarket":
+        MessageLookupByLibrary.simpleMessage("مرحباً بك في متجر لوكافاي"),
+    "changeLanguageTitle":
+        MessageLookupByLibrary.simpleMessage("تغيير اللغة"),
+    "mustLoginToWishlist": MessageLookupByLibrary.simpleMessage(
+        "يجب عليك تسجيل الدخول أو التسجيل لإضافة عناصر إلى قائمة أمنياتك."),
+    "goToShoppingCart":
+        MessageLookupByLibrary.simpleMessage("اذهب إلى سلة التسوق"),
+    "noCustomerWithMobile": MessageLookupByLibrary.simpleMessage(
+        "العميل مع رقم الهاتف المحمول هذا غير موجود"),
       };
 }

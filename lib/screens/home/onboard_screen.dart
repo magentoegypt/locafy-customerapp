@@ -158,7 +158,7 @@ class _OnBoardScreenState extends State<OnBoardScreen> with ChangeLanguage {
                 children: [
                   SizedBox(height: 100,),
                   Text(
-                    "Welcome to Locafy Market",
+                    S.of(context).welcomeToLocafyMarket,
                     style: Theme.of(context)
                         .textTheme
                         .headlineSmall!

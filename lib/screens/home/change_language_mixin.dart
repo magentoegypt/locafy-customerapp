@@ -3,6 +3,7 @@ import 'package:inspireui/inspireui.dart';
 import 'package:provider/provider.dart';
 
 import '../../common/config.dart';
+import '../../generated/l10n.dart';
 import '../../models/index.dart';
 import '../../widgets/common/flux_image.dart';
 
@@ -55,21 +56,15 @@ mixin ChangeLanguage<T extends StatefulWidget> on State<T> {
                     ),
                   ),
                 ),
-                const Text(
-                  'Change language',
-                  style: TextStyle(
+                Text(
+                  S.of(context).changeLanguageTitle,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                     color: Colors.black,
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.only(top: 8, bottom: 16),
-                  child: Text(
-                    'Which language do you prefer?',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ),
+                const SizedBox(height: 16),
                 Expanded(
                   child: ListView.builder(
                     key: const Key('changeLanguageList'),

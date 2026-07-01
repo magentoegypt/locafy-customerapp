@@ -329,7 +329,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "couponMsgSuccess": MessageLookupByLibrary.simpleMessage(
             "Congratulations! Coupon code applied successfully"),
         "createAccount": MessageLookupByLibrary.simpleMessage("Create account"),
-        "newcreateAccount": MessageLookupByLibrary.simpleMessage("Create account"),
+        "newcreateAccount": MessageLookupByLibrary.simpleMessage("Register"),
         "sizeGuide": MessageLookupByLibrary.simpleMessage("Size Guide"),
     "newAccount": MessageLookupByLibrary.simpleMessage("New Account"),
         "createAccountMessage": MessageLookupByLibrary.simpleMessage(
@@ -1375,5 +1375,15 @@ class MessageLookup extends MessageLookupByLibrary {
     "discountCoupons": MessageLookupByLibrary.simpleMessage("Discount Coupons"),
     "returnMerchandiseAuthorization": MessageLookupByLibrary.simpleMessage("Return Merchandise Authorization"),
     "signOut": MessageLookupByLibrary.simpleMessage("Sign Out"),
+    "welcomeToLocafyMarket":
+        MessageLookupByLibrary.simpleMessage("Welcome to Locafy Market"),
+    "changeLanguageTitle":
+        MessageLookupByLibrary.simpleMessage("Change language"),
+    "mustLoginToWishlist": MessageLookupByLibrary.simpleMessage(
+        "You must login or register to add items to your wishlist."),
+    "goToShoppingCart":
+        MessageLookupByLibrary.simpleMessage("Go to the shopping cart"),
+    "noCustomerWithMobile": MessageLookupByLibrary.simpleMessage(
+        "There is no customer registered with this number."),
       };
 }
