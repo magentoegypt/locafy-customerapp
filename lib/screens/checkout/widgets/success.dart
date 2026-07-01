@@ -4,7 +4,8 @@ import 'package:provider/provider.dart';
 import '../../../common/config.dart';
 import '../../../common/constants.dart';
 import '../../../generated/l10n.dart';
-import '../../../models/index.dart' show Order, UserModel, PointModel;
+import '../../../models/index.dart'
+    show CartModel, Order, UserModel, PointModel;
 import '../../../services/index.dart';
 import '../../base_screen.dart';
 
@@ -146,7 +147,10 @@ class _OrderedSuccessState extends BaseScreen<OrderedSuccess> {
                       shape: const RoundedRectangleBorder(),
                     ),
                     onPressed: () {
-                      Navigator.of(context).popUntil((route) => route.isFirst);
+                      Provider.of<CartModel>(context, listen: false)
+                          .clearCart(true);
+                      Navigator.of(context).pushNamedAndRemoveUntil(
+                          RouteList.dashboard, (route) => false);
                     },
                     child: Text(
                       S.of(context).backToShop.toUpperCase(),

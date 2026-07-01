@@ -43,12 +43,16 @@ class _ReviewState extends BaseScreen<ReviewScreen> {
 
   @override
   void afterFirstLayout(BuildContext context) {
-    Provider.of<TaxModel>(context, listen: false).getTaxes(
-        Provider.of<CartModel>(context, listen: false), (taxesTotal, taxes) {
-      Provider.of<CartModel>(context, listen: false).taxesTotal = taxesTotal;
-      Provider.of<CartModel>(context, listen: false).taxes = taxes;
-      setState(() {});
-    });
+    if (kPaymentConfig.enableTax) {
+      Provider.of<TaxModel>(context, listen: false).getTaxes(
+          Provider.of<CartModel>(context, listen: false), (taxesTotal, taxes) {
+        Provider.of<CartModel>(context, listen: false).taxesTotal = taxesTotal;
+        Provider.of<CartModel>(context, listen: false).taxes = taxes;
+        setState(() {});
+      });
+    } else {
+      Provider.of<CartModel>(context, listen: false).taxesTotal = 0;
+    }
   }
 
   @override

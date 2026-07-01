@@ -169,11 +169,15 @@ class Address {
           '$apartment${(block?.isEmpty ?? true) ? '' : ' - $block'}',
         ],
         'postcode': zipCode,
-        'region': city,
-        'city': block,//city,
+        'region': state,
+        'city': city,
         'firstname': firstName,
         'lastname': lastName,
-        'email': email,
+        // Email is optional; fall back to a provisional default when empty so
+        // Magento still receives a value. Final default rule is a follow-up.
+        'email': (email?.isNotEmpty ?? false)
+            ? email
+            : 'guest${(phoneNumber ?? '').replaceAll(RegExp(r'[^0-9]'), '')}@locafy.market',
         'telephone': phoneNumber,
         'same_as_billing': 1
       }
@@ -198,9 +202,9 @@ class Address {
   }
 
   bool isValid() {
+    // Email is optional at checkout; a default is substituted before submit.
     return firstName!.isNotEmpty &&
         lastName!.isNotEmpty &&
-        email!.isNotEmpty &&
         street!.isNotEmpty &&
         city!.isNotEmpty &&
         state!.isNotEmpty &&

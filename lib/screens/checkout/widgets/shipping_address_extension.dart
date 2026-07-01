@@ -442,6 +442,15 @@ extension on _ShippingAddressState {
 
   String? validateField(
       String? val, AddressFieldConfig config, AddressFieldType type) {
+    // Email is optional at checkout: never block on empty, only validate the
+    // format when the user actually typed something.
+    if (type == AddressFieldType.email) {
+      if (val?.isEmpty ?? true) {
+        return null;
+      }
+      return validateEmail(val!);
+    }
+
     if (!config.required) {
       return null;
     }
@@ -449,9 +458,6 @@ extension on _ShippingAddressState {
     final label = getFieldLabel(type)?.toLowerCase();
     if ((val?.isEmpty ?? true) && label != null) {
       return S.of(context).theFieldIsRequired(label);
-    }
-    if (val != null && type == AddressFieldType.email) {
-      return validateEmail(val);
     }
     return null;
   }
