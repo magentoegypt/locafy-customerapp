@@ -6,6 +6,7 @@ import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:inspireui/extensions/string_extension.dart';
 import 'package:magentoegypt/app.dart';
 import 'package:magentoegypt/common/events.dart';
@@ -114,23 +115,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       '${S.of(context).welcome} $email!',
       isError: false,
     );
-    if (Services().widget.isRequiredLogin) {
-      Navigator.of(context).pushReplacementNamed(RouteList.dashboard);
-      return;
-    }
-    var routeFound = false;
-    var routeNames = [RouteList.dashboard, RouteList.productDetail];
-    Navigator.popUntil(context, (route) {
-      if (routeNames
-          .any((element) => route.settings.name?.contains(element) ?? false)) {
-        routeFound = true;
-      }
-      return routeFound || route.isFirst;
-    });
-
-    if (!routeFound) {
-      Navigator.of(context).pushReplacementNamed(RouteList.dashboard);
-    }
+    // Navigate to the dashboard on the ROOT navigator and clear the whole stack
+    // so a single, fresh MainTabs is shown. The registration screen may be
+    // pushed inside a tab's nested navigator; using the local Navigator here
+    // would push a MainTabs *inside* that tab, rendering the tab bar/footer
+    // twice right after account creation (later logins go through the root
+    // navigator, which is why they are unaffected).
+    Navigator.of(App.fluxStoreNavigatorKey.currentContext!)
+        .pushNamedAndRemoveUntil(RouteList.dashboard, (route) => false);
   }
 
   @override
@@ -381,6 +373,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                                 S.of(context).enterYourPhoneNumber,
                                               ),
                                               keyboardType: TextInputType.phone,
+                                              inputFormatters: [
+                                                FilteringTextInputFormatter
+                                                    .digitsOnly,
+                                                LengthLimitingTextInputFormatter(
+                                                    10),
+                                              ],
                                             ),
                                           )
                                         ],

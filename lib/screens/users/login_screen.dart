@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:magentoegypt/screens/users/otp_dialog.dart';
 import 'package:magentoegypt/widgets/auth/social_login_button_row.dart';
 import 'package:provider/provider.dart';
@@ -262,7 +263,16 @@ class _LoginPageState extends BaseScreen<LoginScreen>
               size: 24,
             ),
             onPressed: () {
-              Navigator.pop(context);
+              // If there is a previous page, return to it. Otherwise (login was
+              // opened as the root route, e.g. from onboarding via
+              // pushReplacement) go to the dashboard instead of leaving a blank
+              // white screen.
+              if (ModalRoute.of(context)!.canPop) {
+                Navigator.of(context).pop();
+              } else {
+                Navigator.of(App.fluxStoreNavigatorKey.currentContext!)
+                    .pushReplacementNamed(RouteList.dashboard);
+              }
             },
           ),
           elevation: 0.0,
@@ -372,6 +382,12 @@ class _LoginPageState extends BaseScreen<LoginScreen>
                                               decoration:
                                               InputDecoration(labelText: S.of(context).phone),
                                               keyboardType: TextInputType.phone,
+                                              inputFormatters: [
+                                                FilteringTextInputFormatter
+                                                    .digitsOnly,
+                                                LengthLimitingTextInputFormatter(
+                                                    10),
+                                              ],
                                               controller: username,
                                             ),
                                           )
@@ -467,6 +483,23 @@ class _LoginPageState extends BaseScreen<LoginScreen>
                                               );
                                             }else{
                                               _playAnimation();
+                                              // Only send the OTP if a customer is registered with this
+                                              // number. wapplogin/customer/login returns a token for
+                                              // registered numbers and errors otherwise.
+                                              try {
+                                                await Services().api.loginMobile(
+                                                    mobile:
+                                                        "$selectedCode${username.text.trim()}");
+                                              } catch (_) {
+                                                _stopAnimation();
+                                                unawaited(
+                                                  FlashHelper.errorMessage(context,
+                                                      message: S
+                                                          .of(context)
+                                                          .noCustomerWithMobile),
+                                                );
+                                                return;
+                                              }
                                               String currentOtp = OtpDialog.generateOtp();
                                               final json = await Services().api.mobileSendOtp("$selectedCode${username.text.trim()}",currentOtp);
                                               _stopAnimation();
