@@ -1580,6 +1580,10 @@ class Product {
   Product.fromWislitJson(Map<String, dynamic> productJson,String domain): id = productJson['product_id'].toString() {
     itemID = productJson['wishlist_item_id'];
     stockQuantity = productJson['qty'];//(double.parse()).toInt();
+    // Preserve the Magento product type so the wishlist's "Add to cart" can
+    // decide between adding a simple product directly and opening the product
+    // page for a configurable product, even when loaded from the server.
+    type = productJson['product_type'];
     sku = productJson['product_sku'];
     vendor = productJson['vendor_id'];
     price = productJson['regular_price'];

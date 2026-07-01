@@ -3,6 +3,7 @@ import 'package:inspireui/inspireui.dart';
 import '../app.dart';
 import '../common/tools/flash.dart';
 import '../data/boxes.dart';
+import '../generated/l10n.dart';
 import '../services/index.dart';
 import 'entities/product.dart';
 
@@ -18,6 +19,10 @@ class ProductWishListModel extends ChangeNotifier {
   int get wishlistCount => products.length;
 
   Future<void> addToWishlist(Product product) async {
+    if (!UserBox().isLoggedIn) {
+      _failMessage(S.current.mustLoginToWishlist);
+      return;
+    }
     final isExist = products.indexWhere((item) => item.id == product.id) != -1;
     if (!isExist) {
 
