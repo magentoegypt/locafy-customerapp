@@ -48,7 +48,7 @@ dependencies:
   flare_flutter:
     git:
       url: https://github.com/inspireui/Flare-Flutter.git
-      ref: fd4bcba22aae4c028286e453deeb78f3311e689a
+      ref: 0211568820af2ba96fedb7c51462ec5a6bf566b9
       path: flare_flutter
   flash:
   flutter:
@@ -137,12 +137,14 @@ dependency_overrides:
 
 flutter_icons:
   #  image_path: "assets/images/icon-128x128.png"
-  image_path_android: "assets/images/app-icon.png"
-  image_path_ios: "assets/images/app-icon.png"
+  image_path_android: "assets/images/app-icon-square.png"
+  image_path_ios: "assets/images/app-icon-square.png"
   android: true # can specify file name here e.g. "ic_launcher"
-  ios: true # can specify file name here e.g. "My-Launcher-Icon"
-  adaptive_icon_background: "assets/images/app-icon.png" # only available for Android 8.0 devices and above
-  adaptive_icon_foreground: "assets/images/app-icon.png" # only available for Android 8.0 devices and above
+  ios: false # keep the existing (approved) iOS icon as reference — only regenerate Android
+  # Solid background + a padded foreground so the Android adaptive mask does not
+  # clip the wordmark (previously both layers were the full-bleed logo → cropped).
+  adaptive_icon_background: "#FFFFFF" # only available for Android 8.0 devices and above
+  adaptive_icon_foreground: "assets/images/app-icon-foreground.png" # only available for Android 8.0 devices and above
 
 flutter:
   generate: true

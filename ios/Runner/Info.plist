@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Magento Egypt Pro</string>
+	<string>Locafy</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -34,9 +34,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs camera access to scan QR codes</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Turning on location services allows Magento Egypt Pro App to show you place of transaction</string>
+	<string>Turning on location services allows Locafy App to show you place of transaction</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Turning on location services allows Magento Egypt Pro App to show you place of transaction</string>
+	<string>Turning on location services allows Locafy App to show you place of transaction</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Need to access your photo library to select a photo add and update profile picture</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
