@@ -10,7 +10,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:inspireui/icons/icon_picker.dart';
 import 'package:inspireui/inspireui.dart';
-import 'package:magentoegypt/ajstoreui/widgets/app_bar/appbar_title.dart';
 import 'package:magentoegypt/core/colors.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -82,7 +81,10 @@ class SettingScreenState extends State<SettingScreen>
   final bannerHigh = 150.0;
 
   List<SectionItem> items = [];
-  late List<SectionItem> myAccountItems = [
+  // Getter (not a cached `late` field) so the labels rebuild in the current
+  // language when the user switches locale — otherwise they stay frozen in the
+  // language that was active when the screen first built.
+  List<SectionItem> get myAccountItems => [
     SectionItem(title: S.of(context).myOrders, url: "myOrders"),
     SectionItem(title: S.of(context).myWishList, url: "myWishList"),
     SectionItem(title: S.of(context).addressBook, url: "addressBook"),
@@ -95,7 +97,10 @@ class SettingScreenState extends State<SettingScreen>
     SectionItem(title: S.of(context).returnMerchandiseAuthorization, url: "https://stg.locafy.market/eg-en/csrma/customerrma/index/"),
   ];
 
-  late final List<Section> sections = [
+  // Getter (not a cached `late final` field) so section titles/items rebuild in
+  // the current language on locale switch instead of staying in the language
+  // active at first build.
+  List<Section> get sections => [
     Section(
       title: S.of(context).customerService,
       items: [
@@ -110,14 +115,6 @@ class SettingScreenState extends State<SettingScreen>
       title:  S.of(context).aboutLocafy,
       items: [
         SectionItem(title: S.of(context).aboutUs, url: "https://stg.locafy.market/eg-en/about-us"),
-        SectionItem(title: S.of(context).ourSellers, url: "https://stg.locafy.market/eg-en/csmarketplace/vshops/index/?search="),
-      ],
-    ),
-    Section(
-      title: S.of(context).forSellers,
-      items: [
-        SectionItem(title: S.of(context).whySellOnLocafy, url: "https://stg.locafy.market/eg-en/why-sell-on-locafy-en"),
-        SectionItem(title: S.of(context).joinAsSeller, url: "https://stg.locafy.market/eg-en/csmarketplace/account/approval/"),
       ],
     ),
     Section(
@@ -947,6 +944,12 @@ class SettingScreenState extends State<SettingScreen>
   Widget build(BuildContext context) {
     super.build(context);
 
+    // Listen to the auth state so this screen rebuilds immediately on
+    // login/logout (the `user` getter reads with listen:false). Without this the
+    // My Account page kept showing the old logged-in/out state until a language
+    // switch forced a rebuild.
+    Provider.of<UserModel>(context);
+
     var settings = widget.settings ?? kDefaultSettings;
     var background = widget.background ?? kProfileBackground;
 
@@ -1052,8 +1055,7 @@ class SettingScreenState extends State<SettingScreen>
                               ),
                               child: GestureDetector(
                                 onTap: () {
-                                  // Handle navigation here
-
+                                  _openSectionItem(item);
                                 },
                                 child: Text(
                                   item.title,
@@ -1130,7 +1132,7 @@ class SettingScreenState extends State<SettingScreen>
                                       height: 48,
                                       child: OutlinedButton(
                                         style: OutlinedButton.styleFrom(
-                                          side: const BorderSide(color: Colors.red, width: 2),
+                                          side: const BorderSide(color: Colors.black, width: 2),
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(8),
                                           ),
@@ -1142,7 +1144,7 @@ class SettingScreenState extends State<SettingScreen>
                                         child: Text(
                                           S.of(context).newcreateAccount,
                                           style: const TextStyle(
-                                            color: Colors.red,
+                                            color: Colors.black,
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -1204,9 +1206,7 @@ class SettingScreenState extends State<SettingScreen>
                               child: _SettingItem(
                                 title:section.title,
                                 onTap: () async {
-                                  setState(() {
-
-                                  });
+                                  _openSectionItem(section);
                                 },
                               ),
                             );
@@ -1385,7 +1385,7 @@ class SettingScreenState extends State<SettingScreen>
                           child: TextButton(
                             onPressed: _onLogout,
                             child: Text(
-                              "Sign Out",
+                              S.of(context).signOut,
                               style: TextStyle(
                                 color: Colors.black,
                                 fontSize: 16,
@@ -1427,11 +1427,90 @@ class SettingScreenState extends State<SettingScreen>
     }
   }
 
+  void _openAuthWebView(String url, String title) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WebView(
+          auth: true,
+          url: url,
+          title: title,
+        ),
+      ),
+    );
+  }
+
+  /// Rewrites a store-view URL to the Arabic store view when the app language
+  /// is Arabic, so support / quick-link pages open in the matching language
+  /// (Arabic pages -> /eg-ar/..., English pages -> /eg-en/...).
+  /// CMS pages whose Arabic slug differs are mapped explicitly; pages that
+  /// have no Arabic version yet keep the English URL to avoid a 404.
+  String _localizeUrl(String url) {
+    final isArabic =
+        (Provider.of<AppModel>(context, listen: false).langCode ?? '')
+            .toLowerCase()
+            .startsWith('ar');
+    if (!isArabic || !url.contains('/eg-en/')) return url;
+
+    // CMS pages that do not have an Arabic version yet -> keep English.
+    const keepEnglish = ['faqs-english', 'privacy-policy-en'];
+    for (final slug in keepEnglish) {
+      if (url.contains(slug)) return url;
+    }
+
+    var localized = url.replaceFirst('/eg-en/', '/eg-ar/');
+    // CMS pages whose Arabic slug differs from the English one.
+    const slugMap = {
+      'delivery-returns-en': 'delivery-returns-ar',
+      'terms-conditions-en': 'terms-conditions-ar',
+    };
+    slugMap.forEach((en, ar) {
+      localized = localized.replaceFirst(en, ar);
+    });
+    return localized;
+  }
+
+  void _openSectionItem(SectionItem item) {
+    final url = item.url;
+    if (url.startsWith('http')) {
+      _openAuthWebView(_localizeUrl(url), item.title);
+      return;
+    }
+    switch (url) {
+      case 'myOrders':
+        FluxNavigate.pushNamed(
+          RouteList.orders,
+          arguments: user,
+        );
+        break;
+      case 'myWishList':
+        MainTabControlDelegate.getInstance().tabAnimateTo(2);
+        break;
+      case 'addressBook':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ShippingAddress(
+              isFromAddrssHistory: true,
+              isFromCheckout: false,
+            ),
+          ),
+        );
+        break;
+      case 'accountInformation':
+        _openAuthWebView(
+          '${ServerConfig().url}/my-account',
+          item.title,
+        );
+        break;
+    }
+  }
+
   void _processDeleteAccount() async {
     final result = await FluxNavigate.pushNamed(
       RouteList.deleteAccount,
       arguments: DeleteAccountArguments(
-        confirmCaptcha: "",
+        confirmCaptcha: "PERMANENTLY DELETE",
         userToken:
             Provider.of<UserModel>(context, listen: false).user?.cookie ?? '',
       ),
@@ -1589,7 +1668,14 @@ class HeaderSettingScreen extends StatelessWidget {
           //   height: 50,
           // ),
           if(items.isEmpty)
-          AppbarTitle(text: S.of(context).generalSettings,),
+          Text(
+            S.of(context).generalSettings,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
           Spacer()
           // const Icon(
           //   CupertinoIcons.search,

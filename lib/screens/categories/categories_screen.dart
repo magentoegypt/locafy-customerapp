@@ -282,7 +282,7 @@ class HeaderCategory extends StatelessWidget {
                         height: 48,
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.red, width: 2),
+                            side: const BorderSide(color: Colors.black, width: 2),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -294,7 +294,7 @@ class HeaderCategory extends StatelessWidget {
                           child: Text(
                             S.of(context).newcreateAccount,
                             style: const TextStyle(
-                              color: Colors.red,
+                              color: Colors.black,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
