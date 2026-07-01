@@ -86,12 +86,17 @@ class WebView extends StatefulWidget {
 }
 
 class _WebViewState extends State<WebView> with WebviewMixin, AppBarMixin {
-  int selectedIndex = 1;
+  bool _isLoading = true;
   String html = '';
 
   late final WebViewController _controller;
 
-  User? get user => Provider.of<UserModel>(context, listen: true).user;
+  // listen: false — this is read once in initState() (via _initWebView) to
+  // build the initial request URL, and Provider forbids listen: true lookups
+  // before initState() has completed (throws "dependOnInheritedElement...
+  // was called before initState() completed", silently swallowed by the
+  // app's global ErrorWidget.builder into a blank screen).
+  User? get user => Provider.of<UserModel>(context, listen: false).user;
 
   @override
   void initState() {
@@ -135,6 +140,9 @@ class _WebViewState extends State<WebView> with WebviewMixin, AppBarMixin {
       ..setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: (request) => getNavigationDelegate(request),
+          onPageStarted: (url) {
+            if (mounted) setState(() => _isLoading = true);
+          },
           onPageFinished: (url) {
             final script = widget.script.isEmptyOrNull
                 ? kAdvanceConfig.webViewScript
@@ -145,7 +153,15 @@ class _WebViewState extends State<WebView> with WebviewMixin, AppBarMixin {
             if (widget.onPageFinished != null) {
               widget.onPageFinished!(url);
             }
-            setState(() => selectedIndex = 0);
+            if (mounted) setState(() => _isLoading = false);
+          },
+          onWebResourceError: (error) {
+            // Never leave the user stuck on a blank loading overlay if the page
+            // fails or hangs (slow network, load error, redirect) — reveal the
+            // webview so its content or the browser error page is visible.
+            printLog(
+                '[WebView] resource error: ${error.errorCode} ${error.description}');
+            if (mounted) setState(() => _isLoading = false);
           },
         ),
       )
@@ -280,11 +296,10 @@ class _WebViewState extends State<WebView> with WebviewMixin, AppBarMixin {
               },
             ),
           ),
-      child: IndexedStack(
-        index: selectedIndex,
+      child: Stack(
         children: [
           WebViewWidget(controller: _controller),
-          Center(child: kLoadingWidget(context)),
+          if (_isLoading) Center(child: kLoadingWidget(context)),
         ],
       ),
     );
