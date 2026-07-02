@@ -362,13 +362,17 @@ class DefaultConfig {
   };
   static List<Map> languagesInfo = <Map>[];
   static Map paymentConfig = {};
+  // Field order mirrors the website's address form: First Name, Last Name,
+  // Phone, Street Address, Country, City (governorate/region), Zone
+  // (district/city). Email stays first — the website checkout asks for it
+  // before the address fields (optional; a default is assigned when empty).
   static List<AddressFieldConfig> addressFields = [
     {
       'type': 'email',
       'visible': true,
       'position': 1,
       'editable': true,
-      'required': true,
+      'required': false,
       'defaultValue': '',
     },
     {
@@ -388,22 +392,9 @@ class DefaultConfig {
       'defaultValue': '',
     },
     {
-      'type': 'country',
+      'type': 'phoneNumber',
       'visible': true,
       'position': 4,
-    },
-    {
-      'type': 'city',
-      'visible': true,
-      'position': 5,
-      'editable': true,
-      'required': true,
-      'defaultValue': '',
-    },
-    {
-      'type': 'block',
-      'visible': true,
-      'position': 6,
       'editable': true,
       'required': true,
       'defaultValue': '',
@@ -411,17 +402,30 @@ class DefaultConfig {
     {
       'type': 'street',
       'visible': true,
+      'position': 5,
+      'editable': true,
+      'required': true,
+      'defaultValue': '',
+    },
+    {
+      'type': 'country',
+      'visible': true,
+      'position': 6,
+    },
+    {
+      'type': 'city',
+      'visible': true,
       'position': 7,
       'editable': true,
       'required': true,
       'defaultValue': '',
     },
     {
-      'type': 'phoneNumber',
+      'type': 'block',
       'visible': true,
       'position': 8,
       'editable': true,
-      'required': false,
+      'required': true,
       'defaultValue': '',
     },
     {

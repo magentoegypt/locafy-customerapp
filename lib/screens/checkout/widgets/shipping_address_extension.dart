@@ -14,6 +14,40 @@ extension on _ShippingAddressState {
     _textControllers[AddressFieldType.phoneNumber]?.text =
         address?.phoneNumber ?? '';
     _textControllers[AddressFieldType.email]?.text = address?.email ?? '';
+    // Seed the national number so phoneValidationError() also works when the
+    // user saves without touching the phone field (onInputChanged never fired).
+    phoneNumberWithoutCountryCode = _nationalNumber(address?.phoneNumber);
+  }
+
+  /// The digits the user actually typed, without the dial code (e.g. +20).
+  String _nationalNumber(String? phone) {
+    var digits = (phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+    final dial =
+        (kPhoneNumberConfig.dialCodeDefault).replaceAll(RegExp(r'[^0-9]'), '');
+    if (dial.isNotEmpty && digits.length > 10 && digits.startsWith(dial)) {
+      digits = digits.substring(dial.length);
+    }
+    return digits;
+  }
+
+  /// Website rule: the national number must be exactly 10 digits and must not
+  /// start with 0. Returns the message to show, or null when the number is ok.
+  String? phoneValidationError() =>
+      phoneErrorFor(phoneNumberWithoutCountryCode);
+
+  /// Same rule applied to an arbitrary stored number (e.g. a saved address).
+  String? phoneErrorFor(String? rawPhone) {
+    final phone = _nationalNumber(rawPhone).trim();
+    if (phone.isEmpty) {
+      return S.of(context).enterMobile;
+    }
+    if (phone.startsWith('0')) {
+      return S.of(context).validMobileWithout0;
+    }
+    if (phone.length != 10) {
+      return S.of(context).validMobile;
+    }
+    return null;
   }
 
   void loadAddressFields(Address? address) {
@@ -111,20 +145,27 @@ extension on _ShippingAddressState {
             message: "Please select address first",
           );
         }else{
-          // _formKey.currentState!.validate();
-          // _formKey.currentState!.save();
-         // Provider.of<CartModel>(context, listen: false).setAddress(address);
+          // Saved addresses may predate the phone/region rules (or were
+          // synced from the website without a district) — block them here so
+          // the order payload never carries an invalid phone or empty
+          // region/city, and ask the user to edit the address instead.
+          final selected = listAddress[selectIndex];
+          final phoneError = phoneErrorFor(selected?.phoneNumber);
+          if (phoneError != null) {
+            _showMessage(phoneError);
+            return;
+          }
+          if (!(selected?.isValid() ?? false) || selected?.state == 'SG') {
+            _showMessage(S.of(context).pleaseUpdateAddress);
+            return;
+          }
           _loadShipping(beforehand: false);
           widget.onNext!();
         }
       }else{
-        print(phoneNumberWithoutCountryCode);
-        if((phoneNumberWithoutCountryCode ?? "").trim().isEmpty){
-          _showMessage(S.of(context).enterMobile);
-        }else if((phoneNumberWithoutCountryCode ?? "").trim().startsWith("0")){
-          _showMessage(S.of(context).validMobileWithout0);
-        }else if((phoneNumberWithoutCountryCode ?? "").trim().length != 10){
-          _showMessage(S.of(context).validMobile);
+        final phoneError = phoneValidationError();
+        if(phoneError != null){
+          _showMessage(phoneError);
         }else if (_formKey.currentState!.validate()) {
           _formKey.currentState!.save();
           Provider.of<CartModel>(context, listen: false).setAddress(address);
@@ -183,13 +224,20 @@ extension on _ShippingAddressState {
     }
     String? value;
 
-    City? firstCity = cities!
-        .firstWhereOrNull((o) => o.name.toString() == address!.city.toString());
+    // This dropdown lists the governorates, which are the store's Magento
+    // *regions* — the selection is kept in address.state so the order payload
+    // sends it as `region` and the summary shows its name (was showing the
+    // dead "SG" default).
+    City? firstCity = cities!.firstWhereOrNull(
+        (o) => o.name.toString() == address!.state.toString());
 
     if (firstCity != null) {
       value = firstCity.id;
     }
     return DropdownButtonFormField<dynamic>(
+      // Re-key on country so a country change discards the old
+      // FormFieldState (its value would otherwise survive the item reload).
+      key: ValueKey('governorate-${address!.country ?? ''}'),
       items: items,
       value: value,
       validator: (val) {
@@ -203,8 +251,11 @@ extension on _ShippingAddressState {
       onChanged: (dynamic val) async {
         City? city = cities!
             .firstWhereOrNull((o) => o.id.toString() == val.toString());
-        address!.city = city?.name;
+        address!.state = city?.name;
+        _textControllers[AddressFieldType.state]?.text = city?.name ?? '';
+        address!.city = '';
         address!.block = '';
+        _textControllers[AddressFieldType.city]?.text = '';
         _textControllers[AddressFieldType.block]?.text = '';
         if(city != null) {
           final zonesList =
@@ -233,13 +284,19 @@ extension on _ShippingAddressState {
     }
     String? value;
 
+    // The zones are the store's Magento *cities* (districts) — the selection
+    // is kept in address.city, matching what the website saves on the order.
     City? firstCity = zones!
-        .firstWhereOrNull((o) => o.name.toString() == address!.block.toString());
+        .firstWhereOrNull((o) => o.name.toString() == address!.city.toString());
 
     if (firstCity != null) {
       value = firstCity.id;
     }
     return DropdownButtonFormField<dynamic>(
+      // Re-key on the governorate: changing it reloads the zones and must
+      // discard the old FormFieldState, otherwise the stale selection passes
+      // the required-validator while address.city is already cleared.
+      key: ValueKey('zone-${address!.state ?? ''}'),
       items: items,
       value: value,
       validator: (val) {
@@ -253,7 +310,10 @@ extension on _ShippingAddressState {
       onChanged: (dynamic val) async {
         City? city = zones!
             .firstWhereOrNull((o) => o.id.toString() == val.toString());
-        address!.block = city?.name;
+        address!.city = city?.name;
+        _textControllers[AddressFieldType.city]?.text = city?.name ?? '';
+        address!.block = '';
+        _textControllers[AddressFieldType.block]?.text = '';
       },
       isExpanded: true,
       itemHeight: 70,
@@ -284,8 +344,10 @@ extension on _ShippingAddressState {
                       final c =
                           Country(id: country.isoCode, name: country.name);
                       cities = await Services().widget.loadCitiesWithCountry(c);
+                      address!.state = '';
                       address!.city = '';
                       address!.block = '';
+                      _textControllers[AddressFieldType.state]?.text = '';
                       _textControllers[AddressFieldType.city]?.text = '';
                       _textControllers[AddressFieldType.block]?.text = '';
                       refresh();
@@ -323,8 +385,10 @@ extension on _ShippingAddressState {
                             final c =
                             Country(id: countries![index].code, name: countries![index].name);
                             cities = await Services().widget.loadCitiesWithCountry(c);
+                            address!.state = '';
                             address!.city = '';
                             address!.block = '';
+                            _textControllers[AddressFieldType.state]?.text = '';
                             _textControllers[AddressFieldType.city]?.text = '';
                             _textControllers[AddressFieldType.block]?.text = '';
                             refresh();
@@ -385,13 +449,27 @@ extension on _ShippingAddressState {
         address?.state = value;
         break;
       case AddressFieldType.city:
+        // When the governorate dropdown could not load, the plain "City"
+        // text field takes its place — the typed value is the region.
+        if (cities?.isEmpty ?? true) {
+          address?.state = value;
+          _textControllers[AddressFieldType.state]?.text = value ?? '';
+        }
         address?.city = value;
         break;
       case AddressFieldType.apartment:
         address?.apartment = value;
         break;
       case AddressFieldType.block:
-        address?.block = value;
+        // The plain "Zone" text field only renders when the zones list is
+        // empty; under the Magento-aligned semantics the district it holds
+        // is the address *city*.
+        if (zones?.isEmpty ?? true) {
+          address?.city = value;
+          address?.block = '';
+        } else {
+          address?.block = value;
+        }
         break;
       case AddressFieldType.street:
         address?.street = value;
@@ -499,16 +577,26 @@ extension on _ShippingAddressState {
                   ).then((_) async {
                     getDataFromLocal();
                   });
-                }else if (_formKey.currentState!.validate()) {
-                  if (!checkToSave()) return;
-                  _formKey.currentState!.save();
-                  await Services().api.saveUserInfo(address!,false);
-                  if(widget.isFromAddrssHistory){
-                    Navigator.pop(context);
-                  }else {
-                    Provider.of<CartModel>(context, listen: false)
-                        .setAddress(address);
-                    // saveDataToLocal();
+                }else {
+                  // The save path must enforce the same phone rules as the
+                  // checkout Next button, otherwise invalid numbers can be
+                  // stored on the address book and reused at checkout.
+                  final phoneError = phoneValidationError();
+                  if (phoneError != null) {
+                    _showMessage(phoneError);
+                    return;
+                  }
+                  if (_formKey.currentState!.validate()) {
+                    if (!checkToSave()) return;
+                    _formKey.currentState!.save();
+                    await Services().api.saveUserInfo(address!,false);
+                    if(widget.isFromAddrssHistory){
+                      Navigator.pop(context);
+                    }else {
+                      Provider.of<CartModel>(context, listen: false)
+                          .setAddress(address);
+                      // saveDataToLocal();
+                    }
                   }
                 }
               },

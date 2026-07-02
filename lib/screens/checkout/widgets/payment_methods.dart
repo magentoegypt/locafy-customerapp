@@ -356,7 +356,9 @@ class _PaymentMethodsState extends State<PaymentMethods> {
         paymentMethod: paymentMethod,
         billingData: {
           "apartment": cartModel.address?.street,
-          "email": cartModel.address?.email,
+          // Email is optional at checkout; Paymob requires a non-empty
+          // billing email, so use the same fallback the order payload uses.
+          "email": cartModel.address?.effectiveEmail,
           "floor": cartModel.address?.street,
           "first_name": cartModel.address?.firstName,
           "last_name": cartModel.address?.lastName,

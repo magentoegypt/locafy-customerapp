@@ -842,6 +842,8 @@ class MessageLookup extends MessageLookupByLibrary {
             MessageLookupByLibrary.simpleMessage("يرجى ملء جميع الحقول"),
         "pleaseInputFillAllFields":
             MessageLookupByLibrary.simpleMessage("يرجى ملء جميع الخانات"),
+        "pleaseUpdateAddress": MessageLookupByLibrary.simpleMessage(
+            "هذا العنوان غير مكتمل. يرجى تعديله واختيار المدينة والمنطقة مرة أخرى."),
         "pleaseSelectADate":
             MessageLookupByLibrary.simpleMessage("الرجاء تحديد تاريخ الحجز"),
         "pleaseSelectALocation":
@@ -1125,7 +1127,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "street2": MessageLookupByLibrary.simpleMessage("شارع 2"),
         "streetIsRequired":
             MessageLookupByLibrary.simpleMessage("خانة اسم الشارع مطلوبة"),
-        "streetName": MessageLookupByLibrary.simpleMessage("اسم الشارع"),
+        "streetName": MessageLookupByLibrary.simpleMessage("عنوان الشارع"),
         "streetNameApartment": MessageLookupByLibrary.simpleMessage("الشقة"),
         "streetNameBlock": MessageLookupByLibrary.simpleMessage("الحي"),
         "submit": MessageLookupByLibrary.simpleMessage("أرسال"),

@@ -482,34 +482,37 @@ class ShippingAddressInfo extends StatelessWidget {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                SizedBox(
-                  width: 120,
-                  child: Text(
-                    '${S.of(context).email} :',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.secondary,
+          // Email is optional at checkout — only show the row when the
+          // shopper actually entered one.
+          if ((address.email ?? '').isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  SizedBox(
+                    width: 120,
+                    child: Text(
+                      '${S.of(context).email} :',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
                     ),
                   ),
-                ),
-                Expanded(
-                  child: Text(
-                    address.email!,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.secondary,
+                  Expanded(
+                    child: Text(
+                      address.email!,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
                     ),
-                  ),
-                )
-              ],
+                  )
+                ],
+              ),
             ),
-          ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 5),
             child: Row(
@@ -539,6 +542,9 @@ class ShippingAddressInfo extends StatelessWidget {
             ),
           ),
 
+          // Match the form's wording: "City" is the governorate (Magento
+          // region, held in address.state) and "Zone" is the district
+          // (address.city) — same labels the website uses.
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 5),
             child: Row(
@@ -557,7 +563,7 @@ class ShippingAddressInfo extends StatelessWidget {
                 ),
                 Expanded(
                   child: Text(
-                    address.city!,
+                    address.state ?? '',
                     style: TextStyle(
                       fontSize: 14,
                       color: Theme.of(context).colorScheme.secondary,
@@ -576,7 +582,7 @@ class ShippingAddressInfo extends StatelessWidget {
                 SizedBox(
                   width: 120,
                   child: Text(
-                    '${S.of(context).stateProvince} :',
+                    '${S.of(context).zone} :',
                     style: TextStyle(
                       fontSize: 14,
                       color: Theme.of(context).colorScheme.secondary,
@@ -585,7 +591,7 @@ class ShippingAddressInfo extends StatelessWidget {
                 ),
                 Expanded(
                   child: Text(
-                    address.state!,
+                    address.city ?? '',
                     style: TextStyle(
                       fontSize: 14,
                       color: Theme.of(context).colorScheme.secondary,

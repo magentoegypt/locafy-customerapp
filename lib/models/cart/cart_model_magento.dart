@@ -232,6 +232,11 @@ class CartModelMagento
     resetCoupon();
     notes = null;
     discountAmount = 0.0;
+    // Totals from the finished order must not leak into the next (empty)
+    // cart — without this the cart kept showing the previous order's tax.
+    shoppingList = [];
+    taxes = [];
+    taxesTotal = 0.0;
     notifyListeners();
   }
 
@@ -274,7 +279,32 @@ class CartModelMagento
     }
     String? skuString = variation != null ? variation.sku : product.sku;
     if(!isFromApi) {
-      final messagebody = await Services().api.addUpdateItemsToCart(product,skuString ?? "", quantity!, false);
+      // Re-adding a SKU that is already in the server cart must be sent as an
+      // update (absolute qty): POSTing the same SKU again makes Magento sum
+      // the quantities server-side and reject the request with "The requested
+      // qty is not available" whenever stock can't cover the sum.
+      final cartKey = skuString ?? product.id.toString();
+      final existingQty = productsInCart[cartKey] ?? 0;
+      final existingItemId = item[cartKey]?.itemID ?? product.itemID;
+
+      // Fail fast when the combined quantity exceeds the salable stock —
+      // the server would reject it with "The requested qty is not available".
+      final stockQty = variation?.stockQuantity ?? product.stockQuantity;
+      if (existingQty > 0 &&
+          stockQty != null &&
+          existingQty + (quantity ?? 1) > stockQty) {
+        return '${S.current.currentlyWeOnlyHave} $stockQty ${S.current.ofThisProduct}';
+      }
+
+      String? messagebody;
+      if (existingQty > 0 && (existingItemId?.isNotEmpty ?? false)) {
+        product.itemID = existingItemId;
+        messagebody = await Services().api.addUpdateItemsToCart(
+            product, skuString ?? "", existingQty + (quantity ?? 1), true);
+      } else {
+        messagebody = await Services().api.addUpdateItemsToCart(
+            product, skuString ?? "", quantity!, false);
+      }
       if (!(messagebody ?? "").isEmpty) {
         return messagebody ?? "";
       }

@@ -1169,6 +1169,16 @@ class S {
     );
   }
 
+  /// `This saved address is incomplete. Please edit it and select the city and zone again.`
+  String get pleaseUpdateAddress {
+    return Intl.message(
+      'This saved address is incomplete. Please edit it and select the city and zone again.',
+      name: 'pleaseUpdateAddress',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Searching Address`
   String get searchingAddress {
     return Intl.message(

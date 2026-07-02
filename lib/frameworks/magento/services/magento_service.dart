@@ -897,7 +897,9 @@ class MagentoService extends BaseServices {
               domain, 'guest-carts/$guestQuoteId/payment-information')!;
       var params = Order().toMagentoJson(cartModel!, null, paid);
       if (isGuest) {
-        params['email'] = cartModel.address!.email;
+        // Email is optional at checkout — effectiveEmail falls back to the
+        // per-phone default when the shopper left the field empty.
+        params['email'] = cartModel.address!.effectiveEmail;
         params['firstname'] = cartModel.address!.firstName;
         params['lastname'] = cartModel.address!.lastName;
       }

@@ -848,6 +848,8 @@ class MessageLookup extends MessageLookupByLibrary {
             "Please input fill in all fields"),
         "pleaseInputFillAllFields":
             MessageLookupByLibrary.simpleMessage("Please fill in all fields"),
+        "pleaseUpdateAddress": MessageLookupByLibrary.simpleMessage(
+            "This saved address is incomplete. Please edit it and select the city and zone again."),
         "pleaseSelectADate": MessageLookupByLibrary.simpleMessage(
             "Please select a booking date"),
         "pleaseSelectALocation":
@@ -1144,7 +1146,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "street2": MessageLookupByLibrary.simpleMessage("Street 2"),
         "streetIsRequired": MessageLookupByLibrary.simpleMessage(
             "The street name field is required"),
-        "streetName": MessageLookupByLibrary.simpleMessage("Street Name"),
+        "streetName": MessageLookupByLibrary.simpleMessage("Street Address"),
         "streetNameApartment":
             MessageLookupByLibrary.simpleMessage("Apartment"),
         "streetNameBlock": MessageLookupByLibrary.simpleMessage("Block"),

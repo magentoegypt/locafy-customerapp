@@ -141,13 +141,14 @@ class _ShippingAddressState extends State<ShippingAddress> {
             } else {
               var user = Provider.of<UserModel>(context, listen: false).user;
               setState(() {
+                // No default region: address.state is filled with the
+                // governorate the user picks in the City dropdown. Seeding it
+                // with DefaultStateISOCode made the summary show "SG".
                 address = Address(country: kPaymentConfig.defaultCountryISOCode);
-                if (kPaymentConfig.defaultStateISOCode != null) {
-                  address!.state = kPaymentConfig.defaultStateISOCode;
-                }
                 _textControllers[AddressFieldType.country]?.text =
                 address!.country!;
-                _textControllers[AddressFieldType.state]?.text = address!.state!;
+                _textControllers[AddressFieldType.state]?.text =
+                    address!.state ?? '';
                 if (user != null) {
                   address!.firstName = user.firstName;
                   address!.lastName = user.lastName;
@@ -214,10 +215,12 @@ class _ShippingAddressState extends State<ShippingAddress> {
             // );
 
             cities = await Services().widget.loadCitiesWithCountry(country);
+            // The city list holds the governorates (Magento regions); the
+            // current selection lives in address.state.
             var city = cities?.firstWhereOrNull(
-                  (element) => element.name == address?.city,
+                  (element) => element.name == address?.state,
             );
-            city ??= cities?.first;
+            city ??= cities?.firstOrNull;
 
             /// Load zipCode
             if (city != null) {
@@ -252,6 +255,21 @@ class _ShippingAddressState extends State<ShippingAddress> {
       address!.countryId = country.id;
     }
     _textControllers[AddressFieldType.country]?.text = country.code!;
+    refresh();
+
+    // Load the governorate (region) and district lists so the add/edit
+    // address form shows the same dropdowns as the checkout address step.
+    cities = await Services().widget.loadCitiesWithCountry(country);
+    var city = cities?.firstWhereOrNull(
+      (element) => element.name == address?.state,
+    );
+    city ??= cities?.firstOrNull;
+    if (city != null) {
+      final zonesList = await Services().widget.loadZones(city);
+      if (zonesList != null) {
+        zones = zonesList;
+      }
+    }
     refresh();
   }
 
@@ -815,85 +833,42 @@ class _ShippingAddressState extends State<ShippingAddress> {
 
   Widget convertToCard(BuildContext context, Address address) {
     final s = S.of(context);
+
+    Widget row(String label, String? value) {
+      if (value == null || value.isEmpty || value == 'null') {
+        return const SizedBox();
+      }
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 4.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              '$label:  ',
+              style: TextStyle(color: Theme.of(context).primaryColor),
+            ),
+            Flexible(
+              child: Column(
+                children: <Widget>[Text(value)],
+              ),
+            )
+          ],
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         const SizedBox(height: 10.0),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              '${s.streetName}:  ',
-              style: TextStyle(color: Theme.of(context).primaryColor),
-            ),
-            Flexible(
-              child: Column(
-                children: <Widget>[Text(address.street.toString())],
-              ),
-            )
-          ],
-        ),
-        const SizedBox(height: 4.0),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              '${s.city}:  ',
-              style: TextStyle(color: Theme.of(context).primaryColor),
-            ),
-            Flexible(
-              child: Column(
-                children: <Widget>[Text(address.city.toString())],
-              ),
-            )
-          ],
-        ),
-        const SizedBox(height: 4.0),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              '${s.stateProvince}:  ',
-              style: TextStyle(color: Theme.of(context).primaryColor),
-            ),
-            Flexible(
-              child: Column(
-                children: <Widget>[Text(address.state.toString())],
-              ),
-            )
-          ],
-        ),
-        const SizedBox(height: 4.0),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              '${s.country}:  ',
-              style: TextStyle(color: Theme.of(context).primaryColor),
-            ),
-            Flexible(
-              child: Column(
-                children: <Widget>[Text(address.country.toString())],
-              ),
-            )
-          ],
-        ),
-        const SizedBox(height: 4.0),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              '${s.zipCode}:  ',
-              style: TextStyle(color: Theme.of(context).primaryColor),
-            ),
-            Flexible(
-              child: Column(
-                children: <Widget>[Text(address.zipCode.toString())],
-              ),
-            )
-          ],
-        ),
-        const SizedBox(height: 10.0),
+        row(s.streetName, address.street),
+        // Same wording as the form/website: City = governorate (region,
+        // address.state), Zone = district (address.city).
+        row(s.city, address.state),
+        row(s.zone, address.city),
+        row(s.country, address.country),
+        row(s.zipCode, address.zipCode),
+        const SizedBox(height: 6.0),
       ],
     );
   }

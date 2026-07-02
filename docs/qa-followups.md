@@ -6,6 +6,32 @@ Device: Redmi (Android 16), staging API `stg.locafy.market`, test account `locaf
 
 ---
 
+## 0. Strong lead for item 1: `eg-en` REST rejects customer tokens  🔴 Backend
+
+While working ClickUp **86d3g53f8** (checkout page), API probing on staging (2026-07-02) showed:
+
+- `POST /rest/V1/integration/customer/token` (default store) → **works**, and the returned token works
+  against `/rest/V1/customers/me`, `/rest/V1/carts/mine`, `/rest/V1/carts/mine/payment-methods` etc.
+- The **same token** against the same endpoints under the store-code path the app uses —
+  `/rest/eg-en/V1/customers/me`, `/rest/eg-en/V1/carts/mine` — always returns
+  `{"message":"Specified request cannot be processed."}`.
+
+The app builds all its REST URLs with the `eg-en` store code, so **every customer-token call the app
+makes is failing at the store-view level**, which would fully explain item 1 below (add-to-cart 404 /
+quote not found for logged-in customers). Backend should check the `eg-en` store-view webapi
+configuration (integration/OAuth consumer availability per website, or a WAF rule scoped to that path).
+
+Also noted while testing checkout parity:
+- The website/backend applies **no tax** (`carts/mine/totals` → `tax_amount: 0`); the old in-app 14%
+  line came from the app applying raw `taxRates/search` rates locally (now config-gated off).
+- Website payment methods for a live quote: `sympl, cashondelivery, online, wallet, fawry_express,
+  fawry_cards, fawry_cash` — the app renders the API list unfiltered/unreordered, so it matches.
+- Email at checkout is optional on the website. The app now sends a fallback
+  `guest<phone-digits>@locafy.market` when the shopper leaves email empty — if the website assigns a
+  different default (server-side plugin), share the rule and we'll mirror it exactly.
+
+---
+
 ## 1. Add-to-cart fails with backend 404 — checkout fully blocked  🔴 Backend
 
 **Symptom**
