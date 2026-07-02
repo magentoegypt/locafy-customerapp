@@ -17,6 +17,7 @@ import 'index.dart'
         CartIcon,
         CartQuantity,
         HeartButton,
+        ProductBrand,
         ProductImage,
         ProductOnSale,
         ProductPricing,
@@ -92,8 +93,9 @@ class _ProductCardState extends State<ProductCard> with ActionButtonMixin {
         //const TempStartRating(),
 
         ///=====
-        const Divider(),
+        const Divider(height: 10),
         // const SizedBox(height: 10),
+        ProductBrand(product: widget.item),
         Center(
           child: ProductTitle(
             product: widget.item,
@@ -102,7 +104,7 @@ class _ProductCardState extends State<ProductCard> with ActionButtonMixin {
           ),
         ),
         StoreName(product: widget.item, hide: widget.config.hideStore),
-        const SizedBox(height: 5),
+        const SizedBox(height: 2),
         ProductPricing(
           product: widget.item,
           hide: widget.config.hidePrice,

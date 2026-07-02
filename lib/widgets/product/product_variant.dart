@@ -19,6 +19,10 @@ class BasicSelection extends StatelessWidget {
   final Function? onChanged;
   final VariantLayout? layout;
 
+  /// Option label -> swatch value (hex color or image URL), when the
+  /// backend ships swatches with the attribute options.
+  final Map<String, String>? swatchCodes;
+
   const BasicSelection(
       {super.key,
         required this.product,
@@ -28,6 +32,7 @@ class BasicSelection extends StatelessWidget {
       this.type,
       this.layout,
       this.onChanged,
+      this.swatchCodes,
       this.imageUrls});
 
   @override
@@ -41,7 +46,6 @@ class BasicSelection extends StatelessWidget {
         onChanged: onChanged,
       );
     }
-    final validValue = options.contains(value) ? value : null;
     if (type == 'image') {
       return ImageSelection(
         imageUrls: imageUrls,
@@ -52,201 +56,100 @@ class BasicSelection extends StatelessWidget {
       );
     }
 
+    /// Web-parity layout: attribute label above a wrap of selectable
+    /// swatches ('color') or labeled rectangular boxes (default/'box').
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.max,
-      mainAxisAlignment: MainAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Text(
-                  // ignore: prefer_single_quotes
-                  "${title![0].toUpperCase()}${title!.substring(1)}",
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        DropdownButtonFormField<String>(
-          value: validValue,
-          isExpanded: true,
-          decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-              ),
+        if (title?.isNotEmpty ?? false)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              // ignore: prefer_single_quotes
+              "${title![0].toUpperCase()}${title!.substring(1)}",
+              style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
-          icon: const Icon(Icons.arrow_drop_down),
-          items: options.map<DropdownMenuItem<String>>((item) {
-            final optionValue = item ?? '';
-
-            if (type == 'color') {
-              final colorCode = getColorCode(optionValue);
-              final isImage = colorCode.contains("http");
-              final bgColor = HexColor(isImage ? '#ffffff' : colorCode);
-
-              return DropdownMenuItem<String>(
-                value: optionValue,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 25,
-                      height: 25,
-                      decoration: BoxDecoration(
-                        color: bgColor,
-                        image: isImage
-                            ? DecorationImage(
-                          image: NetworkImage(colorCode),
-                          fit: BoxFit.cover,
-                        )
-                            : null,
-                        borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withOpacity(0.3),
-                        ),
-                      ),
-                      child: optionValue.toUpperCase() == (value ?? '').toUpperCase()
-                          ? const Icon(Icons.check, color: Colors.white, size: 16)
-                          : null,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        optionValue,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            } else {
-              return DropdownMenuItem<String>(
-                value: optionValue,
-                child: Text(
-                  optionValue,
-                  style: TextStyle(
-                    color: optionValue == value
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.secondary,
-                    fontSize: 14,
-                  ),
-                ),
-              );
-            }
-          }).toList(),
-          onChanged: (newValue) {
-            if (onChanged != null) {
-              onChanged!(newValue);
-            }
-          },
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 8.0,
+          children: <Widget>[
+            for (final item in options)
+              if (item != null) _buildOption(context, item, primaryColor),
+          ],
         ),
-
-        // Wrap(
-        //   spacing: 0.0,
-        //   runSpacing: 12.0,
-        //   children: <Widget>[
-        //     for (var item in options)
-        //       GestureDetector(
-        //         onTap: () => onChanged!(item),
-        //         behavior: HitTestBehavior.opaque,
-        //         child: Tooltip(
-        //           message: item.toString(),
-        //           verticalOffset: 32,
-        //           preferBelow: false,
-        //           child: AnimatedContainer(
-        //             duration: const Duration(milliseconds: 300),
-        //             curve: Curves.easeIn,
-        //             margin: const EdgeInsets.only(
-        //               right: 12.0,
-        //               top: 8.0,
-        //             ),
-        //             decoration: type == 'color'
-        //                 ? BoxDecoration(
-        //                     color: item!.toUpperCase() == value!.toUpperCase()
-        //                         ? HexColor(getColorCode(item).contains("http") ? '#ffffff':getColorCode(item))
-        //                     // HexColor(kNameToHex[getColorCode(item)
-        //                     //             .toString()
-        //                     //             .replaceAll(' ', '_')
-        //                     //             .toLowerCase()] ??
-        //                     //         '#ffffff')
-        //                         : HexColor(getColorCode(item).contains("http") ? '#ffffff':getColorCode(item))
-        //                             .withOpacity(1.0),
-        //               image: getColorCode(item).contains("http") ? DecorationImage(
-        //                 image: NetworkImage(getColorCode(item)),
-        //                 fit: BoxFit.fill,
-        //               ):null,
-        //                     borderRadius: BorderRadius.circular(25),
-        //                     border: Border.all(
-        //                       width: 1.0,
-        //                       color: Theme.of(context)
-        //                           .colorScheme
-        //                           .secondary
-        //                           .withOpacity(0.3),
-        //                     ),
-        //                   )
-        //                 : BoxDecoration(
-        //                     color: item!.toUpperCase() == value!.toUpperCase()
-        //                         ? primaryColor
-        //                         : Colors.transparent,
-        //                     borderRadius: BorderRadius.circular(5.0),
-        //                     border: Border.all(
-        //                       color: Theme.of(context)
-        //                           .colorScheme
-        //                           .secondary
-        //                           .withOpacity(0.3),
-        //                     ),
-        //                   ),
-        //             child: type == 'color'
-        //                 ? SizedBox(
-        //                     height: 25,
-        //                     width: 25,
-        //                     child: item == value
-        //                         ? const Icon(
-        //                             Icons.check,
-        //                             color: Colors.white,
-        //                             size: 16,
-        //                           )
-        //                         : const SizedBox(),
-        //                   )
-        //                 : Container(
-        //                     constraints: const BoxConstraints(minWidth: 40),
-        //                     padding:
-        //                         const EdgeInsets.only(left: 10.0, right: 10.0),
-        //                     child: Padding(
-        //                       padding:
-        //                           const EdgeInsets.only(top: 10, bottom: 10),
-        //                       child: Text(
-        //                         item,
-        //                         textAlign: TextAlign.center,
-        //                         style: TextStyle(
-        //                           color: item == value
-        //                               ? Colors.white
-        //                               : Theme.of(context).colorScheme.secondary,
-        //                           fontSize: 14,
-        //                         ),
-        //                       ),
-        //                     ),
-        //                   ),
-        //           ),
-        //         ),
-        //       )
-        //   ],
-        // ),
-
       ],
     );
   }
+
+  Widget _buildOption(BuildContext context, String item, Color primaryColor) {
+    final secondary = Theme.of(context).colorScheme.secondary;
+    final selected = item.toUpperCase() == (value ?? '').toUpperCase();
+
+    if (type == 'color') {
+      final colorCode = swatchCodes?[item] ?? getColorCode(item);
+      final isImage = colorCode.contains('http');
+      final isHex = colorCode.startsWith('#');
+      return GestureDetector(
+        onTap: () => onChanged?.call(item),
+        child: Tooltip(
+          message: item,
+          verticalOffset: 24,
+          preferBelow: false,
+          child: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: isHex ? HexColor(colorCode) : Colors.white,
+              image: isImage
+                  ? DecorationImage(
+                      image: NetworkImage(colorCode),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+              shape: BoxShape.circle,
+              border: Border.all(
+                width: selected ? 2.0 : 1.0,
+                color: selected ? primaryColor : secondary.withOpacity(0.3),
+              ),
+            ),
+            child: selected
+                ? const Icon(
+                    Icons.check,
+                    color: Colors.white,
+                    size: 16,
+                  )
+                : null,
+          ),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () => onChanged?.call(item),
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 44),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: selected ? primaryColor : secondary.withOpacity(0.3),
+          ),
+        ),
+        child: Text(
+          item,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            color: selected ? Colors.white : secondary,
+          ),
+        ),
+      ),
+    );
+  }
+
    String getColorCode(String item){
      String colorCode = "#ffffff";
      product?.productOptions?.forEach((element){

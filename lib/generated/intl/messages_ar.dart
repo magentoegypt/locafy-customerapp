@@ -650,7 +650,7 @@ class MessageLookup extends MessageLookupByLibrary {
             MessageLookupByLibrary.simpleMessage("وضع علامة كغير مقروءة"),
         "maximumFileSizeMb": m15,
         "maybeLater": MessageLookupByLibrary.simpleMessage("يمكن لاحقاً"),
-        "menuOrder": MessageLookupByLibrary.simpleMessage("ترتيب القائمة"),
+        "menuOrder": MessageLookupByLibrary.simpleMessage("موقع"),
         "message": MessageLookupByLibrary.simpleMessage("رسالة"),
         "messageTo": MessageLookupByLibrary.simpleMessage("إرسال رسالة إلى"),
         "minimumQuantityIs":
@@ -1048,6 +1048,8 @@ class MessageLookup extends MessageLookupByLibrary {
         "sendSMSCode":
             MessageLookupByLibrary.simpleMessage("إرسال كود التفعيل للواتس اب"),
         "serbian": MessageLookupByLibrary.simpleMessage("الصربية"),
+        "requestedQtyNotAvailable": MessageLookupByLibrary.simpleMessage(
+            "الكمية المطلوبة غير متوفرة"),
         "sessionExpired": MessageLookupByLibrary.simpleMessage("انتهت الجلسة"),
         "setAnAddressInSettingPage": MessageLookupByLibrary.simpleMessage(
             "يرجى تحديد عنوان في صفحة الإعدادات"),

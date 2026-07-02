@@ -82,14 +82,17 @@ class _StateProductVariant extends State<ProductCartButtons> {
           }
           this.mapAttribute = mapAttribute ?? {};
           if (variations != null) {
-            context.read<ProductModel>().changeProductVariations(
-                  variations,
-                  notify: false,
-                );
+            final model = context.read<ProductModel>();
+            model.changeProductVariations(
+              variations,
+              notify: false,
+            );
             productVariation = variation;
-            context
-                .read<ProductModel>()
-                .changeSelectedVariation(productVariation);
+            // Don't overwrite a selection the user already made (the body
+            // selector runs this same flow and may finish later).
+            if (model.selectedVariation == null) {
+              model.changeSelectedVariation(productVariation);
+            }
           }
           if (!mounted) {
             return;
@@ -183,7 +186,7 @@ class _StateProductVariant extends State<ProductCartButtons> {
   }
 
   /// Add to Cart & Buy Now function
-  void addToCart([bool buyNow = false, bool inStock = false]) {
+  Future<void> addToCart([bool buyNow = false, bool inStock = false]) async {
     if (buyNow &&
         Services().widget.enableInAppPurchase &&
         !ServerConfig().isBuilder) {
@@ -197,15 +200,26 @@ class _StateProductVariant extends State<ProductCartButtons> {
         services.widget.addToCart(context, product, quantity, productVariation,
             mapAttribute ?? {}, buyNow, inStock);
       });
-    } else {
-      services.widget.addToCart(context, product, quantity, productVariation,
-          mapAttribute ?? {}, buyNow, inStock);
+      return;
     }
-    showModalBottomSheet(
+
+    final success = await services.widget.addToCart(context, product, quantity,
+        productVariation, mapAttribute ?? {}, buyNow, inStock);
+
+    /// Only confirm items that were actually added; Buy Now already
+    /// navigates to the cart.
+    if (!success || buyNow || !mounted) {
+      return;
+    }
+    final selectedVariation = context.read<ProductModel>().selectedVariation;
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) =>  AddToBagSheet(product: product,),
+      builder: (context) => AddToBagSheet(
+        product: product,
+        variation: selectedVariation,
+      ),
     );
   }
 

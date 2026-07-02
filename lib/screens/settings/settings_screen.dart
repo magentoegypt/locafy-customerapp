@@ -89,12 +89,12 @@ class SettingScreenState extends State<SettingScreen>
     SectionItem(title: S.of(context).myWishList, url: "myWishList"),
     SectionItem(title: S.of(context).addressBook, url: "addressBook"),
     SectionItem(title: S.of(context).accountInformation, url: "accountInformation"),
-    SectionItem(title: S.of(context).storedPaymentMethods, url: "https://stg.locafy.market/eg-en/vault/cards/listaction/"),
-    SectionItem(title: S.of(context).myProductReviews, url: "https://stg.locafy.market/eg-en/review/customer/"),
-    SectionItem(title: S.of(context).newsletterSubscriptions, url: "https://stg.locafy.market/eg-en/newsletter/manage/"),
-    SectionItem(title: S.of(context).discountCoupons, url: "https://stg.locafy.market/eg-en/referralsystem/payout/"),
-    SectionItem(title: S.of(context).myWallet, url: "https://stg.locafy.market/eg-en/wallet/wallet/transaction/"),
-    SectionItem(title: S.of(context).returnMerchandiseAuthorization, url: "https://stg.locafy.market/eg-en/csrma/customerrma/index/"),
+    SectionItem(title: S.of(context).storedPaymentMethods, url: "https://locafy.market/eg-en/vault/cards/listaction/"),
+    SectionItem(title: S.of(context).myProductReviews, url: "https://locafy.market/eg-en/review/customer/"),
+    SectionItem(title: S.of(context).newsletterSubscriptions, url: "https://locafy.market/eg-en/newsletter/manage/"),
+    SectionItem(title: S.of(context).discountCoupons, url: "https://locafy.market/eg-en/referralsystem/payout/"),
+    SectionItem(title: S.of(context).myWallet, url: "https://locafy.market/eg-en/wallet/wallet/transaction/"),
+    SectionItem(title: S.of(context).returnMerchandiseAuthorization, url: "https://locafy.market/eg-en/csrma/customerrma/index/"),
   ];
 
   // Getter (not a cached `late final` field) so section titles/items rebuild in
@@ -104,26 +104,26 @@ class SettingScreenState extends State<SettingScreen>
     Section(
       title: S.of(context).customerService,
       items: [
-        SectionItem(title: S.of(context).contactUs, url: "https://stg.locafy.market/eg-en/contact"),
-        SectionItem(title: S.of(context).faqs, url: "https://stg.locafy.market/eg-en/faqs-english"),
-        SectionItem(title: S.of(context).deliveryReturns, url: "https://stg.locafy.market/eg-en/delivery-returns-en"),
-        SectionItem(title: S.of(context).termsConditions, url: "https://stg.locafy.market/eg-en/terms-conditions-en"),
-        SectionItem(title: S.of(context).privacyPolicy, url: "https://stg.locafy.market/eg-en/privacy-policy-en"),
+        SectionItem(title: S.of(context).contactUs, url: "https://locafy.market/eg-en/contact"),
+        SectionItem(title: S.of(context).faqs, url: "https://locafy.market/eg-en/faqs-english"),
+        SectionItem(title: S.of(context).deliveryReturns, url: "https://locafy.market/eg-en/delivery-returns-en"),
+        SectionItem(title: S.of(context).termsConditions, url: "https://locafy.market/eg-en/terms-conditions-en"),
+        SectionItem(title: S.of(context).privacyPolicy, url: "https://locafy.market/eg-en/privacy-policy-en"),
       ],
     ),
     Section(
       title:  S.of(context).aboutLocafy,
       items: [
-        SectionItem(title: S.of(context).aboutUs, url: "https://stg.locafy.market/eg-en/about-us"),
+        SectionItem(title: S.of(context).aboutUs, url: "https://locafy.market/eg-en/about-us"),
       ],
     ),
     Section(
       title: S.of(context).quickLinks,
       items: [
-        SectionItem(title: S.of(context).mensCollections, url: "https://stg.locafy.market/eg-en/loca-men/clothing.html"),
-        SectionItem(title: S.of(context).womanCollections, url: "https://stg.locafy.market/eg-en/women-wear/clothing.html"),
-        SectionItem(title: S.of(context).kidsCollections, url: "https://stg.locafy.market/eg-en/kidswear/kids-3-12-years.html"),
-        SectionItem(title: S.of(context).allBrands, url: "https://stg.locafy.market/eg-en/csmarketplace/vshops/index/?search="),
+        SectionItem(title: S.of(context).mensCollections, url: "https://locafy.market/eg-en/loca-men/clothing.html"),
+        SectionItem(title: S.of(context).womanCollections, url: "https://locafy.market/eg-en/women-wear/clothing.html"),
+        SectionItem(title: S.of(context).kidsCollections, url: "https://locafy.market/eg-en/kidswear/kids-3-12-years.html"),
+        SectionItem(title: S.of(context).allBrands, url: "https://locafy.market/eg-en/csmarketplace/vshops/index/?search="),
       ],
     ),
     Section(
@@ -1245,7 +1245,7 @@ class SettingScreenState extends State<SettingScreen>
                         icon: SettingScreenItemIcon(icon: CupertinoIcons.info),
                         title: S.of(context).contactUs,
                         onTap: (){
-                          Tools.launchURL("https://stg.locafy.market/contact");
+                          Tools.launchURL("https://locafy.market/contact");
                         },
                       ),
                     ),

@@ -225,9 +225,13 @@ abstract class BaseFrameworks {
   ) =>
       [const SizedBox()];
 
-  void addToCart(BuildContext context, Product product, int quantity,
-      ProductVariation? productVariation, Map<String?, String?> mapAttribute,
-      [bool buyNow = false, bool inStock = false, bool inBackground = false]) {}
+  /// Returns true when the product was actually added to the cart.
+  Future<bool> addToCart(BuildContext context, Product product, int quantity,
+          ProductVariation? productVariation, Map<String?, String?> mapAttribute,
+          [bool buyNow = false,
+          bool inStock = false,
+          bool inBackground = false]) async =>
+      false;
 
   /// Load countries for shipping address
   Future<List<Country>?> loadCountries();

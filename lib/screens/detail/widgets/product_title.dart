@@ -326,13 +326,17 @@ class _ReviewsStarRatingState extends State<ReviewsStarRating> {
       return 0.0; // Return 0 if no ratings are available
     }
 
-    var sum = 0;
+    var sum = 0.0;
     var count = 0;
 
     for (final rating in ratings) {
-      final value = rating.value;
-      if (value is int || value is double) {
-        sum += value ?? 0;
+      // Prefer the precise 0-100 percent (÷20 → 0-5) over the whole-star
+      // `value`, which is rounded and inflates/deflates the average.
+      if (rating.percent != null) {
+        sum += rating.percent! / 20.0;
+        count++;
+      } else if (rating.value != null) {
+        sum += rating.value!;
         count++;
       }
     }

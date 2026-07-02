@@ -69,6 +69,13 @@ class BackdropMenu extends StatefulWidget {
 class _BackdropMenuState extends State<BackdropMenu> {
   double minPrice = 0.0;
   double maxPrice = 0.0;
+  // The RangeSlider's outer bound. Defaults to kMaxPriceFilter so an
+  // already-applied filter can still be widened upward (the currently
+  // loaded product list only reflects the filtered subset in that case, so
+  // it can't tell us the true catalog max). When no filter is applied yet,
+  // this is tightened to the current list's real max in initState so the
+  // slider fills the track instead of only occupying a sliver of it.
+  double _sliderMaxBound = kMaxPriceFilter;
   String? currentSlug;
   String? _categoryId = '-1';
   FilterSortBy? _currentSortBy;
@@ -92,10 +99,32 @@ class _BackdropMenuState extends State<BackdropMenu> {
   void initState() {
     super.initState();
     _categoryId = widget.categoryId;
-    minPrice = widget.minPrice ?? 0;
-    maxPrice = widget.maxPrice ?? 0;
     _currentSortBy = widget.sortBy;
 
+    if (widget.minPrice != null || widget.maxPrice != null) {
+      minPrice = widget.minPrice ?? 0;
+      maxPrice = widget.maxPrice ?? 0;
+    } else {
+      // No price filter has been applied yet — default the slider to the
+      // actual price range of the currently loaded products instead of
+      // 0.00-0.00, which reads as broken/empty.
+      final prices = productModel.productsList
+              ?.map((p) => double.tryParse(p.price ?? ''))
+              .whereType<double>()
+              .where((p) => p > 0)
+              .toList() ??
+          [];
+      if (prices.isNotEmpty) {
+        minPrice = prices.reduce((a, b) => a < b ? a : b).clamp(0, kMaxPriceFilter);
+        maxPrice = prices.reduce((a, b) => a > b ? a : b).clamp(0, kMaxPriceFilter);
+        // Safe here because nothing is filtered yet, so the loaded list is
+        // the full unfiltered catalog for this category/search — its max is
+        // a true ceiling, not just the top of an already-narrowed range.
+        if (maxPrice > 0) {
+          _sliderMaxBound = maxPrice;
+        }
+      }
+    }
   }
 
   void _onFilter({
@@ -234,7 +263,7 @@ class _BackdropMenuState extends State<BackdropMenu> {
           ),
           child: RangeSlider(
             min: 0.0,
-            max: kMaxPriceFilter,
+            max: _sliderMaxBound,
             divisions: kFilterDivision,
             values: RangeValues(minPrice, maxPrice),
             onChanged: (RangeValues value) {
@@ -445,7 +474,7 @@ class _BackdropMenuState extends State<BackdropMenu> {
               ),
             ),
 
-        //  if (widget.showLayout) ...renderLayout(),
+          //  if (widget.showLayout) ...renderLayout(),
 
           if ((!ServerConfig().isListingType)) renderFilterSortBy(),
 
@@ -455,8 +484,13 @@ class _BackdropMenuState extends State<BackdropMenu> {
           if (!ServerConfig().isListingType &&
               ServerConfig().type != ConfigType.shopify &&
               widget.showPrice) ...[
-         //   renderPriceSlider(),
-         //   renderAttributes(),
+            renderPriceSlider(),
+            // Attribute filters (e.g. color, size) are not shown: they need
+            // FilterAttributeModel.getFilterAttributes()/getSubAttributes(),
+            // which has no Magento implementation (base_services.dart's
+            // no-op stub is the only one) — there is no backend endpoint for
+            // this yet. See docs/qa-followups.md.
+            // renderAttributes(),
           ],
 
           /// filter by tags

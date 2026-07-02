@@ -52,9 +52,11 @@ class Review {
     name = parsedJson['name'];
     email = parsedJson['email'];
     review = parsedJson['review'];
-    rating = parsedJson['rating'];
+    rating = parsedJson['rating'] is num
+        ? (parsedJson['rating'] as num).toDouble()
+        : null;
     createdAt = parsedJson['date_created'] != null
-        ? DateTime.parse(parsedJson['date_created'])
+        ? DateTime.tryParse('${parsedJson['date_created']}') ?? DateTime.now()
         : DateTime.now();
   }
 

@@ -8737,6 +8737,16 @@ class S {
     );
   }
 
+  /// `The requested quantity is not available`
+  String get requestedQtyNotAvailable {
+    return Intl.message(
+      'The requested quantity is not available',
+      name: 'requestedQtyNotAvailable',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `No conversation yet`
   String get noConversation {
     return Intl.message(
@@ -8757,10 +8767,10 @@ class S {
     );
   }
 
-  /// `Menu order`
+  /// `Position`
   String get menuOrder {
     return Intl.message(
-      'Menu order',
+      'Position',
       name: 'menuOrder',
       desc: '',
       args: [],

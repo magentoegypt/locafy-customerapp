@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert' as convert;
 import 'package:country_pickers/utils/utils.dart';
 import 'package:http/http.dart' as http;
@@ -45,6 +45,7 @@ class MagentoService extends BaseServices {
   String? guestQuoteId;
   Map<String, ProductAttribute>? attributes;
   List<String> brandIds = [];
+  Map<String, String>? _brandLabelsCache;
 
   MagentoService({
     required String domain,
@@ -54,7 +55,7 @@ class MagentoService extends BaseServices {
         guestQuoteId = null,
         super(domain: domain, blogDomain: blogDomain);
 
-  Product parseProductFromJson(productJson) {
+  Product parseProductFromJson(productJson, {Map<String, String>? brandLabels}) {
     final dateSaleFrom = MagentoHelper.getCustomAttribute(
         productJson['custom_attributes'], 'special_from_date');
     final dateSaleTo = MagentoHelper.getCustomAttribute(
@@ -107,13 +108,39 @@ class MagentoService extends BaseServices {
     var product = Product.fromMagentoJson(productJson);
     final description = MagentoHelper.getCustomAttribute(
         productJson['custom_attributes'], 'description');
-    product.description = description ??
-        MagentoHelper.getCustomAttribute(
-            productJson['custom_attributes'], 'short_description');
+    final shortDescription = MagentoHelper.getCustomAttribute(
+        productJson['custom_attributes'], 'short_description');
+    product.description = description ?? shortDescription;
+    // Only surface the short-description block when it isn't already the
+    // sole content of the Details section (description fallback above).
+    if (description != null) {
+      product.shortDescription = shortDescription;
+    }
     product.size_chart = MagentoHelper.getCustomAttribute(
         productJson['custom_attributes'], 'size_chart');
+
+    /// Marketplace seller ("Sold by …"), exposed by the backend as
+    /// extension_attributes.seller_name (+ seller_shop_url). id is left null so
+    /// the same-store related-products block stays off (no vendor API here).
+    final sellerName = productJson['extension_attributes']?['seller_name'];
+    if (sellerName is String && sellerName.isNotEmpty) {
+      product.store = Store.fromLocalJson({
+        'name': sellerName,
+        'website': productJson['extension_attributes']?['seller_shop_url'],
+      });
+    }
     if (productJson['type_id'] == 'configurable') {
-      if (product.price == null) {
+      // `product.price` (the entity field) is always null at this point —
+      // Product.fromMagentoJson() never sets it — so this used to always
+      // take the special_price/minimal_price branch below, then throw away
+      // the onSale/regularPrice/salePrice already computed above and hard
+      // -code onSale=false. That silently dropped every discount badge and
+      // "before" price for configurable products (the common case for
+      // clothing with size/color options), even when special_price made
+      // them genuinely on sale. Check the raw `price` value from the
+      // response instead, and reuse the onSale/salePrice already derived
+      // from special_price/date range above, same as simple products.
+      if (price == null) {
         if((MagentoHelper.getCustomAttribute(productJson['custom_attributes'], 'special_price') ?? "").isNotEmpty){
           product.price = MagentoHelper.getCustomAttribute(
               productJson['custom_attributes'], 'special_price');
@@ -124,24 +151,44 @@ class MagentoService extends BaseServices {
       } else {
         product.price = '$price';
       }
-      product.regularPrice = product.price;
-      product.salePrice = product.price;
-      product.onSale = false;
     } else {
       product.price = '$price';
-      product.regularPrice = "${productJson["price"]}";
-      product.salePrice = onSale ? salePrice : product.price;
-      product.onSale = onSale;
     }
+    // The parent/base `price` attribute is frequently 0/unset for
+    // configurable products in this store's data (real pricing lives on the
+    // child SKUs), even when special_price/date-range detection above
+    // correctly finds a discount. Only trust it as the "regular" (before
+    // discount) price when it's actually greater than the current price —
+    // otherwise claiming onSale=true with a bogus regularPrice of 0 shows a
+    // broken "0.00" strikethrough/badge instead of just the plain price.
+    final rawPriceValue = double.tryParse('${productJson["price"]}') ?? 0;
+    final currentPriceValue = double.tryParse(product.price ?? '') ?? 0;
+    final hasReliableRegularPrice = rawPriceValue > currentPriceValue;
+    product.regularPrice =
+        hasReliableRegularPrice ? "${productJson["price"]}" : product.price;
+    product.salePrice = onSale ? salePrice : product.price;
+    product.onSale = onSale && hasReliableRegularPrice;
 
     product.minimalPrice = minimalPrice;
     if (minimalPrice != null) {
-      product.original_price = product.price;
+      // Same reasoning as hasReliableRegularPrice above: only show
+      // minimal_price's predecessor as the "before" price when it's an
+      // actual, larger value.
+      final minimalPriceValue = double.tryParse(minimalPrice) ?? 0;
+      if (currentPriceValue > minimalPriceValue) {
+        product.original_price = product.price;
+      }
       product.price = minimalPrice;
       product.salePrice = minimalPrice;
     }
     product.images = images;
     product.imageFeature = images.isNotEmpty ? images[0] : null;
+
+    final brandId =
+        MagentoHelper.getCustomAttribute(productJson['custom_attributes'], 'brand');
+    if (brandId != null) {
+      product.vendor = brandLabels?[brandId];
+    }
 
     List<dynamic>? categoryIds;
     if (productJson['custom_attributes'] != null &&
@@ -246,6 +293,199 @@ class MagentoService extends BaseServices {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Maps the `brand` attribute's numeric option ids (what
+  /// `custom_attributes` gives us on a product) to their display label,
+  /// fetched once and cached for the app session.
+  Future<Map<String, String>> getBrandLabels() async {
+    if (_brandLabelsCache != null) return _brandLabelsCache!;
+    try {
+      final options = await getProductAttributesWithOption('brand');
+      _brandLabelsCache = {
+        for (final o in options)
+          if (o.value != null) o.value!: o.label ?? '',
+      };
+    } catch (e) {
+      _brandLabelsCache = {};
+    }
+    return _brandLabelsCache!;
+  }
+
+  List? _storeViewsCache;
+  Future<int?> _storeViewIdForCode(String code) async {
+    try {
+      if (_storeViewsCache == null) {
+        final res = await httpGet(
+            MagentoHelper.buildUrl(domain, 'store/storeViews')!,
+            headers: {'Authorization': 'Bearer $accessToken'});
+        if (res.statusCode == 200) {
+          final body = convert.jsonDecode(res.body);
+          if (body is List) {
+            _storeViewsCache = body;
+          }
+        }
+      }
+      final match = _storeViewsCache?.firstWhere(
+          (s) => s is Map && s['code'] == code,
+          orElse: () => null);
+      return match?['id'];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Map<String, Map<String, dynamic>>? _visibleAttributesCache;
+  String? _visibleAttributesCacheLang;
+
+  /// attribute_code -> {'label': localized label, 'options': value->label}
+  /// for every attribute flagged visible-on-front, fetched once per language.
+  /// Used to build the PDP "Product Details" table like the website's
+  /// "More Information" tab.
+  Future<Map<String, Map<String, dynamic>>> getVisibleFrontAttributes(
+      {String? lang}) async {
+    final langCode = (lang ?? SettingsBox().languageCode ?? 'en').toLowerCase();
+    if (_visibleAttributesCache != null &&
+        _visibleAttributesCacheLang == langCode) {
+      return _visibleAttributesCache!;
+    }
+    final result = <String, Map<String, dynamic>>{};
+    var succeeded = false;
+    try {
+      // Store-scoped path so option labels come localized.
+      final storePath = langCode == 'ar' ? 'eg-ar' : 'eg-en';
+      final storeId =
+          await _storeViewIdForCode(storePath.replaceAll('-', '_'));
+      final url = '$domain/$storePath/rest/V1/products/attributes?'
+          'searchCriteria[filter_groups][0][filters][0][field]=is_visible_on_front'
+          '&searchCriteria[filter_groups][0][filters][0][value]=1'
+          '&searchCriteria[pageSize]=200'
+          '&fields=items[attribute_code,default_frontend_label,frontend_labels,options]';
+      final res = await httpGet(url.toUri()!,
+          headers: {'Authorization': 'Bearer $accessToken'});
+      final body = convert.jsonDecode(res.body);
+      if (res.statusCode == 200 && body is Map && body['items'] is List) {
+        succeeded = true;
+        for (final item in body['items']) {
+          final code = item['attribute_code'];
+          if (code is! String || code.isEmpty) {
+            continue;
+          }
+          String? label;
+          final storeLabels = item['frontend_labels'];
+          if (storeId != null && storeLabels is List) {
+            final match = storeLabels.firstWhere(
+                (l) => l is Map && l['store_id'] == storeId,
+                orElse: () => null);
+            if (match != null && match['label'] is String) {
+              label = match['label'];
+            }
+          }
+          if (label == null && item['default_frontend_label'] is String) {
+            label = item['default_frontend_label'];
+          }
+          if (label == null || label.trim().isEmpty) {
+            continue;
+          }
+          final optionsMap = <String, String>{};
+          if (item['options'] is List) {
+            for (final option in item['options']) {
+              final value = '${option['value'] ?? ''}'.trim();
+              final optionLabel = option['label'];
+              if (value.isEmpty ||
+                  optionLabel is! String ||
+                  optionLabel.trim().isEmpty) {
+                continue;
+              }
+              optionsMap[value] = optionLabel.trim();
+            }
+          }
+          result[code] = {'label': label.trim(), 'options': optionsMap};
+        }
+      }
+    } catch (e) {
+      printLog('getVisibleFrontAttributes error: $e');
+    }
+    // Only cache a successful fetch — otherwise a transient failure would
+    // suppress the Product Details table for the whole app session.
+    if (succeeded) {
+      _visibleAttributesCache = result;
+      _visibleAttributesCacheLang = langCode;
+    }
+    return result;
+  }
+
+  /// Attributes shown elsewhere on the PDP — keep them out of the table.
+  static const _kExcludedInforCodes = [
+    'description',
+    'short_description',
+    'size_chart',
+  ];
+
+  /// Builds the localized "Product Details" rows (product.infors) from the
+  /// product's visible-on-front custom attributes.
+  Future<List<ProductAttribute>> getProductInfors(String? sku,
+      {String? lang}) async {
+    final infors = <ProductAttribute>[];
+    if (sku == null || sku.isEmpty) {
+      return infors;
+    }
+    try {
+      final meta = await getVisibleFrontAttributes(lang: lang);
+      if (meta.isEmpty) {
+        return infors;
+      }
+      final res = await httpGet(
+          MagentoHelper.buildUrl(domain,
+              'products/${Uri.encodeComponent(sku)}?fields=custom_attributes')!,
+          headers: {'Authorization': 'Bearer $accessToken'});
+      if (res.statusCode != 200) {
+        return infors;
+      }
+      final body = convert.jsonDecode(res.body);
+      final customAttributes = body is Map ? body['custom_attributes'] : null;
+      if (customAttributes is! List) {
+        return infors;
+      }
+      for (final attr in customAttributes) {
+        final code = attr['attribute_code'];
+        final rawValue = attr['value'];
+        final attrMeta = meta[code];
+        if (attrMeta == null ||
+            rawValue == null ||
+            _kExcludedInforCodes.contains(code)) {
+          continue;
+        }
+        final optionLabels = attrMeta['options'] as Map<String, String>;
+        final values = <String>[];
+        // Multiselect values arrive as comma-joined option ids.
+        for (final part in '$rawValue'.split(',')) {
+          final value = part.trim();
+          if (value.isEmpty) {
+            continue;
+          }
+          final resolved = optionLabels[value];
+          if (resolved != null) {
+            values.add(resolved);
+          } else if (optionLabels.isEmpty) {
+            // Text attribute — show the raw value.
+            values.add(value);
+          }
+        }
+        if (values.isEmpty) {
+          continue;
+        }
+        infors.add(ProductAttribute(
+          id: code,
+          name: attrMeta['label'],
+          label: attrMeta['label'],
+          options: values,
+        ));
+      }
+    } catch (e) {
+      printLog('getProductInfors error: $e');
+    }
+    return infors;
   }
 
   Future getAllAttributes() async {
@@ -562,6 +802,9 @@ class MagentoService extends BaseServices {
         return 'price';
       case 'title':
         return 'name';
+      // Matches the website's default "Sort by Position" option.
+      case 'menu_order':
+        return 'position';
       case 'popularity':
       case 'rating':
       case 'date':
@@ -615,21 +858,38 @@ class MagentoService extends BaseServices {
 
       }
       if (minPrice != null) {
+        // Was filter_groups[0].filters[1] — the SAME group as category_id
+        // above. Filters within one group are OR'd in Magento's
+        // searchCriteria, so that made the query
+        // "(category_id = X OR price >= minPrice) AND price <= maxPrice",
+        // which let any category item through regardless of price (proven
+        // on-device: a category item priced below minPrice still appeared).
+        // Needs its own group, isolated from category_id/maxPrice/onSale/
+        // search (groups 0/2/3/4), so it's a genuine AND condition.
         endPoint +=
-            '&searchCriteria[filter_groups][0][filters][1][field]=price&searchCriteria[filter_groups][0][filters][1][value]=$minPrice&searchCriteria[filter_groups][0][filters][1][condition_type]=gteq';
+            '&searchCriteria[filter_groups][5][filters][0][field]=price&searchCriteria[filter_groups][5][filters][0][value]=$minPrice&searchCriteria[filter_groups][5][filters][0][condition_type]=gteq';
       }
       if (maxPrice != null) {
         endPoint +=
             '&searchCriteria[filter_groups][2][filters][1][field]=price&searchCriteria[filter_groups][2][filters][1][value]=$maxPrice&searchCriteria[filter_groups][2][filters][1][condition_type]=lteq';
       }
       //Search by SKU
+      // Uses filter_groups[4] (not [0], which category_id/minPrice already
+      // occupy) so a text search performed inside a category doesn't
+      // silently overwrite the category filter via a duplicate query key.
       if (search != null) {
+        // This block used to be missing its leading '&', so whenever a
+        // category/price filter had already been appended above, this
+        // segment ran straight into it with no separator — corrupting the
+        // whole query string and causing the backend to 404 on searches
+        // performed from within a category.
+        if (endPoint != '?') endPoint += '&';
         if (kAdvanceConfig.enableSkuSearch) {
           endPoint +=
-              'searchCriteria[filter_groups][0][filters][0][field]=name&searchCriteria[filter_groups][0][filters][0][value]=%$search%&searchCriteria[filter_groups][0][filters][0][condition_type]=like&searchCriteria[filter_groups][0][filters][1][field]=sku&searchCriteria[filter_groups][0][filters][1][value]=%$search%&searchCriteria[filter_groups][0][filters][1][condition_type]=like';
+              'searchCriteria[filter_groups][4][filters][0][field]=name&searchCriteria[filter_groups][4][filters][0][value]=%$search%&searchCriteria[filter_groups][4][filters][0][condition_type]=like&searchCriteria[filter_groups][4][filters][1][field]=sku&searchCriteria[filter_groups][4][filters][1][value]=%$search%&searchCriteria[filter_groups][4][filters][1][condition_type]=like';
         } else {
           endPoint +=
-              'searchCriteria[filter_groups][0][filters][0][field]=name&searchCriteria[filter_groups][0][filters][0][value]=%$search%&searchCriteria[filter_groups][0][filters][0][condition_type]=like';
+              'searchCriteria[filter_groups][4][filters][0][field]=name&searchCriteria[filter_groups][4][filters][0][value]=%$search%&searchCriteria[filter_groups][4][filters][0][condition_type]=like';
         }
       }
       if (page != null) {
@@ -664,8 +924,9 @@ class MagentoService extends BaseServices {
 
       var list = <Product>[];
       if (response.statusCode == 200) {
+        final brandLabels = await getBrandLabels();
         for (var item in convert.jsonDecode(response.body)['items']) {
-          var product = parseProductFromJson(item);
+          var product = parseProductFromJson(item, brandLabels: brandLabels);
           list.add(product);
         }
       }
@@ -678,29 +939,119 @@ class MagentoService extends BaseServices {
 
   @override
   Future<PagingResponse<Review>>? getReviews(productId, {int page = 1, int perPage = 10}) async {
-    '********** getReviews is called'.log();
-
     try {
-      final response = await http.get(
-        Uri.parse(
-            '$domain/index.php/rest/V1/products/$productId/reviews'),
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'content-type': 'application/json'
-        },
+      // This Magento build has no REST review routes — reviews are only
+      // exposed via GraphQL. `productId` must be the product SKU.
+      final langCode = (SettingsBox().languageCode ?? 'en').toLowerCase();
+      final store = langCode == 'ar' ? 'eg_ar' : 'eg_en';
+      final query = '''
+{
+  products(filter: {sku: {eq: "$productId"}}) {
+    items {
+      reviews(pageSize: $perPage, currentPage: $page) {
+        items {
+          nickname
+          summary
+          text
+          average_rating
+          created_at
+        }
+      }
+    }
+  }
+}''';
+      final response = await httpPost(
+        '$domain/graphql'.toUri()!,
+        headers: {'content-type': 'application/json', 'Store': store},
+        body: convert.jsonEncode({'query': query}),
       );
-
       var list = <Review>[];
       if (response.statusCode == 200) {
-        // for (var item in convert.jsonDecode(response.body)) {
-        //   list.add(Review.fromMagentoJson(item));
-        // }
-        '**********inside response status code 200'.log();
+        final body = convert.jsonDecode(response.body);
+        final items = body?['data']?['products']?['items'];
+        if (items is List && items.isNotEmpty) {
+          final reviewItems = items.first?['reviews']?['items'];
+          if (reviewItems is List) {
+            for (final item in reviewItems) {
+              final summary = '${item['summary'] ?? ''}'.trim();
+              final text = '${item['text'] ?? ''}'.trim();
+              final rating = item['average_rating'];
+              list.add(Review.fromMagentoJson({
+                'name': item['nickname'],
+                'review': summary.isEmpty || summary == text
+                    ? text
+                    : '$summary\n$text',
+                // GraphQL returns a 0-100 percentage; the UI expects 0-5.
+                'rating': rating is num ? rating / 20.0 : null,
+                'date_created': item['created_at'],
+              }));
+            }
+          }
+        }
+      }
+      return PagingResponse(data: list);
+    } catch (e) {
+      // Degrade to the widget's empty state rather than leaving the
+      // Reviews section stuck on its loading spinner.
+      printLog('getReviews error: $e');
+      return PagingResponse(data: <Review>[]);
+    }
+  }
 
-        '********** ${response.body}'.log();
-      } else {
-        '********** ${response.statusCode}'.log();
-        '********** ${response.body}'.log();
+  @override
+  Future<PagingResponse<ProductReview>>? getProductReviews(productSKU, {int page = 1, int perPage = 10}) async {
+    try {
+      // Same GraphQL source as getReviews — the REST route doesn't exist.
+      final langCode = (SettingsBox().languageCode ?? 'en').toLowerCase();
+      final store = langCode == 'ar' ? 'eg_ar' : 'eg_en';
+      final query = '''
+{
+  products(filter: {sku: {eq: "$productSKU"}}) {
+    items {
+      reviews(pageSize: $perPage, currentPage: $page) {
+        items {
+          nickname
+          summary
+          text
+          average_rating
+          created_at
+        }
+      }
+    }
+  }
+}''';
+      final response = await httpPost(
+        '$domain/graphql'.toUri()!,
+        headers: {'content-type': 'application/json', 'Store': store},
+        body: convert.jsonEncode({'query': query}),
+      );
+      var list = <ProductReview>[];
+      if (response.statusCode == 200) {
+        final body = convert.jsonDecode(response.body);
+        final items = body?['data']?['products']?['items'];
+        if (items is List && items.isNotEmpty) {
+          final reviewItems = items.first?['reviews']?['items'];
+          if (reviewItems is List) {
+            for (final item in reviewItems) {
+              final percent = item['average_rating'];
+              list.add(ProductReview(
+                title: item['summary'],
+                detail: item['text'],
+                nickname: item['nickname'],
+                createdAt: '${item['created_at'] ?? ''}',
+                ratings: [
+                  if (percent is num)
+                    // GraphQL sends a 0-100 percentage; the star row
+                    // averages the 0-5 `value`s.
+                    Ratings(
+                      percent: percent.toInt(),
+                      value: (percent / 20).round(),
+                    ),
+                ],
+              ));
+            }
+          }
+        }
       }
       return PagingResponse(data: list);
     } catch (e) {
@@ -708,36 +1059,89 @@ class MagentoService extends BaseServices {
     }
   }
 
-  @override
-  Future<PagingResponse<ProductReview>>? getProductReviews(productSKU, {int page = 1, int perPage = 10}) async {
-    '********** getReviews is called'.log();
-
+  /// Rating-code metadata: rating_id -> ordered list of option value ids
+  /// (index i is the (i+1)-star option), from mobiconnect/review/ratingoption.
+  List<Map<String, dynamic>>? _ratingOptionsCache;
+  Future<List<Map<String, dynamic>>> _getRatingOptions() async {
+    if (_ratingOptionsCache != null) return _ratingOptionsCache!;
+    final result = <Map<String, dynamic>>[];
     try {
-      final response = await http.get(
-        Uri.parse(
-            '$domain/index.php/rest/V1/products/$productSKU/reviews'),
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'content-type': 'application/json'
-        },
-      );
-
-      var list = <ProductReview>[];
-      if (response.statusCode == 200) {
-        for (var item in convert.jsonDecode(response.body)) {
-          list.add(ProductReview.fromJson(item));
+      final res = await httpGet(
+          MagentoHelper.buildUrl(domain, 'mobiconnect/review/ratingoption')!,
+          headers: {'Authorization': 'Bearer $accessToken'});
+      if (res.statusCode == 200) {
+        final body = convert.jsonDecode(res.body);
+        final first = body is List && body.isNotEmpty ? body[0] : null;
+        final dataMap = first is Map ? first['data'] : null;
+        final options = dataMap is Map ? dataMap['rating-option'] : null;
+        if (options is List) {
+          for (final o in options) {
+            final ratingId = int.tryParse('${o['rating-id']}');
+            final values = (o['option'] as List?)
+                ?.map((v) => int.tryParse('${v['value']}'))
+                .whereType<int>()
+                .toList();
+            if (ratingId != null && values != null && values.isNotEmpty) {
+              result.add({'rating_id': ratingId, 'values': values});
+            }
+          }
         }
-        '**********inside response status code 200'.log();
-
-        '********** ${response.body}'.log();
-      } else {
-        '********** ${response.statusCode}'.log();
-        '********** ${response.body}'.log();
       }
-      return PagingResponse(data: list);
     } catch (e) {
-      rethrow;
+      printLog('getRatingOptions error: $e');
     }
+    if (result.isNotEmpty) {
+      _ratingOptionsCache = result;
+    }
+    return result;
+  }
+
+  @override
+  Future<Map<String, dynamic>?> createReview(
+      {String? productId, Map<String, dynamic>? data, String? token}) async {
+    // Clean, spoof-proof route: POST /products/{sku}/reviews, resource "self"
+    // (customer derived server-side from the token).
+    final sku = productId;
+    if (sku == null || sku.isEmpty) {
+      throw Exception('Missing product SKU');
+    }
+    final star = ((data?['rating'] as num?)?.round() ?? 0).clamp(1, 5);
+    final ratingOptions = await _getRatingOptions();
+    final ratings = <Map<String, dynamic>>[];
+    for (final o in ratingOptions) {
+      final values = o['values'] as List<int>;
+      // index star-1, guarding shorter lists.
+      final valueId = values[(star - 1).clamp(0, values.length - 1)];
+      ratings.add({'rating_id': o['rating_id'], 'value_id': valueId});
+    }
+    final text = '${data?['review'] ?? ''}'.trim();
+    final body = {
+      'review': {
+        'nickname': data?['reviewer'] ?? '',
+        // Magento requires a title; derive a short one from the body.
+        'summary': text.length > 40 ? '${text.substring(0, 40)}…' : text,
+        'text': text,
+        'ratings': ratings,
+      }
+    };
+    final res = await httpPost(
+      MagentoHelper.buildUrl(
+          domain, 'products/${Uri.encodeComponent(sku)}/reviews')!,
+      headers: {
+        'Authorization': 'Bearer ${token ?? UserBox().userInfo?.cookie}',
+        'content-type': 'application/json'
+      },
+      body: convert.jsonEncode(body),
+    );
+    final resBody = convert.jsonDecode(res.body);
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return resBody is Map
+          ? Map<String, dynamic>.from(resBody)
+          : {'status': 'pending'};
+    }
+    throw Exception(
+        (resBody is Map ? MagentoHelper.getErrorMessage(resBody) : null) ??
+            'Failed to submit review');
   }
 
   @override
@@ -752,15 +1156,22 @@ class MagentoService extends BaseServices {
           });
       List<ProductAttribute> attributes = await getConfigurableproductsAttributes(product.sku ?? "");
       product.attributes = attributes;
+
+      /// The store's configurable attribute codes vary per attribute set
+      /// (all_color, top_size, bottom_size...), so extract them from the
+      /// options/list response instead of the hard-coded config list.
+      final attributeCodes =
+          attributes.map((a) => a.name).whereType<String>().toList();
       var list = <ProductVariation>[];
       if (res.statusCode == 200) {
         for (var item in convert.jsonDecode(res.body)) {
-          var prod = ProductVariation.fromMagentoJson(item, product);
+          var prod = ProductVariation.fromMagentoJson(item, product,
+              attributeCodes: attributeCodes);
           Product? productStock = await getStockStatus(prod.sku);
           prod.inStock = productStock?.inStock;
+          prod.stockQuantity = productStock?.stockQuantity;
           prod.configurable_product_options = product.configurable_product_options;
           prod.configurable_product_links = product.configurable_product_links;
-          prod.price = product.price;//productStock?.price;
           list.add(prod);
         }
       }
@@ -1489,44 +1900,77 @@ class MagentoService extends BaseServices {
     if(!UserBox().isLoggedIn){
       return "";
     }
-    Uri? url;
-    var params = <String, dynamic>{};
-    params['qty'] = qty;
-    if(isUpdate){
-    params['item_id'] = product.itemID;
-    }
-    params['sku'] = sku;
-    params['quote_id'] = quoteId;
-    print(convert.jsonEncode(params));
     try {
-      //create a quote
-      url = isUpdate
-          ? MagentoHelper.buildUrl(domain, 'carts/mine/items/${product.itemID}')!
-          : MagentoHelper.buildUrl(domain, 'carts/mine/items')!;
-      var res =  isUpdate
-          ? await httpPut(url,
-          headers: {'Authorization': 'Bearer ${UserBox().userInfo?.cookie}','content-type': 'application/json'},
-          body: convert.jsonEncode({'cartItem': params}))
-          : await httpPost(url,
-          headers: {'Authorization': 'Bearer ${UserBox().userInfo?.cookie}','content-type': 'application/json'},
-          body: convert.jsonEncode({'cartItem': params}));
-      final body = convert.jsonDecode(res.body);
-      print(body);
-      if (res.statusCode == 200) {
-        if(!isUpdate){
-          product.itemID = body["item_id"].toString();
-        }
-        return "";
-      } else {
-        if (body['message'] != null) {
-          return body['message'];
-        }else {
-          return 'Something went wrong.';
+      var res = await _sendCartItemRequest(product, sku, qty, isUpdate);
+      var body = convert.jsonDecode(res.body);
+      var message = body is Map ? MagentoHelper.getErrorMessage(body) : null;
+
+      if (res.statusCode == 401) {
+        // Customer token expired — mirror createCart()'s behaviour instead of
+        // surfacing the raw "consumer isn't authorized" text.
+        _onLogout();
+        return S.current.sessionExpired;
+      }
+
+      /// A missing/inactive customer quote (typically right after placing an
+      /// order) 404s with "No such entity". Recreate the quote and retry once.
+      /// Only a fresh add (POST) is safe to retry this way — retrying a PUT
+      /// (which carries an *absolute* quantity) as a POST would add that total
+      /// on top of any existing line. A PUT that 404s on a stale item_id is
+      /// left to the next cart resync instead of being blindly re-added.
+      if (res.statusCode == 404) {
+        if ((message?.contains('No such entity') ?? false) && !isUpdate) {
+          try {
+            final created = await createCart();
+            if (created.isNotEmpty) {
+              return created;
+            }
+            res = await _sendCartItemRequest(product, sku, qty, false);
+            body = convert.jsonDecode(res.body);
+            message = body is Map ? MagentoHelper.getErrorMessage(body) : null;
+          } catch (_) {
+            return S.current.sessionExpired;
+          }
         }
       }
+
+      if (res.statusCode == 200) {
+        if (!isUpdate && body is Map) {
+          product.itemID = body['item_id'].toString();
+        }
+        return "";
+      }
+      if (message != null &&
+          message.toLowerCase().contains('requested qty is not available')) {
+        return S.current.requestedQtyNotAvailable;
+      }
+      return message ?? 'Something went wrong.';
     } catch (err) {
       rethrow;
     }
+  }
+
+  Future<dynamic> _sendCartItemRequest(
+      Product product, String sku, int qty, bool isUpdate) {
+    final params = <String, dynamic>{};
+    params['qty'] = qty;
+    if (isUpdate) {
+      params['item_id'] = product.itemID;
+    }
+    params['sku'] = sku;
+    params['quote_id'] = quoteId;
+    final url = isUpdate
+        ? MagentoHelper.buildUrl(domain, 'carts/mine/items/${product.itemID}')!
+        : MagentoHelper.buildUrl(domain, 'carts/mine/items')!;
+    final headers = {
+      'Authorization': 'Bearer ${UserBox().userInfo?.cookie}',
+      'content-type': 'application/json'
+    };
+    return isUpdate
+        ? httpPut(url,
+            headers: headers, body: convert.jsonEncode({'cartItem': params}))
+        : httpPost(url,
+            headers: headers, body: convert.jsonEncode({'cartItem': params}));
   }
 
 

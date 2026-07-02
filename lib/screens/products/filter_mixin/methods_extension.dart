@@ -33,7 +33,11 @@ extension ProductsFilterMixinMethodExtension on ProductsFilterMixin {
     }
 
     if (search != null) {
-      this.search = search;
+      // An empty string means the user cleared the search box (e.g. via the
+      // field's clear button) — treat it as "no search" so the title and
+      // product list revert to the category being browsed instead of
+      // getting stuck on the "Results" view.
+      this.search = search.isEmpty ? null : search;
     }
 
     // set attribute

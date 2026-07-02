@@ -16,8 +16,10 @@ import 'package:provider/provider.dart';
 
 import '../../../common/config.dart';
 import '../../../common/constants.dart';
+import '../../../common/tools.dart';
 import '../../../common/tools/flash.dart';
-import '../../../models/index.dart' show Product, ProductModel, UserModel, CartModel;
+import '../../../models/index.dart'
+    show AppModel, Product, ProductModel, UserModel, CartModel;
 import '../../../modules/dynamic_layout/tabbar/tabbar_icon.dart';
 import '../../../services/index.dart';
 import '../../cart/cart_screen.dart';
@@ -54,6 +56,13 @@ class _SimpleLayoutState extends State<SimpleLayout>
   var _hideController;
   var top = 0.0;
 
+  /// Sticky app-bar title: shows name + price once the on-page title
+  /// scrolls out of view.
+  late final ScrollController _scrollController;
+  bool _ownsScrollController = false;
+  final ValueNotifier<bool> _showStickyTitle = ValueNotifier(false);
+  final GlobalKey _titleKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +71,32 @@ class _SimpleLayoutState extends State<SimpleLayout>
       duration: const Duration(milliseconds: 450),
       value: 1.0,
     );
+    if (widget.scrollController != null) {
+      _scrollController = widget.scrollController!;
+    } else {
+      _scrollController = ScrollController();
+      _ownsScrollController = true;
+    }
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (!mounted) {
+      return;
+    }
+    var show = false;
+    final titleContext = _titleKey.currentContext;
+    final box = titleContext?.findRenderObject() as RenderBox?;
+    if (box != null && box.attached) {
+      final appBarBottom = MediaQuery.of(context).padding.top + 60;
+      final titleBottom = box.localToGlobal(Offset.zero).dy + box.size.height;
+      show = titleBottom < appBarBottom;
+    } else if (_scrollController.hasClients) {
+      show = _scrollController.offset > 300;
+    }
+    if (_showStickyTitle.value != show) {
+      _showStickyTitle.value = show;
+    }
   }
 
   @override
@@ -76,6 +111,11 @@ class _SimpleLayoutState extends State<SimpleLayout>
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    if (_ownsScrollController) {
+      _scrollController.dispose();
+    }
+    _showStickyTitle.dispose();
     _hideController.dispose();
     _selectIndexNotifier.dispose();
     super.dispose();
@@ -113,8 +153,21 @@ class _SimpleLayoutState extends State<SimpleLayout>
                       ),
                 backgroundColor: Theme.of(context).colorScheme.background,
                 appBar: CustomAppBar(
-                  height: getVerticalSize(60),
+                  // Fixed 60: the scaled value is < 60 on real devices and
+                  // squeezes the cart action until its badge gets clipped.
+                  height: 60,
                   leadingWidth: 40,
+                  title: ValueListenableBuilder<bool>(
+                    valueListenable: _showStickyTitle,
+                    builder: (context, show, _) => AnimatedOpacity(
+                      opacity: show ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 200),
+                      child: IgnorePointer(
+                        ignoring: !show,
+                        child: _StickyTitle(product: widget.product),
+                      ),
+                    ),
+                  ),
                   leading: IconButton(
                     icon: Icon(
                       Icons.arrow_back_ios,
@@ -145,8 +198,13 @@ class _SimpleLayoutState extends State<SimpleLayout>
                           selector: (_, model) => model.totalCartQuantity,
                           builder: (context, totalCart, child) {
                             return IconButton(
+                              // Give IconCart (icon + badge, ~29x29) a slot it
+                              // fits in; the default 24px slot clips the badge.
+                              padding: EdgeInsets.zero,
+                              iconSize: 30,
                               icon: IconCart(icon: Icon(
                                 CupertinoIcons.bag,
+                                size: 22,
                                 color: Theme.of(context).colorScheme.secondary.withOpacity(0.6),
                               ), totalCart: totalCart),
                               onPressed: () {
@@ -167,19 +225,29 @@ class _SimpleLayoutState extends State<SimpleLayout>
                     ),
                   ],
                 ),
-                bottomNavigationBar: Container(
-                  margin: getMargin(bottom: 10),
-                  height: 80,
-                  padding: getPadding(left: 10, right: 10, top: 10, bottom: 10),
-                  decoration: AppDecoration.outlineBlack90019.copyWith(
-                      borderRadius: BorderRadiusStyle.roundedBorder8,
-                      color: Theme.of(context).cardColor),
-                  child: ProductCartButtons(
-                    widget.product,
-                    isBuyNow: true,
+                // SafeArea(top: false) keeps the action buttons above the
+                // system navigation/gesture bar. The outer SafeArea uses
+                // bottom: false, so without this the bar sits under the
+                // system buttons and gets clipped on devices with an
+                // on-screen nav bar.
+                bottomNavigationBar: SafeArea(
+                  top: false,
+                  child: Container(
+                    margin: getMargin(bottom: 10),
+                    height: 80,
+                    padding:
+                        getPadding(left: 10, right: 10, top: 10, bottom: 10),
+                    decoration: AppDecoration.outlineBlack90019.copyWith(
+                        borderRadius: BorderRadiusStyle.roundedBorder8,
+                        color: Theme.of(context).cardColor),
+                    child: ProductCartButtons(
+                      widget.product,
+                      isBuyNow: true,
+                    ),
                   ),
                 ),
                 body: SingleChildScrollView(
+                  controller: _scrollController,
                   child: Column(
                     children: <Widget>[
                       // SliverAppBar(
@@ -323,6 +391,7 @@ class _SimpleLayoutState extends State<SimpleLayout>
                               },
                             ),
                           Padding(
+                            key: _titleKey,
                             padding: const EdgeInsets.only(
                               top: 8.0,
                               bottom: 4.0,
@@ -494,6 +563,69 @@ class _SimpleLayoutState extends State<SimpleLayout>
           ),
         );
       },
+    );
+  }
+}
+
+/// Compact name + price shown in the app bar once the on-page title has
+/// scrolled out of view. Reads the page-local [ProductModel] so the price
+/// follows the selected variation.
+class _StickyTitle extends StatelessWidget {
+  const _StickyTitle({required this.product});
+
+  final Product product;
+
+  @override
+  Widget build(BuildContext context) {
+    final variation =
+        context.select((ProductModel model) => model.selectedVariation);
+    final appModel = Provider.of<AppModel>(context);
+
+    String? price;
+    if (!product.isGroupedProduct) {
+      final onSale = variation != null
+          ? variation.onSale ?? false
+          : product.onSale ?? false;
+      price = variation != null && (variation.price?.isNotEmpty ?? false)
+          ? variation.price
+          : (product.price?.isNotEmpty ?? false)
+              ? product.price
+              : product.regularPrice;
+      if (onSale) {
+        price = variation != null
+            ? variation.salePrice
+            : (product.salePrice?.isNotEmpty ?? false)
+                ? product.salePrice
+                : product.price;
+      }
+    }
+    final formattedPrice = (price?.isEmpty ?? true)
+        ? null
+        : PriceTools.getCurrencyFormatted(price, appModel.currencyRate,
+            currency: appModel.currency);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          product.name ?? '',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        if (formattedPrice != null)
+          Text(
+            formattedPrice,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall!.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).primaryColor,
+                ),
+          ),
+      ],
     );
   }
 }

@@ -67,7 +67,7 @@ class AdditionalInformation extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
                 child: Align(
-                  alignment: Alignment.topLeft,
+                  alignment: AlignmentDirectional.topStart,
                   child: Text(
                     name.toString().capitalize(),
                     style: Theme.of(context).textTheme.titleSmall!.copyWith(
@@ -83,7 +83,7 @@ class AdditionalInformation extends StatelessWidget {
               flex: 6,
               child: attribute.name != 'color'
                   ? Align(
-                      alignment: Alignment.centerLeft,
+                      alignment: AlignmentDirectional.centerStart,
                       child: Text(attribute.options!.join(', '),
                           style: const TextStyle(
                             color: kGrey600,

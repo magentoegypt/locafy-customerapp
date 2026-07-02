@@ -1,14 +1,17 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:inspireui/widgets/coupon_card.dart';
 import 'package:provider/provider.dart';
 
+import '../../common/config.dart';
 import '../../common/constants.dart';
 import '../../common/tools.dart';
 import '../../data/boxes.dart';
 import '../../generated/l10n.dart';
 import '../../models/entities/filter_sorty_by.dart';
 import '../../models/index.dart';
+import '../../screens/detail/widgets/review.dart';
 import '../../services/index.dart';
+import '../../widgets/common/expansion_info.dart';
 import '../frameworks.dart';
 import '../product_variant_mixin.dart';
 import 'magento_payment.dart';
@@ -23,6 +26,22 @@ class MagentoWidget extends BaseFrameworks
 
   @override
   bool get enableProductReview => false;
+
+  /// Expandable "Reviews" section on the product page (web parity). Reviews
+  /// are read via GraphQL and submitted via the customer-token review API;
+  /// the submit form is shown to logged-in users only (Reviews gates on it).
+  @override
+  Widget productReviewWidget(Product product) {
+    if (!kProductDetail.enableReview) {
+      return const SizedBox();
+    }
+    return ExpansionInfo(
+      title: S.current.reviews,
+      children: [
+        Reviews(product.sku, allowRating: true),
+      ],
+    );
+  }
 
   @override
   Future<void> applyCoupon(context,
@@ -244,6 +263,10 @@ class MagentoWidget extends BaseFrameworks
   Future<void> onLoadedAppConfig(String? lang, Function callback) async {
     getAllAttributes();
     getListCountries();
+    // Warm the visible-on-front attribute metadata so the first product
+    // page's "Product Details" section isn't blocked on this fetch.
+    api.getVisibleFrontAttributes(lang: lang).catchError(
+        (_) => <String, Map<String, dynamic>>{});
   }
 
   @override
@@ -442,8 +465,17 @@ class MagentoWidget extends BaseFrameworks
         }
         product!.attributes = attrs;
       }
-      Product? productStock = await api.getStockStatus(product?.sku);
+      // Fetch stock and the "Product Details" rows concurrently — this is
+      // awaited before the PDP renders. getProductInfors never throws (it
+      // returns [] on failure).
+      final stockFuture = api.getStockStatus(product?.sku);
+      final inforsFuture = api.getProductInfors(product?.sku);
+      Product? productStock = await stockFuture;
       product!.inStock = productStock?.inStock;
+      product.stockQuantity ??= productStock?.stockQuantity;
+
+      /// Localized "Product Details" table rows (web "More Information").
+      product.infors = await inforsFuture;
       return product;
     } catch (e) {
       rethrow;
@@ -466,6 +498,11 @@ class MagentoWidget extends BaseFrameworks
   }
 
   @override
-  List<OrderByType> get supportedSortByOptions =>
-      [OrderByType.date, OrderByType.price, OrderByType.title];
+  List<OrderByType> get supportedSortByOptions => [
+        OrderByType.menu_order,
+        OrderByType.onSale,
+        OrderByType.date,
+        OrderByType.price,
+        OrderByType.title,
+      ];
 }

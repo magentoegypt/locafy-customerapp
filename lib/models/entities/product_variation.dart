@@ -180,7 +180,8 @@ class ProductVariation {
   }
 
   ProductVariation.fromMagentoJson(
-      Map<String, dynamic> parsedJson, Product product) {
+      Map<String, dynamic> parsedJson, Product product,
+      {List<String>? attributeCodes}) {
     String? getCustomAttribute(customAttributes, attribute) {
       String? value;
       if (customAttributes != null && customAttributes.length > 0) {
@@ -260,7 +261,9 @@ class ProductVariation {
         : product.imageFeature;
 
     var attributeList = <Attribute>[];
-    final attributesConfig = kAdvanceConfig.enableAttributesConfigurableProduct;
+    final attributesConfig = (attributeCodes?.isNotEmpty ?? false)
+        ? attributeCodes!
+        : kAdvanceConfig.enableAttributesConfigurableProduct;
 
     for (var element in attributesConfig) {
       final item = getCustomAttribute(parsedJson['custom_attributes'], element);

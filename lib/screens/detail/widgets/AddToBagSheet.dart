@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:magentoegypt/screens/detail/widgets/product_title.dart';
-import 'package:provider/provider.dart';
 import 'package:quiver/strings.dart';
 
 import '../../../common/config.dart';
@@ -9,14 +7,19 @@ import '../../../common/tools/image_resize.dart';
 import '../../../generated/l10n.dart';
 import '../../../models/entities/product.dart';
 import '../../../models/entities/product_variation.dart';
-import '../../../models/product_model.dart';
 import '../../../services/services.dart';
 import '../../../widgets/product/widgets/pricing.dart';
 import '../../cart/cart_screen.dart';
 
 class AddToBagSheet extends StatelessWidget {
   final Product? product;
-   AddToBagSheet({super.key, required this.product});
+
+  /// The variation that was added. Passed in explicitly because the modal
+  /// route sits outside the page-local ProductModel provider — reading the
+  /// provider here would get the global (empty) one and show the base price.
+  final ProductVariation? variation;
+
+   AddToBagSheet({super.key, required this.product, this.variation});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +27,7 @@ class AddToBagSheet extends StatelessWidget {
     String? price;
     bool onSale = false;
 
-    ProductVariation? productVariation = Provider.of<ProductModel>(context).selectedVariation;
+    ProductVariation? productVariation = variation;
    String? getProductPrice() {
       try {
         onSale = productVariation != null
@@ -52,11 +55,15 @@ class AddToBagSheet extends StatelessWidget {
     }
     return Container(
       padding: const EdgeInsets.all(16),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      ),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      child: Column(
+      child: SingleChildScrollView(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -98,13 +105,14 @@ class AddToBagSheet extends StatelessWidget {
 
           // Product info row
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Product image
               SizedBox(
                 height: 100,
                 width: 60,
                 child: ImageResize(
-                  url: product?.imageFeature,
+                  url: productVariation?.imageFeature ?? product?.imageFeature,
                   fit: BoxFit.contain,
                   isResize: true,
                   size: kSize.medium,
@@ -119,11 +127,10 @@ class AddToBagSheet extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Full name, wrapping to as many lines as needed.
                     Text(
                       product?.name ?? "",
                       softWrap: true,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -163,6 +170,7 @@ class AddToBagSheet extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }

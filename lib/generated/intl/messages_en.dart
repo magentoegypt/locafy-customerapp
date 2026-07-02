@@ -659,7 +659,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "markAsUnread": MessageLookupByLibrary.simpleMessage("Mark as unread"),
         "maximumFileSizeMb": m15,
         "maybeLater": MessageLookupByLibrary.simpleMessage("Maybe Later"),
-        "menuOrder": MessageLookupByLibrary.simpleMessage("Menu order"),
+        "menuOrder": MessageLookupByLibrary.simpleMessage("Position"),
         "message": MessageLookupByLibrary.simpleMessage("Message"),
         "messageTo": MessageLookupByLibrary.simpleMessage("Send Message To"),
         "minimumQuantityIs":
@@ -1064,6 +1064,8 @@ class MessageLookup extends MessageLookupByLibrary {
         "sendBack": MessageLookupByLibrary.simpleMessage("Send back"),
         "sendSMSCode": MessageLookupByLibrary.simpleMessage("Get code"),
         "serbian": MessageLookupByLibrary.simpleMessage("Serbian"),
+        "requestedQtyNotAvailable": MessageLookupByLibrary.simpleMessage(
+            "The requested quantity is not available"),
         "sessionExpired":
             MessageLookupByLibrary.simpleMessage("Session Expired"),
         "setAnAddressInSettingPage": MessageLookupByLibrary.simpleMessage(
