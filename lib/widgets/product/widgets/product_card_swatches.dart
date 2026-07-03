@@ -53,6 +53,9 @@ class ProductCardSwatches extends StatelessWidget {
     if (color == null && size == null) {
       return const SizedBox.shrink();
     }
+    // When both rows show, cap the sizes so colour circles + size chips stay
+    // within the card's reserved height.
+    final sizeLimit = color != null ? 4 : maxSizes;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
@@ -63,7 +66,7 @@ class ProductCardSwatches extends StatelessWidget {
         ],
         if (size != null) ...[
           const SizedBox(height: 8),
-          _sizeRow(context, size),
+          _sizeRow(context, size, sizeLimit),
         ],
       ],
     );
@@ -124,10 +127,10 @@ class ProductCardSwatches extends StatelessWidget {
         color: (hex?.startsWith('#') ?? false) ? HexColor(hex!) : Colors.white,
       );
 
-  Widget _sizeRow(BuildContext context, ConfigurableSwatch swatch) {
+  Widget _sizeRow(BuildContext context, ConfigurableSwatch swatch, int limit) {
     final options =
         swatch.options.where((o) => (o.label?.isNotEmpty ?? false)).toList();
-    final shown = options.take(maxSizes).toList();
+    final shown = options.take(limit).toList();
     final extra = options.length - shown.length;
     return Wrap(
       alignment: WrapAlignment.center,
