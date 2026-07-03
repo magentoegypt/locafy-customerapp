@@ -16,6 +16,7 @@ import '../../../common/events.dart';
 import '../../../common/extensions.dart';
 import '../../../generated/l10n.dart';
 import '../../../models/entities/ProdcutOptionAttribute.dart';
+import '../../../models/entities/home_section.dart';
 import '../../../models/index.dart'
     show
         CartModel,
@@ -118,6 +119,16 @@ class MagentoService extends BaseServices {
     }
     product.size_chart = MagentoHelper.getCustomAttribute(
         productJson['custom_attributes'], 'size_chart');
+
+    /// Configurable swatches (color/size options with product images +
+    /// child product_ids), exposed on both list and single payloads.
+    final rawSwatches = productJson['extension_attributes']?['swatches'];
+    if (rawSwatches is List) {
+      product.swatches = rawSwatches
+          .whereType<Map>()
+          .map((a) => ConfigurableSwatch.fromJson(a))
+          .toList();
+    }
 
     /// Marketplace seller ("Sold by …"), exposed by the backend as
     /// extension_attributes.seller_name (+ seller_shop_url). id is left null so
@@ -415,6 +426,35 @@ class MagentoService extends BaseServices {
     return result;
   }
 
+  /// Fetch just the configurable swatches for a SKU. Used to backfill
+  /// product.swatches on PDPs whose product came from a source that doesn't
+  /// carry them (e.g. live-search results), so color swatches render there too.
+  Future<List<ConfigurableSwatch>> getProductSwatches(String? sku) async {
+    if (sku == null || sku.isEmpty) {
+      return [];
+    }
+    try {
+      final res = await httpGet(
+          MagentoHelper.buildUrl(domain,
+              'products/${Uri.encodeComponent(sku)}?fields=extension_attributes[swatches]')!,
+          headers: {'Authorization': 'Bearer $accessToken'});
+      if (res.statusCode == 200) {
+        final body = convert.jsonDecode(res.body);
+        final ext = body is Map ? body['extension_attributes'] : null;
+        final sw = ext is Map ? ext['swatches'] : null;
+        if (sw is List) {
+          return sw
+              .whereType<Map>()
+              .map((a) => ConfigurableSwatch.fromJson(a))
+              .toList();
+        }
+      }
+    } catch (e) {
+      printLog('getProductSwatches error: $e');
+    }
+    return [];
+  }
+
   /// Attributes shown elsewhere on the PDP — keep them out of the table.
   static const _kExcludedInforCodes = [
     'description',
@@ -600,6 +640,58 @@ class MagentoService extends BaseServices {
       return data.map((e) => Brand.fromJson(e)).toList();
     }
     return [];
+  }
+
+  /// Backend-curated home / main-category sections
+  /// (`GET mstore/homepage-sections`): a list of groups of typed sections
+  /// (banner / category / brands). Rendered banner -> category -> brands; the
+  /// brands section is shared by the home and main-category screens.
+  Future<List<HomeSection>> fetchHomepageSections({String? lang}) async {
+    try {
+      final response = await httpGet(
+        MagentoHelper.buildUrl(domain, 'mstore/homepage-sections', lang)!,
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
+      if (response.statusCode == 200) {
+        return HomeSection.parseResponse(convert.jsonDecode(response.body));
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Backend-curated sections for a MAIN category's landing page
+  /// (86d3g36q4). `GET mstore/sections/{categoryId}` returns
+  /// `[ { "sections": [ { "label": "...", "sub_category": "id" | "id,id,..." }, ... ] } ]`.
+  /// A `sub_category` with several comma-separated ids is a "shop collection"
+  /// (hero subcategory banners); a single id is a product carousel whose
+  /// products are that category's curated set. Labels are merchant-defined and
+  /// vary per category, so callers render whatever comes back. Returns an empty
+  /// list when the category has no curation configured.
+  Future<List<Map<String, dynamic>>> fetchMainCategorySections(
+      String categoryId, {String? lang}) async {
+    try {
+      final response = await httpGet(
+        MagentoHelper.buildUrl(domain, 'mstore/sections/$categoryId', lang)!,
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
+      if (response.statusCode == 200) {
+        final data = convert.jsonDecode(response.body);
+        if (data is List && data.isNotEmpty && data.first is Map) {
+          final sections = (data.first as Map)['sections'];
+          if (sections is List) {
+            return sections
+                .whereType<Map>()
+                .map((e) => e.cast<String, dynamic>())
+                .toList();
+          }
+        }
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
   }
 
   void attachBrandsAtTopLevel(
@@ -844,6 +936,7 @@ class MagentoService extends BaseServices {
       String? include,
       String? search,
         String? searchText,
+      Map<String, List<String>>? attributeFilters,
       nextCursor}) async {
     try {
       var endPoint = '?';
@@ -892,6 +985,29 @@ class MagentoService extends BaseServices {
               'searchCriteria[filter_groups][4][filters][0][field]=name&searchCriteria[filter_groups][4][filters][0][value]=%$search%&searchCriteria[filter_groups][4][filters][0][condition_type]=like';
         }
       }
+      // Layered-navigation attribute filters (Brand, Colour, Size, Gender,
+      // Material, …) selected from the filter panel. Each attribute gets its
+      // OWN filter group (starting at index 6 — 0-5 are taken by
+      // category/visibility/max-price/on-sale/search/min-price), so different
+      // attributes are AND'd together. Multiple selected values for one
+      // attribute go in a single `in` filter, so they are OR'd — exactly
+      // Magento layered navigation and the website. The option ids are the
+      // same EAV values `brand`/`category_id` already filter on above.
+      if (attributeFilters != null && attributeFilters.isNotEmpty) {
+        var groupIndex = 6;
+        attributeFilters.forEach((field, values) {
+          final clean =
+              values.where((v) => v.trim().isNotEmpty).toList();
+          if (field.trim().isEmpty || clean.isEmpty) return;
+          if (endPoint != '?') endPoint += '&';
+          final joined = clean.join(',');
+          endPoint +=
+              'searchCriteria[filter_groups][$groupIndex][filters][0][field]=$field'
+              '&searchCriteria[filter_groups][$groupIndex][filters][0][value]=$joined'
+              '&searchCriteria[filter_groups][$groupIndex][filters][0][condition_type]=in';
+          groupIndex++;
+        });
+      }
       if (page != null) {
         endPoint += '&searchCriteria[currentPage]=$page';
       }
@@ -933,6 +1049,89 @@ class MagentoService extends BaseServices {
       return list;
     } catch (e) {
       rethrow;
+    }
+  }
+
+  /// Fetch the web-parity filter attributes (Brand, Colour, Size, Gender,
+  /// Material, Pattern, Sleeve length, Style, Product Type, …) for a category
+  /// via the storefront GraphQL `aggregations` — the only surface on this
+  /// install that exposes layered-navigation options/counts (the REST
+  /// `mstore/products` endpoint has none). The *selected* values are then
+  /// applied back through REST `fetchProductsByCategory` so the product list,
+  /// prices and paging stay on the existing REST path. See docs/qa-followups.md
+  /// item 3.
+  Future<List<CategoryFilterAttribute>> fetchCategoryFilters({
+    required String categoryId,
+    String? lang,
+  }) async {
+    try {
+      final langCode = (lang ?? SettingsBox().languageCode ?? 'en').toLowerCase();
+      final store = langCode == 'ar' ? 'eg_ar' : 'eg_en';
+      final query = '''
+{
+  products(filter: {category_id: {eq: "$categoryId"}}, pageSize: 1) {
+    aggregations {
+      attribute_code
+      label
+      options { label value count }
+    }
+  }
+}''';
+      final response = await httpPost(
+        '$domain/graphql'.toUri()!,
+        headers: {'content-type': 'application/json', 'Store': store},
+        body: convert.jsonEncode({'query': query}),
+      );
+      if (response.statusCode != 200) return const [];
+      final body = convert.jsonDecode(response.body);
+      final aggs = body?['data']?['products']?['aggregations'];
+      if (aggs is! List) return const [];
+
+      // `category_id` and `price` are already covered by the category tree and
+      // the price slider in the panel — don't duplicate them as chips.
+      const skip = {'category_id', 'price'};
+
+      // Merge attributes that share a display label into one group (e.g. the
+      // several category-specific `*_producttype` codes all show as "Product
+      // Type" on the web). Each option keeps its own attribute_code so it
+      // still filters the right field.
+      final byLabel = <String, List<CategoryFilterOption>>{};
+      final order = <String>[];
+      for (final agg in aggs) {
+        final code = '${agg['attribute_code'] ?? ''}'.trim();
+        if (code.isEmpty || skip.contains(code)) continue;
+        final label = '${agg['label'] ?? code}'.trim();
+        if (label.isEmpty) continue;
+        final options = agg['options'];
+        if (options is! List) continue;
+        final parsed = <CategoryFilterOption>[];
+        for (final o in options) {
+          final value = '${o['value'] ?? ''}'.trim();
+          final optLabel = '${o['label'] ?? ''}'.trim();
+          if (value.isEmpty || optLabel.isEmpty) continue;
+          final rawCount = o['count'];
+          final count = rawCount is num
+              ? rawCount.toInt()
+              : int.tryParse('${rawCount ?? ''}') ?? 0;
+          parsed.add(CategoryFilterOption(
+            code: code,
+            label: optLabel,
+            value: value,
+            count: count,
+          ));
+        }
+        if (parsed.isEmpty) continue;
+        if (!byLabel.containsKey(label)) order.add(label);
+        byLabel.putIfAbsent(label, () => []).addAll(parsed);
+      }
+
+      return [
+        for (final label in order)
+          CategoryFilterAttribute(label: label, options: byLabel[label]!),
+      ];
+    } catch (e) {
+      printLog('fetchCategoryFilters error: $e');
+      return const [];
     }
   }
 

@@ -5,6 +5,7 @@ import '../../common/config.dart';
 import '../../common/constants.dart';
 import '../../common/tools.dart';
 import '../../generated/l10n.dart';
+import '../../models/entities/ProdcutOptionAttribute.dart' show SwatchOption;
 import '../../models/entities/product.dart';
 
 enum VariantLayout { inline, dropdown }
@@ -23,6 +24,10 @@ class BasicSelection extends StatelessWidget {
   /// backend ships swatches with the attribute options.
   final Map<String, String>? swatchCodes;
 
+  /// Option label -> rich swatch (product image, hex, child ids) from
+  /// extension_attributes.swatches.
+  final Map<String, SwatchOption>? swatchOptions;
+
   const BasicSelection(
       {super.key,
         required this.product,
@@ -33,6 +38,7 @@ class BasicSelection extends StatelessWidget {
       this.layout,
       this.onChanged,
       this.swatchCodes,
+      this.swatchOptions,
       this.imageUrls});
 
   @override
@@ -88,8 +94,60 @@ class BasicSelection extends StatelessWidget {
     final selected = item.toUpperCase() == (value ?? '').toUpperCase();
 
     if (type == 'color') {
-      final colorCode = swatchCodes?[item] ?? getColorCode(item);
-      final isImage = colorCode.contains('http');
+      final swatch = swatchOptions?[item];
+      final hex = (swatch?.isColor ?? false)
+          ? swatch?.swatchValue
+          : (swatchCodes?[item] ?? getColorCode(item));
+
+      // Prefer the variant's product image so color swatches show the actual
+      // product photo, like the website.
+      String? imageUrl;
+      if (swatch?.hasImage ?? false) {
+        imageUrl = swatch!.productImage;
+      } else if (swatch?.swatchType == 'image') {
+        imageUrl = swatch?.swatchValue;
+      } else if (hex?.contains('http') ?? false) {
+        imageUrl = hex;
+      }
+
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        return GestureDetector(
+          onTap: () => onChanged?.call(item),
+          child: Tooltip(
+            message: item,
+            verticalOffset: 24,
+            preferBelow: false,
+            child: Container(
+              width: 52,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  width: selected ? 2.0 : 1.0,
+                  color: selected ? primaryColor : secondary.withOpacity(0.3),
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(5),
+                child: AspectRatio(
+                  aspectRatio: 3 / 4,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: (hex?.startsWith('#') ?? false)
+                          ? HexColor(hex!)
+                          : Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      // Fallback: plain hex color circle.
+      final colorCode = hex ?? '#ffffff';
       final isHex = colorCode.startsWith('#');
       return GestureDetector(
         onTap: () => onChanged?.call(item),
@@ -102,12 +160,6 @@ class BasicSelection extends StatelessWidget {
             height: 34,
             decoration: BoxDecoration(
               color: isHex ? HexColor(colorCode) : Colors.white,
-              image: isImage
-                  ? DecorationImage(
-                      image: NetworkImage(colorCode),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
               shape: BoxShape.circle,
               border: Border.all(
                 width: selected ? 2.0 : 1.0,

@@ -2467,6 +2467,46 @@ class S {
     );
   }
 
+  /// `New Arrival`
+  String get newArrival {
+    return Intl.message(
+      'New Arrival',
+      name: 'newArrival',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Shop Now`
+  String get shopNow {
+    return Intl.message(
+      'Shop Now',
+      name: 'shopNow',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Featured Brands`
+  String get featuredBrands {
+    return Intl.message(
+      'Featured Brands',
+      name: 'featuredBrands',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Shop by Category`
+  String get shopByCategory {
+    return Intl.message(
+      'Shop by Category',
+      name: 'shopByCategory',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Please checking internet connection!`
   String get pleaseCheckInternet {
     return Intl.message(

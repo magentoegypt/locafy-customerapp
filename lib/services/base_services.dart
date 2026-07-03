@@ -68,6 +68,7 @@ abstract class BaseServices {
           userId,
           String? search,
             String? searchText,
+          Map<String, List<String>>? attributeFilters,
           String? include,
           String? nextCursor}) async =>
       const <Product>[];

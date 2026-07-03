@@ -165,7 +165,8 @@ class ProductModel with ChangeNotifier {
       userId,
       List? include,
       String? search,
-        String? searchText}) async {
+        String? searchText,
+      Map<String, List<String>>? attributeFilters}) async {
     try {
       if (isFetching) {
         await _cancelLoadProduct?.cancel();
@@ -214,7 +215,8 @@ class ProductModel with ChangeNotifier {
         userId: userId,
         nextCursor: cursor,
         include: include?.join(','),
-        search: search, searchText: searchText
+        search: search, searchText: searchText,
+        attributeFilters: attributeFilters,
       ));
 
       final products = await _cancelLoadProduct!.value;

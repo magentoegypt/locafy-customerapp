@@ -6,6 +6,7 @@ import '../../models/index.dart' show Product;
 import '../../modules/dynamic_layout/config/product_config.dart';
 import '../../services/services.dart';
 import 'action_button_mixin.dart';
+import 'widgets/product_card_swatches.dart';
 import 'index.dart'
     show
         CartButton,
@@ -163,6 +164,10 @@ class _ProductDescription extends StatelessWidget {
                 style: const TextStyle(fontSize: 13),
               ),
             ProductPricing(product: item, hide: config.hidePrice),
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: ProductCardSwatches(product: item),
+            ),
             StockStatus(product: item, config: config),
             ProductRating(
               product: item,

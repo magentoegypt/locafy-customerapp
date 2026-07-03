@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../common/config.dart';
+import '../../models/entities/ProdcutOptionAttribute.dart'
+    show ConfigurableSwatch, SwatchOption;
 import '../../models/index.dart'
     show Product, ProductAttribute, ProductModel, ProductVariation;
 import '../../services/index.dart';
@@ -169,11 +171,27 @@ mixin MagentoVariantMixin on ProductVariantMixin {
             }
           }
 
+          /// Richer swatches from extension_attributes.swatches (product image
+          /// per option, so color swatches show the variant photo like the
+          /// website). Matched to this attribute by attribute_code, keyed by
+          /// option label.
+          final swatchOptions = <String, SwatchOption>{};
+          final swatchAttr = product.swatches?.firstWhere(
+            (s) => s.attributeCode == attr.name,
+            orElse: () => ConfigurableSwatch(),
+          );
+          for (final opt in swatchAttr?.options ?? <SwatchOption>[]) {
+            if (opt.label != null) {
+              swatchOptions[opt.label!] = opt;
+            }
+          }
+
           listWidget.add(
             BasicSelection(
               product: product,
               options: options,
               swatchCodes: swatchCodes,
+              swatchOptions: swatchOptions,
               title: title,
               type: type,
               value: selectedValue,

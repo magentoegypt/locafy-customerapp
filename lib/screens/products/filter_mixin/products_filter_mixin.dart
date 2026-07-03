@@ -2,6 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:inspireui/inspireui.dart';
+import 'package:provider/provider.dart';
 import '../../../../models/entities/filter_sorty_by.dart';
 import '../../../../models/index.dart';
 import '../../../app.dart';

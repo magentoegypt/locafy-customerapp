@@ -13,6 +13,7 @@ import '../../../routes/flux_navigate.dart';
 import '../../../widgets/common/index.dart';
 import '../../../widgets/common/parallax_image.dart';
 import '../../../widgets/common/refresh_scroll_physics.dart';
+import '../../home/home_sections_view.dart';
 import '../../index.dart';
 
 class CardCategories extends StatefulWidget {
@@ -133,6 +134,13 @@ class _StateCardCategories extends BaseScreen<CardCategories> {
 
   @override
   Widget build(BuildContext context) {
+    // Home tab: render the backend-curated homepage sections (banner ->
+    // shop-by-category -> featured brands) instead of the plain category-card
+    // list. Scoped to the home ("categogies") so category browsing elsewhere
+    // is unaffected.
+    if (widget.isComingFrom == "categogies") {
+      return const HomeSectionsView();
+    }
     if (kEnableLargeCategories) {
       return PagingList<CategoryModel, Category>(
         lengthLoadingWidget: 6,
@@ -200,10 +208,14 @@ class _StateCardCategories extends BaseScreen<CardCategories> {
                 onTap: hasChildren(category.id)
                     ? (){
                   if(widget.isComingFrom == "categogies"){
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CategorySearch(isNavigation: true,isComingFrom: "categogies",newCategoryId: category.id,),
+                    // Main (top-level) categories open the merchandised
+                    // landing page (86d3g36q4): hero subcategories + New
+                    // Arrival + Sale + Featured Brands.
+                    Navigator.of(context).pushNamed(
+                      RouteList.categoryLanding,
+                      arguments: BackDropArguments(
+                        cateId: category.id,
+                        cateName: category.name,
                       ),
                     );
                   }

@@ -4,6 +4,7 @@ export 'address.dart';
 export 'aftership.dart';
 export 'back_drop_arguments.dart';
 export 'category.dart';
+export 'category_filter.dart';
 export 'city.dart';
 export 'country.dart';
 export 'country_state.dart';

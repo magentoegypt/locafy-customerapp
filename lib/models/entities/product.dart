@@ -57,6 +57,12 @@ class Product {
   List<dynamic>? groupedProducts;
   List<String?>? files;
   List<ProdcutOptionAttribute>? productOptions;
+
+  /// Configurable swatches from extension_attributes.swatches — per attribute,
+  /// each option carries its swatch (color/image/text), the variant's product
+  /// image and the child product_ids. Transient (freshly parsed from the API,
+  /// not cached locally).
+  List<ConfigurableSwatch>? swatches;
   dynamic configurable_product_options;
   dynamic configurable_product_links;
   int? shopQuantity;

@@ -81,6 +81,7 @@ class AppState extends State<App>
   final _recent = RecentModel();
   final _user = UserModel();
   final _filterModel = FilterAttributeModel();
+  final _categoryFilterModel = CategoryFilterModel();
   final _filterTagModel = FilterTagModel();
   final _tagModel = TagModel();
   final _taxModel = TaxModel();
@@ -230,6 +231,20 @@ class AppState extends State<App>
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Keep the on-screen device (navigation) buttons hidden across all
+    // screens — re-assert after returning from background, since the OS can
+    // restore the full system bars on resume.
+    if (isMobile && state == AppLifecycleState.resumed) {
+      SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.manual,
+        overlays: const [SystemUiOverlay.top],
+      );
+    }
+  }
+
   void _onLogout({
     bool isRequiredLogin = false,
     String? errMsg,
@@ -361,6 +376,8 @@ class AppState extends State<App>
                 }),
                 ChangeNotifierProvider<FilterAttributeModel>.value(
                     value: _filterModel),
+                ChangeNotifierProvider<CategoryFilterModel>.value(
+                    value: _categoryFilterModel),
                 ChangeNotifierProvider<FilterTagModel>.value(
                     value: _filterTagModel),
                 ChangeNotifierProvider(create: (_) => _tagModel),

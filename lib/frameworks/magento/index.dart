@@ -7,6 +7,7 @@ import '../../common/constants.dart';
 import '../../common/tools.dart';
 import '../../data/boxes.dart';
 import '../../generated/l10n.dart';
+import '../../models/entities/ProdcutOptionAttribute.dart' show ConfigurableSwatch;
 import '../../models/entities/filter_sorty_by.dart';
 import '../../models/index.dart';
 import '../../screens/detail/widgets/review.dart';
@@ -470,12 +471,22 @@ class MagentoWidget extends BaseFrameworks
       // returns [] on failure).
       final stockFuture = api.getStockStatus(product?.sku);
       final inforsFuture = api.getProductInfors(product?.sku);
+      // Backfill swatches when the product didn't come with them (e.g. from
+      // live search); browse products already carry them from mstore/products.
+      final Future<List<ConfigurableSwatch>> swatchFuture =
+          (product?.swatches?.isNotEmpty ?? false) || product?.sku == null
+              ? Future.value(product?.swatches ?? <ConfigurableSwatch>[])
+              : api.getProductSwatches(product?.sku);
       Product? productStock = await stockFuture;
       product!.inStock = productStock?.inStock;
       product.stockQuantity ??= productStock?.stockQuantity;
 
       /// Localized "Product Details" table rows (web "More Information").
       product.infors = await inforsFuture;
+      final swatches = await swatchFuture;
+      if (swatches.isNotEmpty) {
+        product.swatches = swatches;
+      }
       return product;
     } catch (e) {
       rethrow;

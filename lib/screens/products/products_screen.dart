@@ -8,6 +8,7 @@ import '../../generated/l10n.dart';
 import '../../models/index.dart'
     show
         AppModel,
+        CategoryFilterModel,
         CategoryModel,
         FilterAttributeModel,
         Product,
@@ -80,6 +81,9 @@ class ProductsScreenState extends State<ProductsScreen>
   ProductModel get productModel =>
       Provider.of<ProductModel>(context, listen: false);
 
+  CategoryFilterModel get categoryFilterModel =>
+      Provider.of<CategoryFilterModel>(context, listen: false);
+
   @override
   FilterAttributeModel get filterAttrModel =>
       Provider.of<FilterAttributeModel>(context, listen: false);
@@ -120,6 +124,11 @@ class ProductsScreenState extends State<ProductsScreen>
     WidgetsBinding.instance.endOfFrame.then((_) {
       if (mounted) {
         resetFilter();
+        // Load the web-parity attribute filters for this category. Called
+        // before onRefresh: load() synchronously clears any selection held
+        // from a previously-browsed category, so getProductList never applies
+        // a stale filter to this category's list.
+        categoryFilterModel.load(categoryId, appModel.langCode);
         onRefresh();
       }
     });
@@ -149,6 +158,7 @@ class ProductsScreenState extends State<ProductsScreen>
       listingLocation: listingLocationId,
       include: include,
       search: search,
+      attributeFilters: categoryFilterModel.selectedFilters,
     );
   }
 

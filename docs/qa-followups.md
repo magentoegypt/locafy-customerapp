@@ -124,7 +124,24 @@ appears on startup — Firebase isn't configured in this build (push/Firebase fe
 
 ---
 
-## 3. No Brand / Color / Size / etc. filters on category pages  🟡 Frontend (unblocked — needs a build)
+## 3. No Brand / Color / Size / etc. filters on category pages  ✅ Built (needs on-device pass)
+
+**Update (built):** implemented on this branch as the GraphQL-aggregations + REST-filtering hybrid
+described below. The listing page now fetches the current category's layered-navigation attributes
+from storefront GraphQL `aggregations` (`MagentoService.fetchCategoryFilters`, store `eg_en`/`eg_ar`)
+and renders each — Brand, Colour, Size, Gender, Material, Pattern, Sleeve length, Style, Product Type,
+Fulfillment Method — as a collapsible multi-select section in the filter panel
+(`BackdropMenu.renderCategoryAttributeFilters`), with live option counts. Selections are held in a new
+global `CategoryFilterModel` (keyed `attribute_code` → option ids, reset per category) and applied to
+the existing REST `mstore/products` list as extra `searchCriteria[filter_groups]` (index ≥ 6): one
+group per attribute (cross-attribute **AND**), values comma-joined with `condition_type=in`
+(within-attribute **OR**) — the same mechanism `brand`/`category_id` already use, so prices/paging stay
+on REST. Active selections show as removable chips in the listing toolbar. Verified the option-id
+semantics against GraphQL for category 291 (Navy=766→2, Navy∨Red→4, Brand Dress-on→7, Navy∧Dress-on→2,
+all matching aggregation counts). **Still needs one on-device pass** to confirm the custom
+`mstore/products` REST endpoint honours the attribute `filter_groups` (strongly expected — `brand`,
+an EAV attribute filtered by the same option-id shape, already works there). The original analysis is
+kept below for context.
 
 **Context:** ClickUp **86d3g3mea** and **86d3g43qr** ask for the category-page filter list to match
 the website's. Category and Price filters already work in the app. The rest (Brand, Colors, and at
@@ -431,3 +448,51 @@ selection resolves the correct child (correct SKU goes to the cart), the PDP pri
 selection, the short description now renders (parse-side fix), and the "Product Details" / "Reviews"
 expandable sections were added (attribute metadata via store-scoped REST; reviews via GraphQL,
 read-only pending item 7).
+
+---
+
+## 8. Main-category landing page (86d3g36q4) — two backend data gaps  🟡 Backend (app shipped; cosmetic gaps only)
+
+**Context:** Tapping a MAIN category (Kidswear/Menswear/Womenswear/Newborn) now opens a merchandised
+landing page (`lib/screens/categories/category_landing_screen.dart`) with four sections — hero
+subcategory banners, New Arrival, On Sale, Featured Brands — matching the website's layout intent.
+
+The website renders this page from a **CMS page-builder block** (category 192 `KIDSWEAR` has
+`display_mode = PAGE` and `landing_page = 269`; block `main-Kkidswear-en` is ~49 KB of page-builder
+HTML/CSS the app cannot render). Inside that block the product sections are **dynamic Magento
+product widgets** (category + newest / on-sale conditions) and the banners/brands are **static links**
+to subcategories and vendor shops — i.e. there are **no hand-picked SKUs**. So the app reproduces all
+four sections app-side from existing REST (`fetchProductsByCategory` newest / on-sale for the
+carousels, `mstore/categories` children for the heroes, `mstore/brands` for the brands) and matches
+the web. Two backend **data** gaps keep it from being pixel-faithful:
+
+**8a. Subcategory categories return no `image` in `mstore/categories` → hero banners show placeholders.**
+Verified on production: `KIDSWEAR` (192) itself has `image: /media/catalog/category/Artboard_11.png`,
+but **every child returns `image: null`** — `GIRLS` (269), `BOYS` (270), `Kids (3-12) Years` (194),
+`Baby (0-36) Months` (193), `Teens (13-16)` (195), `What's Hot` (442). The website's hero cards use
+hand-set category images (the Boys/Girls photos); the app falls back to a placeholder graphic.
+- **Backend fix (preferred):** set the category Image (Catalog → Categories → each subcategory →
+  Content → Image) for the subcategories that should appear as hero banners. Once populated,
+  `mstore/categories` will return the path and the app renders it with no app change.
+- **Frontend fallback (if backend can't):** use the subcategory's first product image as the hero —
+  less faithful and one extra request per subcategory.
+
+**8b. `mstore/brands` returns only `{label, value}` — no logo → Featured Brands shows text-only cards.**
+Verified on production: `GET /eg-en/rest/V1/mstore/brands` returns 121 entries, each exactly
+`{"label": "Junior", "value": "893"}` — no logo/image URL. The website's "Featured Brands" row shows
+brand/vendor **logos**; the app can only render brand-name cards.
+- **Backend fix:** add a `logo` / `image` URL field to each `mstore/brands` entry (the logos already
+  exist as vendor-shop images on the web, e.g. `…/vendor_shop/junior-store.html`). The app's Featured
+  Brands cards can then show the logo instead of the name.
+
+**8c. (Context, not a blocker) Centralized curation would need a structured endpoint.**
+The app currently derives the hero subcategories (all direct children) and featured brands
+(from the category tree) generically. If you later want the *exact* web curation controlled
+server-side per category (which subcategories are heroes, which brands are "featured", section
+order/visibility), the backend would need to expose that as **structured JSON** — the raw
+page-builder CMS block (`landing_page`) is not app-renderable. Not required for the current shipped
+version; noted only so the option is on record.
+
+**Summary for backend:** (8a) populate subcategory category images; (8b) add a brand logo URL to
+`mstore/brands`. Both are data/response-shape changes with no app rework required — the landing page
+is already live and will pick them up automatically.

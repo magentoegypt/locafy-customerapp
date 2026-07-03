@@ -11,7 +11,12 @@ import '../../common/tools.dart';
 import '../../generated/l10n.dart';
 import '../../models/entities/filter_sorty_by.dart';
 import '../../models/index.dart'
-    show AppModel, BlogModel, FilterAttributeModel, ProductModel;
+    show
+        AppModel,
+        BlogModel,
+        CategoryFilterModel,
+        FilterAttributeModel,
+        ProductModel;
 import '../../modules/dynamic_layout/helper/helper.dart';
 import '../../services/index.dart';
 import 'filters/category_menu.dart';
@@ -125,6 +130,13 @@ class _BackdropMenuState extends State<BackdropMenu> {
         }
       }
     }
+
+    // Load the web-parity attribute filters (Brand/Colour/Size/Gender/…) for
+    // the category this sheet was opened on. load() refreshes counts for the
+    // current category and resets a stale selection if the category changed.
+    final lang = Provider.of<AppModel>(context, listen: false).langCode;
+    Provider.of<CategoryFilterModel>(context, listen: false)
+        .load(widget.categoryId, lang);
   }
 
   void _onFilter({
@@ -284,6 +296,84 @@ class _BackdropMenuState extends State<BackdropMenu> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Web-parity layered-navigation filters (Brand, Colour, Size, Gender,
+  /// Material, Pattern, Sleeve length, Style, Product Type, …). Options and
+  /// counts come from GraphQL aggregations (via [CategoryFilterModel]); each
+  /// attribute is a collapsible section of multi-select checkboxes. Toggling
+  /// an option re-runs the product query with the new selection applied as a
+  /// REST filter group.
+  Widget renderCategoryAttributeFilters() {
+    return Consumer<CategoryFilterModel>(
+      builder: (context, model, child) {
+        if (model.isLoading && model.attributes.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+        if (model.attributes.isEmpty) return const SizedBox();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final attr in model.attributes)
+              ExpansionWidget(
+                key: PageStorageKey('catfilter_${attr.label}'),
+                showDivider: true,
+                initiallyExpanded: false,
+                padding: const EdgeInsets.only(
+                  left: 15,
+                  right: 15,
+                  top: 15,
+                  bottom: 10,
+                ),
+                title: Text(
+                  attr.label,
+                  style: Theme.of(context).textTheme.titleLarge!.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                children: [
+                  for (final opt in attr.options)
+                    CheckboxListTile(
+                      dense: true,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 8),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: Theme.of(context).primaryColor,
+                      value: model.isSelected(opt.code, opt.value),
+                      title: Text(
+                        opt.label,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      secondary: Text(
+                        '${opt.count}',
+                        style:
+                            Theme.of(context).textTheme.bodySmall!.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .secondary
+                                      .withOpacity(0.5),
+                                ),
+                      ),
+                      onChanged: (_) {
+                        model.toggle(opt.code, opt.value);
+                        _onFilter();
+                      },
+                    ),
+                ],
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -485,13 +575,15 @@ class _BackdropMenuState extends State<BackdropMenu> {
               ServerConfig().type != ConfigType.shopify &&
               widget.showPrice) ...[
             renderPriceSlider(),
-            // Attribute filters (e.g. color, size) are not shown: they need
-            // FilterAttributeModel.getFilterAttributes()/getSubAttributes(),
-            // which has no Magento implementation (base_services.dart's
-            // no-op stub is the only one) — there is no backend endpoint for
-            // this yet. See docs/qa-followups.md.
-            // renderAttributes(),
           ],
+
+          // Web-parity attribute filters (Brand, Colour, Size, Gender, …),
+          // driven by GraphQL aggregations. Replaces the old no-op
+          // renderAttributes() (which had no Magento backend). See
+          // docs/qa-followups.md item 3.
+          if (!ServerConfig().isListingType &&
+              ServerConfig().type != ConfigType.shopify)
+            renderCategoryAttributeFilters(),
 
           /// filter by tags
           widget.isUseBlog

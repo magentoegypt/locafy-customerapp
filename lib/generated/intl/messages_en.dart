@@ -501,6 +501,12 @@ class MessageLookup extends MessageLookupByLibrary {
         "featureProducts":
             MessageLookupByLibrary.simpleMessage("Feature Products"),
         "featured": MessageLookupByLibrary.simpleMessage("Featured"),
+        "newArrival": MessageLookupByLibrary.simpleMessage("New Arrival"),
+        "shopNow": MessageLookupByLibrary.simpleMessage("Shop Now"),
+        "featuredBrands":
+            MessageLookupByLibrary.simpleMessage("Featured Brands"),
+        "shopByCategory":
+            MessageLookupByLibrary.simpleMessage("Shop by Category"),
         "features": MessageLookupByLibrary.simpleMessage("Features"),
         "fileIsTooBig": MessageLookupByLibrary.simpleMessage(
             "The file is too big. Please choose a smaller file!"),

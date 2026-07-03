@@ -24,6 +24,59 @@ class ProdcutOptionAttribute {
   }
 }
 
+/// A configurable attribute's swatch set from extension_attributes.swatches
+/// (e.g. attribute_code "all_color" / label "Color").
+class ConfigurableSwatch {
+  String? attributeCode;
+  String? label;
+  List<SwatchOption> options;
+
+  ConfigurableSwatch({this.attributeCode, this.label, this.options = const []});
+
+  ConfigurableSwatch.fromJson(Map json)
+      : options = ((json['options'] as List?) ?? [])
+            .whereType<Map>()
+            .map((o) => SwatchOption.fromJson(o))
+            .toList() {
+    attributeCode = json['attribute_code']?.toString();
+    label = json['label']?.toString();
+  }
+}
+
+/// One selectable option within a [ConfigurableSwatch].
+class SwatchOption {
+  String? value; // option value id (matches ProductAttribute option value)
+  String? label; // "Blue", "4 yrs"
+  String? swatchType; // color | image | text
+  String? swatchValue; // hex color, image URL, or label text
+  String? productImage; // the variant's product image (CDN URL)
+  List<int> productIds; // child products carrying this option
+
+  SwatchOption({
+    this.value,
+    this.label,
+    this.swatchType,
+    this.swatchValue,
+    this.productImage,
+    this.productIds = const [],
+  });
+
+  SwatchOption.fromJson(Map json)
+      : productIds = ((json['product_ids'] as List?) ?? [])
+            .map((e) => int.tryParse('$e'))
+            .whereType<int>()
+            .toList() {
+    value = json['value']?.toString();
+    label = json['label']?.toString();
+    swatchType = json['swatch_type']?.toString();
+    swatchValue = json['swatch_value']?.toString();
+    productImage = json['product_image']?.toString();
+  }
+
+  bool get isColor => swatchType == 'color';
+  bool get hasImage => (productImage?.isNotEmpty ?? false);
+}
+
 class Swatch {
   String? type;
   String? value;

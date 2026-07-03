@@ -11,6 +11,7 @@ import '../../modules/dynamic_layout/config/product_config.dart';
 import '../../modules/dynamic_layout/helper/helper.dart';
 import '../../services/services.dart';
 import 'action_button_mixin.dart';
+import 'widgets/product_card_swatches.dart';
 import 'index.dart'
     show
         CartButton,
@@ -238,6 +239,14 @@ class _ProductCardState extends State<ProductCard> with ActionButtonMixin {
                               onTapProduct: () => onTapProduct(context,
                                   product: widget.item, config: widget.config),
                             ),
+                          ),
+                          // Colour options overlaid on the image so they don't
+                          // add height to the fixed-size card.
+                          Positioned(
+                            left: context.isRtl ? null : 6,
+                            right: context.isRtl ? 6 : null,
+                            bottom: 6,
+                            child: ProductCardSwatches(product: widget.item),
                           ),
                           if (widget.config.showCartButtonWithQuantity &&
                               widget.item.canBeAddedToCartFromList(

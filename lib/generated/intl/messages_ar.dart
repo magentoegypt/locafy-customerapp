@@ -490,6 +490,12 @@ class MessageLookup extends MessageLookupByLibrary {
         "favorite": MessageLookupByLibrary.simpleMessage("مفضل"),
         "featureProducts": MessageLookupByLibrary.simpleMessage("منتجات مميزة"),
         "featured": MessageLookupByLibrary.simpleMessage("متميز"),
+        "newArrival": MessageLookupByLibrary.simpleMessage("وصل حديثاً"),
+        "shopNow": MessageLookupByLibrary.simpleMessage("تسوق الآن"),
+        "featuredBrands":
+            MessageLookupByLibrary.simpleMessage("العلامات المميزة"),
+        "shopByCategory":
+            MessageLookupByLibrary.simpleMessage("تسوق حسب الفئة"),
         "features": MessageLookupByLibrary.simpleMessage("المميزات"),
         "fileIsTooBig": MessageLookupByLibrary.simpleMessage(
             "الملف كبير جدًا. الرجاء اختيار ملف أصغر!"),
