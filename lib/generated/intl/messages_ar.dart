@@ -529,6 +529,8 @@ class MessageLookup extends MessageLookupByLibrary {
         "german": MessageLookupByLibrary.simpleMessage("ألماني"),
         "getNotification":
             MessageLookupByLibrary.simpleMessage("الحصول على إشعارات"),
+        "notificationBlockedMessage": MessageLookupByLibrary.simpleMessage(
+            "الإشعارات مغلقة لهذا التطبيق. الرجاء تفعيلها من إعدادات جهازك."),
         "getNotified":
             MessageLookupByLibrary.simpleMessage(" الحصول على التنبيهات!"),
         "getPasswordLink":

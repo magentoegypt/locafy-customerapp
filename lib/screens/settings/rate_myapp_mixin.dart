@@ -19,6 +19,11 @@ mixin RateMyAppMixin<T extends StatefulWidget> on State<T> {
   void showRateMyApp() {
     _rateMyApp.showRateDialog(
       context,
+      // A menu "Rate the app" tap must always show something. Without this,
+      // rate_my_app first tries the native Play In-App Review, which silently
+      // does nothing on sideloaded / quota-limited installs (looks broken).
+      // Force the custom dialog instead; its RATE button opens the store.
+      ignoreNativeDialog: true,
       title: S.of(context).rateTheApp,
       // The dialog title.
       message: S.of(context).rateThisAppDescription,

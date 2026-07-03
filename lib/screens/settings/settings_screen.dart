@@ -13,6 +13,7 @@ import 'package:inspireui/inspireui.dart';
 import 'package:magentoegypt/core/colors.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart' show openAppSettings;
 import '../../app.dart';
 import '../../common/config.dart';
 import '../../common/config/configuration_utils.dart';
@@ -465,9 +466,15 @@ class SettingScreenState extends State<SettingScreen>
                   //  secondary: const SettingScreenItemIcon(icon: CupertinoIcons.bell),
                     value: model.enable,
                     activeColor: AppColors.kPrimaryRed,
-                    onChanged: (bool enableNotification) {
+                    onChanged: (bool enableNotification) async {
                       if (enableNotification) {
-                        model.enableNotification();
+                        await model.enableNotification();
+                        // Still off => the OS notification permission was
+                        // denied (often permanently). Guide the user to the
+                        // system settings instead of silently doing nothing.
+                        if (!model.enable && mounted) {
+                          _promptOpenNotificationSettings();
+                        }
                       } else {
                         model.disableNotification();
                       }
@@ -780,6 +787,31 @@ class SettingScreenState extends State<SettingScreen>
     /// need to log out and log in again
     if (ServerConfig().isShopify && (hasChangePassword ?? false)) {
       await _showDialogLogout();
+    }
+  }
+
+  /// Shown when the user tries to enable notifications but the OS permission
+  /// is denied — offers to jump straight to the app's system settings.
+  Future<void> _promptOpenNotificationSettings() async {
+    final open = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(S.of(context).getNotification),
+        content: Text(S.of(context).notificationBlockedMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(S.of(context).cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(S.of(context).settings),
+          ),
+        ],
+      ),
+    );
+    if (open == true) {
+      await openAppSettings();
     }
   }
 
