@@ -339,7 +339,7 @@ Map<String, dynamic> environment = {
       "icon": "assets/images/country/ar.png",
       "code": "ar",
       "text": "Arabic",
-      "storeViewCode": "ar"
+      "storeViewCode": "eg-ar"
     }
   ],
   "unsupportedLanguages": ['ku'],

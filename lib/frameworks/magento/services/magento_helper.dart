@@ -74,18 +74,27 @@ class MagentoHelper {
   }
 
   static Uri? buildUrl(String? domain, String endpoint, [String? locale]) {
-    final languages = getLanguages();
-    // if (isNotBlank(locale)) {
-    //   var language = languages.firstWhereOrNull(
-    //       (o) => o['code'] == locale && isNotBlank(o['storeViewCode']));
-    //   if (language != null) {
-    //     return "$domain/${language["storeViewCode"]}/rest/V1/$endpoint" //"$domain/index.php/rest/${language["storeViewCode"]}/V1/$endpoint"
-    //         .toUri();
-    //   }
-    // }
-    return '$domain/eg-en/rest/V1/$endpoint'.toUri();
-    //'$domain/${SettingsBox().languageCode}/rest/V1/$endpoint'.toUri();
-    // '$domain/index.php/rest/V1/$endpoint'.toUri();
+    return '$domain/${_storeViewCode(locale)}/rest/V1/$endpoint'.toUri();
+  }
+
+  /// Store-view path segment for a REST call. Content endpoints pass the
+  /// current app language so the API returns localized (e.g. Arabic) text;
+  /// calls that pass no locale (customer / cart / checkout) stay on the
+  /// default English store view, whose REST config is known-good.
+  ///
+  /// Reads `storeViewCode` from the language config (env `languagesInfo`):
+  /// en -> "" -> falls back to eg-en; ar -> eg-ar. Anything unmapped/blank
+  /// falls back to eg-en.
+  static String _storeViewCode(String? locale) {
+    const fallback = 'eg-en';
+    if (locale == null || locale.isEmpty) return fallback;
+    for (final lang in getLanguages()) {
+      if (lang['code'] == locale) {
+        final code = lang['storeViewCode'];
+        return (code is String && code.isNotEmpty) ? code : fallback;
+      }
+    }
+    return fallback;
   }
 
   static bool isEndLoadMore(body) {
