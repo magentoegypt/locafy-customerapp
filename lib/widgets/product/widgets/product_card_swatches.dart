@@ -56,17 +56,19 @@ class ProductCardSwatches extends StatelessWidget {
     // When both rows show, cap the sizes so colour circles + size chips stay
     // within the card's reserved height.
     final sizeLimit = color != null ? 4 : maxSizes;
+    final rows = <Widget>[
+      if (color != null) _colorRow(context, color),
+      if (size != null) _sizeRow(context, size, sizeLimit),
+    ];
+    // Space only *between* rows — the gap above (price↔chips) is owned by the
+    // card so the price keeps balanced top/bottom spacing.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (color != null) ...[
-          const SizedBox(height: 8),
-          _colorRow(context, color),
-        ],
-        if (size != null) ...[
-          const SizedBox(height: 8),
-          _sizeRow(context, size, sizeLimit),
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) const SizedBox(height: 8),
+          rows[i],
         ],
       ],
     );
@@ -155,6 +157,8 @@ class ProductCardSwatches extends StatelessWidget {
       ),
       child: Text(
         label,
+        // Keep size labels left-to-right (e.g. "6 yrs") in the forced-RTL app.
+        textDirection: TextDirection.ltr,
         textAlign: TextAlign.center,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,

@@ -107,13 +107,16 @@ class _ProductCardState extends State<ProductCard> with ActionButtonMixin {
         // Seller "Sold by" belongs on the product detail page, not the compact
         // grid card — showing it here overflows the fixed-height card.
         StoreName(product: widget.item, hide: true),
-        const SizedBox(height: 2),
-        ProductPricing(
-          product: widget.item,
-          hide: widget.config.hidePrice,
-          // Blue current price to match the design; struck-through original
-          // price keeps its grey styling.
-          mainPriceColor: const Color(0xFF1273EB),
+        // Balanced breathing room above and below the price.
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: ProductPricing(
+            product: widget.item,
+            hide: widget.config.hidePrice,
+            // Blue current price to match the design; struck-through original
+            // price keeps its grey styling.
+            mainPriceColor: const Color(0xFF1273EB),
+          ),
         ),
         // Colour options (as product-image circles) + size chips, below price.
         ProductCardSwatches(product: widget.item),

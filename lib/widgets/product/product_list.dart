@@ -149,9 +149,9 @@ class _ProductListState extends State<ProductList> {
     // (colour-image circles + size chips). Multi-column layouts get less since
     // their narrower cards show fewer chips per row.
     if (widget.layout != 'columns') {
-      itemHeight += 128;
+      itemHeight += 138;
     } else {
-      itemHeight += 96;
+      itemHeight += 104;
     }
     childAspectRatio = widthContent /
         (widthContent * (widget.ratioProductImage ?? 1.2) + itemHeight);
