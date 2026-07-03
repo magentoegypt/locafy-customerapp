@@ -145,6 +145,14 @@ class _ProductListState extends State<ProductList> {
      // itemHeight += 30;
     }
     itemHeight -= 50;
+    // Extra room under the price for the on-card variant preview
+    // (colour-image circles + size chips). Multi-column layouts get less since
+    // their narrower cards show fewer chips per row.
+    if (widget.layout != 'columns') {
+      itemHeight += 128;
+    } else {
+      itemHeight += 96;
+    }
     childAspectRatio = widthContent /
         (widthContent * (widget.ratioProductImage ?? 1.2) + itemHeight);
 
