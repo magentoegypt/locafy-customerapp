@@ -580,7 +580,9 @@ class _LoginPageState extends BaseScreen<LoginScreen>
     return TextButton(
       onPressed: () {
         if(index == 1){
-          NavigateTools.navigateRegister(context);
+          // Replace (not stack) so toggling Login <-> New Account stays one
+          // screen deep and Back returns to wherever the user came from.
+          NavigateTools.navigateRegister(context, replacement: true);
         }
       },
       style: TextButton.styleFrom(

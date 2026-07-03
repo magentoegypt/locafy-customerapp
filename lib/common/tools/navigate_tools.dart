@@ -258,12 +258,20 @@ class NavigateTools {
   }
 
   static void navigateRegister(context, {bool replacement = false}) {
+    final String routeName;
     if (kAdvanceConfig.enableMembershipUltimate) {
-      Navigator.of(context).pushNamed(RouteList.memberShipUltimatePlans);
+      routeName = RouteList.memberShipUltimatePlans;
     } else if (kAdvanceConfig.enableDigitsMobileLogin) {
-      Navigator.of(context).pushNamed(RouteList.digitsMobileLoginSignUp);
+      routeName = RouteList.digitsMobileLoginSignUp;
     } else {
-      Navigator.of(context).pushNamed(RouteList.register);
+      routeName = RouteList.register;
+    }
+    // Honour [replacement] (previously ignored) so the Login <-> Register tab
+    // switch replaces the current auth screen instead of stacking.
+    if (replacement) {
+      Navigator.of(context).pushReplacementNamed(routeName);
+    } else {
+      Navigator.of(context).pushNamed(routeName);
     }
   }
 }

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:inspireui/extensions/string_extension.dart';
 import 'package:magentoegypt/app.dart';
 import 'package:magentoegypt/common/events.dart';
@@ -57,6 +58,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool isPickerEnabled = true;
   bool? isVendor = false;
   bool isChecked = true;
+
+  /// True while an OTP send request is in flight — disables the Generate OTP
+  /// button and shows a spinner so it can't be double-tapped (which would fire
+  /// several OTP SMS and stack dialogs).
+  bool _isSendingOtp = false;
 
   final bool showPhoneNumberWhenRegister =
       kLoginSetting.showPhoneNumberWhenRegister;
@@ -402,48 +408,91 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     children: [
                                       Material(
                                         color: Theme.of(context).primaryColor,
-                                        borderRadius: const BorderRadius.all(Radius.circular(5.0)),
+                                        borderRadius: const BorderRadius.all(Radius.circular(12.0)),
                                         elevation: 0,
                                         child: MaterialButton(
-                                          onPressed: !isPickerEnabled ? null:() async {
-                                            if((phoneNumber ?? "").trim().isEmpty){
+                                          onPressed: (!isPickerEnabled || _isSendingOtp) ? null:() async {
+                                            final phone = (phoneNumber ?? "").trim();
+                                            if(phone.isEmpty){
                                               _showMessage(S.of(context).enterMobile);
-                                            }else if((phoneNumber ?? "").trim().startsWith("0")){
+                                            }else if(phone.startsWith("0")){
                                               _showMessage(S.of(context).validMobileWithout0);
-                                            }else if((phoneNumber ?? "").trim().length != 10){
+                                            }else if(phone.length != 10){
                                               _showMessage(S.of(context).validMobile);
                                             }else{
-                                              String currentOtp = OtpDialog.generateOtp();
-                                              final json = await Services().api.mobileSendOtp("$selectedCode${(phoneNumber ?? "").trim()}",currentOtp);
-                                              final message = json?['error']?['message'] ?? '';
-                                              if(message.isEmpty){
-                                                OtpDialog.showOtpDialog(context, "$selectedCode${(phoneNumber ?? "").trim()}",currentOtp,((otpCode,actionFrom) async {
-                                                  if(actionFrom == "resend"){
-                                                    Services().api.mobileSendOtp("$selectedCode${(phoneNumber ?? "").trim()}",currentOtp);
-                                                  }else{
-                                                    if(actionFrom == "verify"){
-                                                      setState(() {
-                                                        isPickerEnabled = false;
-                                                        emailNode.requestFocus();
-                                                      });
+                                              // Disable + show spinner so a second tap can't fire another send.
+                                              setState(() => _isSendingOtp = true);
+                                              final fullPhone = "$selectedCode$phone";
+                                              final currentOtp = OtpDialog.generateOtp();
+                                              try {
+                                                final json = await Services().api.mobileSendOtp(fullPhone, currentOtp);
+                                                if (!mounted) return;
+                                                final message = json?['error']?['message'] ?? '';
+                                                if(message.isEmpty){
+                                                  OtpDialog.showOtpDialog(context, fullPhone, currentOtp,((otpCode,actionFrom) async {
+                                                    if(actionFrom == "resend"){
+                                                      Services().api.mobileSendOtp(fullPhone, currentOtp);
+                                                    }else{
+                                                      if(actionFrom == "verify"){
+                                                        setState(() {
+                                                          isPickerEnabled = false;
+                                                          emailNode.requestFocus();
+                                                        });
+                                                      }
                                                     }
-                                                  }
-                                                }));
-                                              }else{
-                                                _showMessage(json?["message"]);
+                                                  }));
+                                                }else{
+                                                  _showMessage(json?["message"]);
+                                                }
+                                              } catch (_) {
+                                                if (mounted) _showMessage(S.of(context).somethingWrong);
+                                              } finally {
+                                                if (mounted) setState(() => _isSendingOtp = false);
                                               }
                                             }
                                           },
                                           elevation: 0.0,
-                                          height: 42.0,
-                                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                                          child: Text(
-                                            S.of(context).generateOtp,
-                                            style: TextStyle(
-                                              color: AppColors.textColor(context),
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                          highlightElevation: 0.0,
+                                          height: 44.0,
+                                          minWidth: 150.0,
+                                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12.0),
                                           ),
+                                          child: _isSendingOtp
+                                              ? SizedBox(
+                                                  width: 18,
+                                                  height: 18,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                                      AppColors.textColor(context),
+                                                    ),
+                                                  ),
+                                                )
+                                              : Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    SvgPicture.asset(
+                                                      'assets/icons/brands/whatsapp.svg',
+                                                      height: 18,
+                                                      width: 18,
+                                                      colorFilter: const ColorFilter.mode(
+                                                        Color(0xFF25D366),
+                                                        BlendMode.srcIn,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      S.of(context).generateOtp,
+                                                      style: TextStyle(
+                                                        color: AppColors.textColor(context),
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 15,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
                                         ),
                                       ),
                                     ],
@@ -608,7 +657,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return TextButton(
       onPressed: () {
         if(index == 0){
-          Navigator.of(context).pop();
+          // Show the Login screen. Register may have been opened from Home
+          // (not from Login), so popping would wrongly land on Home. Replace
+          // the current (Register) route with Login instead.
+          Navigator.of(context).pushReplacementNamed(RouteList.login);
         }
       },
       style: TextButton.styleFrom(
