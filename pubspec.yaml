@@ -48,7 +48,7 @@ dependencies:
   flare_flutter:
     git:
       url: https://github.com/inspireui/Flare-Flutter.git
-      ref: fd4bcba22aae4c028286e453deeb78f3311e689a
+      ref: 0211568820af2ba96fedb7c51462ec5a6bf566b9
       path: flare_flutter
   flash:
   flutter:

@@ -469,8 +469,8 @@ packages:
     dependency: "direct main"
     description:
       path: flare_flutter
-      ref: fd4bcba22aae4c028286e453deeb78f3311e689a
-      resolved-ref: fd4bcba22aae4c028286e453deeb78f3311e689a
+      ref: "0211568820af2ba96fedb7c51462ec5a6bf566b9"
+      resolved-ref: "0211568820af2ba96fedb7c51462ec5a6bf566b9"
       url: "https://github.com/inspireui/Flare-Flutter.git"
     source: git
     version: "3.0.2"
