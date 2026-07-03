@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:magentoegypt/common/extensions.dart';
@@ -45,10 +46,10 @@ ThemeData buildLightTheme(String? language,
         ),
       ),
     ),
-    pageTransitionsTheme: const PageTransitionsTheme(
+    pageTransitionsTheme: PageTransitionsTheme(
       builders: {
         TargetPlatform.android: FadeThroughPageTransitionsBuilder(),
-        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.iOS: const CupertinoPageTransitionsBuilder(),
       },
     ),
   );
@@ -86,6 +87,7 @@ ThemeData buildLightTheme(String? language,
       TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
       TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
     }),
+    // (kept const above — both builders are const-constructible)
     tabBarTheme: const TabBarThemeData(
       labelColor: Colors.black,
       unselectedLabelColor: Colors.black,
