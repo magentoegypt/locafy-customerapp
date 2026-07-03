@@ -8,6 +8,7 @@ import '../../generated/l10n.dart';
 import '../../models/index.dart'
     show
         AppModel,
+        CategoryFilterModel,
         CategoryModel,
         FilterAttributeModel,
         Product,
@@ -80,6 +81,9 @@ class ProductsScreenState extends State<ProductsScreen>
   ProductModel get productModel =>
       Provider.of<ProductModel>(context, listen: false);
 
+  CategoryFilterModel get categoryFilterModel =>
+      Provider.of<CategoryFilterModel>(context, listen: false);
+
   @override
   FilterAttributeModel get filterAttrModel =>
       Provider.of<FilterAttributeModel>(context, listen: false);
@@ -115,12 +119,16 @@ class ProductsScreenState extends State<ProductsScreen>
       value: 1.0,
     );
 
-
     /// only request to server if there is empty config params
     // / If there is config, load the products one
     WidgetsBinding.instance.endOfFrame.then((_) {
       if (mounted) {
         resetFilter();
+        // Load the web-parity attribute filters for this category. Called
+        // before onRefresh: load() synchronously clears any selection held
+        // from a previously-browsed category, so getProductList never applies
+        // a stale filter to this category's list.
+        categoryFilterModel.load(categoryId, appModel.langCode);
         onRefresh();
       }
     });
@@ -150,7 +158,7 @@ class ProductsScreenState extends State<ProductsScreen>
       listingLocation: listingLocationId,
       include: include,
       search: search,
-      searchText: productConfig.searchText
+      attributeFilters: categoryFilterModel.selectedFilters,
     );
   }
 
@@ -210,7 +218,7 @@ class ProductsScreenState extends State<ProductsScreen>
         appbarCategory: ProductCategoryMenu(
           enableSearchHistory: widget.enableSearchHistory,
           newCategoryId: categoryId,
-          onTap: (categoryId,categoryName) {
+          onTap: (categoryId, categoryName) {
             include = null;
             onFilter(categoryId: categoryId);
           },
@@ -246,7 +254,6 @@ class ProductsScreenState extends State<ProductsScreen>
                   ? Layout.simpleList
                   : productListLayout;
 
-
               return ListenableProvider.value(
                 value: productModel,
                 child: Consumer<ProductModel>(
@@ -262,7 +269,8 @@ class ProductsScreenState extends State<ProductsScreen>
                         autoFocusSearch: widget.autoFocusSearch,
                         enableSearchHistory: widget.enableSearchHistory,
                         currentTitle: currentTitle,
-                        productCount: '${ model.productsList?.length} ${S.of(context).items}',
+                        productCount:
+                            '${model.productsList?.length} ${S.of(context).items}',
                         builder: layout.isListView
                             ? ProductList(
                                 products: model.productsList,
@@ -275,24 +283,17 @@ class ProductsScreenState extends State<ProductsScreen>
                                 ratioProductImage: ratioProductImage,
                                 productListItemHeight: productListItemHeight,
                                 width: constraint.maxWidth,
-                                appbar: Row(
-                                 // alignment: Alignment.centerLeft,
-                                  children: [
-                                    Expanded(
-                                     // width: MediaQuery.of(context).size.width-120,
-                                      child: ProductCategoryMenu(
-                                      imageLayout: true,
-                                      isComingFrom: "product_screen",
-                                      enableSearchHistory:
-                                      widget.enableSearchHistory,
-                                      newCategoryId: categoryId,
-                                      onTap: (categoryId,categoryName) {
-                                        include = null;
-                                        onFilter(categoryId: categoryId);
-                                      },
-                                    ),),
-                                    renderFilters(context)
-                                  ],
+                                // A category/subcategory page shows just the
+                                // sort/filter toolbar, matching the website.
+                                // This used to also show a row of the current
+                                // category's sibling categories (via
+                                // ProductCategoryMenu), which made a
+                                // subcategory's page look like it was mixing
+                                // its own products with "the remaining
+                                // subcategories of the main category".
+                                appbar: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: renderFilters(context),
                                 ),
                                 header: [
                                   // ProductCategoryMenu(

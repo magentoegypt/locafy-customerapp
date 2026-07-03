@@ -247,10 +247,12 @@ class _ProductImageCarasoulState extends State<ProductImageCarasoul> {
     return Column(
       children: [
         Padding(
-          padding: getPadding(left: 50, right: 50),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: CarouselSlider.builder(
             options: CarouselOptions(
-                height: getVerticalSize(240),
+                // Portrait box sized to the catalog's 2:3 images so
+                // BoxFit.contain shows them full and large like the website.
+                height: (size.width - 32) * kAdvanceConfig.ratioProductImage,
                 initialPage: 0,
                 autoPlay: true,
                 viewportFraction: 1.0,

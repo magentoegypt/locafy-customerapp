@@ -111,6 +111,19 @@ class _MyCartState extends State<MyCart> with SingleTickerProviderStateMixin {
 
   CartModel get cartModel => Provider.of<CartModel>(context, listen: false);
 
+  @override
+  void initState() {
+    super.initState();
+    // Pull the latest cart from the server when the cart opens so items added,
+    // removed or updated on another platform (web / iOS) are reflected without
+    // having to log out and back in. No-op for guests / non-Magento.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        cartModel.reloadCartFromServer();
+      }
+    });
+  }
+
   void _loginWithResult(BuildContext context) async {
     // final result = await Navigator.push(
     //   context,
@@ -212,7 +225,7 @@ class _MyCartState extends State<MyCart> with SingleTickerProviderStateMixin {
                   ),
                 ),
               if (totalCartQuantity > 0)
-                Padding(
+              Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10.0,
                   vertical: 10.0,

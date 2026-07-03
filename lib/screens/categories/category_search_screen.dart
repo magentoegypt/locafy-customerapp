@@ -57,15 +57,23 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
     super.dispose();
   }
 
+  int _searchRequestId = 0;
+
   Future<void> _onSearchTextChange(String value) async {
-    print(value);
-    if(value.isEmpty){
+    // Every keystroke gets its own request id. When an async response comes
+    // back we only apply it if no newer keystroke (including clearing the
+    // field) has happened since — otherwise a slow response for an earlier,
+    // now-stale keyword can land after the field was cleared and make the old
+    // results reappear.
+    final requestId = ++_searchRequestId;
+    if (value.isEmpty) {
       searchResponse = null;
-    }else {
-      searchResponse = await Services().api
-          .searchProductsResult(value);
+      if (mounted) setState(() {});
+      return;
     }
-    print(searchResponse?.result?.length);
+    final result = await Services().api.searchProductsResult(value);
+    if (!mounted || requestId != _searchRequestId) return;
+    searchResponse = result;
     setState(() {
 
     });
@@ -145,7 +153,9 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
         child: AutoHideKeyboard(
           child: Column(
             children: [
-              if(widget.isComingFrom != "homeSearch")
+              // Always show the standard header (back button, current
+              // category/search title, cart icon) — it must never be hidden,
+              // regardless of how this screen was reached.
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -166,15 +176,14 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
                       }
                     },
                   ):SizedBox(width: 25,),
-                  widget.isComingFrom == "categogies" ? Image.asset(
+                  widget.selectedId.isNotEmpty &&
+                          widget.selectedCategoryName.isNotEmpty
+                      ? AppbarTitle(text: widget.selectedCategoryName)
+                      : widget.isComingFrom == "categogies" ? Image.asset(
                     'assets/images/logo.png',
                     width: 150,
                     height: 50,
-                  ):AppbarTitle(
-                      text: widget.selectedId.isNotEmpty &&
-                              widget.selectedCategoryName.isNotEmpty
-                          ? widget.selectedCategoryName
-                          : S.of(context).search),
+                  ):AppbarTitle(text: S.of(context).search),
                   Selector<CartModel, int>(
                     selector: (_, model) => model.totalCartQuantity,
                     builder: (context, totalCart, child) {
@@ -313,6 +322,8 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
                         if ((products?.data ?? []).isNotEmpty)
                           ProductSectionList(
                             items: products!.data as List<Product>,
+                            totalCount: products.size,
+                            searchKeyword: _searchFieldController.text,
                           ),
                       ],
                     ),
@@ -525,57 +536,21 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
       return ChildList(
         children: [
           for (var category in getSubCategories(maincategoryId))
-         //   if ((_keyword ?? "").isEmpty ||((_keyword ?? "").isNotEmpty) && category.name!.toLowerCase().contains((_keyword ?? "").toLowerCase()))
-            Parent(
-              callback: (isSelected) {
-                if (getSubCategories(category.id).isEmpty) {
-                  navigateToBackDrop(category);
-                }else{
+            // Tapping the row/name always opens this category's own product
+            // page; tapping the trailing arrow (only shown when it has
+            // children) drills into its child categories instead.
+            GestureDetector(
+              onTap: () => navigateToBackDrop(category),
+              child: SubItem(
+                category,
+                hasChild: getSubCategories(category.id).isNotEmpty,
+                onArrowTap: (_) {
                   setState(() {
                     widget.selectedId = category.id ?? "";
                     widget.selectedCategoryName = category.name ?? "";
                   });
-                }
-              },
-              parent: SubItem(category,hasChild: getSubCategories(category.id).length > 0 ? true:false,),
-               childList: ChildList()
-              //ChildList(
-              //   children: [
-              //     for (var cate in getSubCategories(category.id))
-              //       Parent(
-              //         callback: (isSelected) {
-              //           if (getSubCategories(cate.id).isEmpty) {
-              //             Navigator.of(context).pushNamed(
-              //               RouteList.backdrop,
-              //               arguments: BackDropArguments(
-              //                 cateId: cate.id,
-              //                 cateName: cate.name,
-              //               ),
-              //             );
-              //           }
-              //         },
-              //         parent: SubItem(cate, level: 1,hasChild: getSubCategories(cate.id).length > 0 ? true:false,),
-              //         childList: ChildList(
-              //           children: [
-              //             for (var cate in getSubCategories(cate.id))
-              //               Parent(
-              //                 callback: (isSelected) {
-              //                   Navigator.of(context).pushNamed(
-              //                     RouteList.backdrop,
-              //                     arguments: BackDropArguments(
-              //                       cateId: cate.id,
-              //                       cateName: cate.name,
-              //                     ),
-              //                   );
-              //                 },
-              //                 parent: SubItem(cate, level: 2,hasChild: getSubCategories(cate.id).length > 0 ? true:false,),
-              //                 childList: const ChildList(children: []),
-              //               ),
-              //           ],
-              //         ),
-              //       ),
-              //   ],
-              // ),
+                },
+              ),
             ),
         ],
       );
@@ -707,15 +682,40 @@ class SuggestSection extends StatelessWidget {
 
 class ProductSectionList extends StatelessWidget {
   final List<Product> items;
+  final int? totalCount;
+  final String? searchKeyword;
 
-  const ProductSectionList({super.key, required this.items});
+  const ProductSectionList({
+    super.key,
+    required this.items,
+    this.totalCount,
+    this.searchKeyword,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _header("PRODUCTS"),
+        _header(
+          totalCount != null ? "PRODUCTS ($totalCount)" : "PRODUCTS",
+          trailing: (searchKeyword?.isNotEmpty ?? false)
+              ? GestureDetector(
+                  onTap: () => Navigator.of(context).pushNamed(
+                    RouteList.backdrop,
+                    arguments: BackDropArguments(searchText: searchKeyword),
+                  ),
+                  child: Text(
+                    S.of(context).seeAll,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                )
+              : null,
+        ),
 
         ListView.builder(
           itemCount: items.length,
@@ -798,14 +798,20 @@ class ProductListTile extends StatelessWidget {
   }
 }
 
-Widget _header(String title) {
+Widget _header(String title, {Widget? trailing}) {
   return Container(
     width: double.infinity,
     padding: const EdgeInsets.all(12),
     color: Colors.blue,
-    child: Text(
-      title,
-      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        if (trailing != null) trailing,
+      ],
     ),
   );
 }

@@ -68,6 +68,7 @@ abstract class BaseServices {
           userId,
           String? search,
             String? searchText,
+          Map<String, List<String>>? attributeFilters,
           String? include,
           String? nextCursor}) async =>
       const <Product>[];
@@ -713,7 +714,8 @@ abstract class BaseServices {
     return null;
   }
 
-  Future<List<Product>?>? getShoppingList(CartModel model) async {
+  Future<List<Product>?>? getShoppingList(CartModel model,
+      {bool replace = false}) async {
     return null;
   }
 

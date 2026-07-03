@@ -25,8 +25,6 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordState extends State<ForgotPasswordScreen> {
   final TextEditingController forgotPasswordController =
       TextEditingController();
-  // Separate controller for the email field so its value is never shared
-  // with (swapped into) the phone field and vice versa.
   final TextEditingController emailController = TextEditingController();
   String selectedCode = '20'; // default value
   bool isSubmitting = false;

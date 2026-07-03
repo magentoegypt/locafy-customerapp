@@ -74,30 +74,13 @@ class CategoriesScreenState extends State<CategoriesScreen>
     return renderScaffold(
       routeName: RouteList.category,
       backgroundColor: Theme.of(context).colorScheme.background,
-      child: [
-        GridCategory.type,
-        ColumnCategories.type,
-        SideMenuCategories.type,
-        SubCategories
-            .type, // Not support enableLargeCategory (pls check again, I think it works)
-        SideMenuSubCategories.type, // Not support enableLargeCategory
-        SideMenuGroupCategories.type,
-        ParallaxCategories
-            .type, // Not support enableLargeCategory (pls check again, I think it works)
-        CardCategories.type,
-        MultiLevelCategories.type, // Only work for enableLargeCategory
-      ].contains(categoryLayout)
+      child: categoryLayout == CardCategories.type
+          // Home: keep the logo + search header sticky, but NOT the
+          // login/register buttons — those render inside the scrolling
+          // HomeSectionsView (showAuthButtons: false) so only they scroll away.
           ? Column(
               children: <Widget>[
-                HeaderCategory(showSearch: widget.showSearch),
-                // ElevatedButton(
-                //   onPressed: () {
-                //     // Navigator.of(context).push(MaterialPageRoute(
-                //     //   builder: (context) => TalkerScreen(talker: talker),
-                //     // ));
-                //   },
-                //   child: Text(categoryLayout),
-                // ),
+                const HeaderCategory(showSearch: true, showAuthButtons: false),
                 Expanded(
                   child: renderCategories(
                     categoryLayout,
@@ -106,16 +89,40 @@ class CategoriesScreenState extends State<CategoriesScreen>
                     widget.parallaxImageRatio,
                     _scrollController,
                   ),
-                )
+                ),
               ],
             )
-          : renderCategories(
-              categoryLayout,
-              "categogies",
-              widget.enableParallax,
-              widget.parallaxImageRatio,
-              _scrollController,
-            ),
+          : [
+              GridCategory.type,
+              ColumnCategories.type,
+              SideMenuCategories.type,
+              SubCategories.type,
+              SideMenuSubCategories.type,
+              SideMenuGroupCategories.type,
+              ParallaxCategories.type,
+              MultiLevelCategories.type,
+            ].contains(categoryLayout)
+              ? Column(
+                  children: <Widget>[
+                    HeaderCategory(showSearch: widget.showSearch),
+                    Expanded(
+                      child: renderCategories(
+                        categoryLayout,
+                        "categogies",
+                        widget.enableParallax,
+                        widget.parallaxImageRatio,
+                        _scrollController,
+                      ),
+                    )
+                  ],
+                )
+              : renderCategories(
+                  categoryLayout,
+                  "categogies",
+                  widget.enableParallax,
+                  widget.parallaxImageRatio,
+                  _scrollController,
+                ),
     );
   }
 
@@ -137,8 +144,13 @@ class CategoriesScreenState extends State<CategoriesScreen>
 }
 
 class HeaderCategory extends StatelessWidget {
-  const HeaderCategory({Key? key, required this.showSearch}) : super(key: key);
+  const HeaderCategory({
+    Key? key,
+    required this.showSearch,
+    this.showAuthButtons = true,
+  }) : super(key: key);
   final bool showSearch;
+  final bool showAuthButtons;
 
   @override
   Widget build(BuildContext context) {
@@ -239,77 +251,94 @@ class HeaderCategory extends StatelessWidget {
               ),
             ),
           ),
-          // 👇 Listen for login changes here
-          Consumer<UserModel>(
-            builder: (context, userModel, _) {
-              if (userModel.loggedIn) return const SizedBox.shrink();
-
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // 🖤 Login Button
-                    Expanded(
-                      child: SizedBox(
-                        height: 48,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          onPressed: () {
-                            NavigateTools.navigateToLogin(context);
-                          },
-                          child: Text(
-                            S.of(context).login,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // 🤍 Create Account Button
-                    Expanded(
-                      child: SizedBox(
-                        height: 48,
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.red, width: 2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            backgroundColor: Colors.white,
-                          ),
-                          onPressed: () {
-                            NavigateTools.navigateRegister(context);
-                          },
-                          child: Text(
-                            S.of(context).newcreateAccount,
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+          // Login/Register buttons — shown in the sticky header for non-home
+          // layouts. On home this is false and the buttons are rendered inside
+          // the scrolling content instead, so only they scroll away.
+          if (showAuthButtons) const HeaderAuthButtons(),
 
         ],
       ),
+    );
+  }
+}
+
+/// Login / Register buttons row (hidden once the user is logged in). Extracted
+/// so it can live either in the sticky [HeaderCategory] or inside a scroll
+/// view (home page) where it should scroll away.
+class HeaderAuthButtons extends StatelessWidget {
+  const HeaderAuthButtons({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<UserModel>(
+      builder: (context, userModel, _) {
+        if (userModel.loggedIn) return const SizedBox.shrink();
+
+        return Container(
+          color: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // 🖤 Login Button
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: () {
+                        NavigateTools.navigateToLogin(context);
+                      },
+                      child: Text(
+                        S.of(context).login,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // 🤍 Create Account Button
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.black, width: 2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        backgroundColor: Colors.white,
+                      ),
+                      onPressed: () {
+                        NavigateTools.navigateRegister(context);
+                      },
+                      child: Text(
+                        S.of(context).newcreateAccount,
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

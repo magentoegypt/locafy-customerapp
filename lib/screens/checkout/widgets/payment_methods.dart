@@ -51,14 +51,18 @@ class _PaymentMethodsState extends State<PaymentMethods> {
           langCode: langCode);
 
       if (kPaymentConfig.enableReview != true) {
-        Provider.of<TaxModel>(context, listen: false)
-            .getTaxes(Provider.of<CartModel>(context, listen: false),
-                (taxesTotal, taxes) {
-          Provider.of<CartModel>(context, listen: false).taxesTotal =
-              taxesTotal;
-          Provider.of<CartModel>(context, listen: false).taxes = taxes;
-          setState(() {});
-        });
+        if (kPaymentConfig.enableTax) {
+          Provider.of<TaxModel>(context, listen: false)
+              .getTaxes(Provider.of<CartModel>(context, listen: false),
+                  (taxesTotal, taxes) {
+            Provider.of<CartModel>(context, listen: false).taxesTotal =
+                taxesTotal;
+            Provider.of<CartModel>(context, listen: false).taxes = taxes;
+            setState(() {});
+          });
+        } else {
+          Provider.of<CartModel>(context, listen: false).taxesTotal = 0;
+        }
       }
     });
   }
@@ -352,7 +356,9 @@ class _PaymentMethodsState extends State<PaymentMethods> {
         paymentMethod: paymentMethod,
         billingData: {
           "apartment": cartModel.address?.street,
-          "email": cartModel.address?.email,
+          // Email is optional at checkout; Paymob requires a non-empty
+          // billing email, so use the same fallback the order payload uses.
+          "email": cartModel.address?.effectiveEmail,
           "floor": cartModel.address?.street,
           "first_name": cartModel.address?.firstName,
           "last_name": cartModel.address?.lastName,

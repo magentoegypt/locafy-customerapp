@@ -7,6 +7,7 @@ class PaymentConfig {
   bool enableAddressLocationNote = false;
   bool enableAlphanumericZipCode = false;
   bool enableReview = false;
+  bool enableTax = false;
   bool allowSearchingAddress = false;
   String googleApiKey = '';
   bool guestCheckout = false;
@@ -32,6 +33,7 @@ class PaymentConfig {
     enableAddressLocationNote = json['EnableAddressLocationNote'] ?? false;
     enableAlphanumericZipCode = json['EnableAlphanumericZipCode'] ?? false;
     enableReview = json['EnableReview'] ?? false;
+    enableTax = json['EnableTax'] ?? false;
     allowSearchingAddress = json['allowSearchingAddress'] ?? false;
     googleApiKey = json['GoogleApiKey'] ?? '';
     guestCheckout = json['GuestCheckout'] ?? false;
@@ -63,6 +65,7 @@ class PaymentConfig {
     map['EnableAddressLocationNote'] = enableAddressLocationNote;
     map['EnableAlphanumericZipCode'] = enableAlphanumericZipCode;
     map['EnableReview'] = enableReview;
+    map['EnableTax'] = enableTax;
     map['allowSearchingAddress'] = allowSearchingAddress;
     map['GoogleApiKey'] = googleApiKey;
     map['GuestCheckout'] = guestCheckout;

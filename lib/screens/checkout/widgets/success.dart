@@ -4,8 +4,9 @@ import 'package:provider/provider.dart';
 import '../../../common/config.dart';
 import '../../../common/constants.dart';
 import '../../../generated/l10n.dart';
+import '../../../menu/maintab_delegate.dart';
 import '../../../models/index.dart'
-    show Order, UserModel, PointModel, CartModel;
+    show CartModel, Order, UserModel, PointModel;
 import '../../../services/index.dart';
 import '../../base_screen.dart';
 
@@ -147,11 +148,14 @@ class _OrderedSuccessState extends BaseScreen<OrderedSuccess> {
                       shape: const RoundedRectangleBorder(),
                     ),
                     onPressed: () {
-                      // Clear the cart so stale totals (e.g. previous tax)
-                      // don't linger, then return to the Home screen instead
-                      // of the shopping cart.
+                      // Local reset only: the order already consumed the
+                      // server quote, so there are no server items to delete.
                       Provider.of<CartModel>(context, listen: false)
-                          .clearCart(true);
+                          .clearCart(false);
+                      // Forget the tab that was active when checkout started
+                      // (usually the cart) so the dashboard opens on the
+                      // default home tab.
+                      MainTabControlDelegate.getInstance().index = null;
                       Navigator.of(context).pushNamedAndRemoveUntil(
                           RouteList.dashboard, (route) => false);
                     },

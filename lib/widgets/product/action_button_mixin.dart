@@ -78,6 +78,26 @@ mixin ActionButtonMixin {
      );
      return;
    }
+
+    // Magento validates (in-cart qty + requested qty) <= salable qty; check it
+    // here too so low-stock items fail fast with a clear message instead of a
+    // raw server error.
+    final salableQty = productCheck?.stockQuantity;
+    if (salableQty != null) {
+      final cartModel = Provider.of<CartModel>(context, listen: false);
+      final cartKey = product.sku ?? product.id.toString();
+      final inCartQty = cartModel.productsInCart[cartKey] ?? 0;
+      if (inCartQty + quantity > salableQty) {
+        FlashHelper.message(
+          context,
+          title: product.name,
+          message:
+              '${S.of(context).currentlyWeOnlyHave} $salableQty ${S.of(context).ofThisProduct}',
+          isError: true,
+        );
+        return;
+      }
+    }
     var message = await addProductToCart(
       product: product,
       context: context,

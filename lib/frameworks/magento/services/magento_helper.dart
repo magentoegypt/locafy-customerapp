@@ -1,5 +1,6 @@
 import 'package:inspireui/inspireui.dart';
 import '../../../common/config.dart';
+import '../../../common/constants.dart';
 
 class MagentoHelper {
   static String? getCustomAttribute(customAttributes, attribute) {
@@ -16,11 +17,9 @@ class MagentoHelper {
   }
 
   static String getProductImageUrlByName(domain, imageName) {
-    // latest provided by FLuxstore Support
-    return '$domain/media/catalog/product$imageName';
-
-    // previous within Code
-    //return '$domain/pub/media/catalog/product$imageName';
+    // Media is served by the CDN (kMediaDomain), not the API domain, because
+    // staging has no media files. Same host is used for live and staging.
+    return '$kMediaDomain/media/catalog/product$imageName';
   }
 
   static String getProductImageUrl(domain, item, [attribute = 'thumbnail']) {
@@ -37,7 +36,7 @@ class MagentoHelper {
   static String getCategoryImageUrl(domain, item, [attribute = 'image']) {
     final imageName = getCustomAttribute(item['custom_attributes'], attribute);
     if (imageName != null) {
-      return '$domain/pub/media/catalog/category/$imageName';
+      return '$kMediaDomain/media/catalog/category/$imageName';
     }
     return '';
   }
@@ -75,18 +74,27 @@ class MagentoHelper {
   }
 
   static Uri? buildUrl(String? domain, String endpoint, [String? locale]) {
-    final languages = getLanguages();
-    // if (isNotBlank(locale)) {
-    //   var language = languages.firstWhereOrNull(
-    //       (o) => o['code'] == locale && isNotBlank(o['storeViewCode']));
-    //   if (language != null) {
-    //     return "$domain/${language["storeViewCode"]}/rest/V1/$endpoint" //"$domain/index.php/rest/${language["storeViewCode"]}/V1/$endpoint"
-    //         .toUri();
-    //   }
-    // }
-    return '$domain/eg-en/rest/V1/$endpoint'.toUri();
-    //'$domain/${SettingsBox().languageCode}/rest/V1/$endpoint'.toUri();
-    // '$domain/index.php/rest/V1/$endpoint'.toUri();
+    return '$domain/${_storeViewCode(locale)}/rest/V1/$endpoint'.toUri();
+  }
+
+  /// Store-view path segment for a REST call. Content endpoints pass the
+  /// current app language so the API returns localized (e.g. Arabic) text;
+  /// calls that pass no locale (customer / cart / checkout) stay on the
+  /// default English store view, whose REST config is known-good.
+  ///
+  /// Reads `storeViewCode` from the language config (env `languagesInfo`):
+  /// en -> "" -> falls back to eg-en; ar -> eg-ar. Anything unmapped/blank
+  /// falls back to eg-en.
+  static String _storeViewCode(String? locale) {
+    const fallback = 'eg-en';
+    if (locale == null || locale.isEmpty) return fallback;
+    for (final lang in getLanguages()) {
+      if (lang['code'] == locale) {
+        final code = lang['storeViewCode'];
+        return (code is String && code.isNotEmpty) ? code : fallback;
+      }
+    }
+    return fallback;
   }
 
   static bool isEndLoadMore(body) {

@@ -24,7 +24,7 @@ class GroupCheckBoxWidget<T> extends StatefulWidget {
           'mustSelectAtLeastOneItem must be false if defaultValue is null',
         ),
         assert(numberOfRow > 0, 'numberOfRow must be greater than 0'),
-        assert(values.length > 1, 'values must be greater than 1'),
+        assert(values.length > 0, 'values must not be empty'),
         super(key: key);
 
   final ValueChanged<GroupCheckBoxItem<T>?>? onChanged;

@@ -19,8 +19,6 @@ class ProductWishListModel extends ChangeNotifier {
   int get wishlistCount => products.length;
 
   Future<void> addToWishlist(Product product) async {
-    // Guests can't have a server-side wishlist — show the same message the
-    // website shows instead of letting the API return a generic error.
     if (!UserBox().isLoggedIn) {
       _failMessage(S.current.mustLoginToWishlist);
       return;

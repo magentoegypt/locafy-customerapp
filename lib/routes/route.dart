@@ -8,6 +8,7 @@ import '../common/config.dart';
 import '../common/constants.dart';
 import '../common/tools.dart';
 import '../menu/maintab.dart';
+import '../models/category/category_model.dart';
 import '../models/index.dart'
     show
         AppModel,
@@ -102,6 +103,15 @@ class Routes {
               var categoryId = cateId ?? configValue.category;
               var categoryName = cateName ?? configValue.name;
               var listingLocationId = config?['location']?.toString();
+
+              // Main (top-level) categories open the merchandised landing
+              // page instead of a flat product list (86d3g36q4).
+              if (_isTopLevelCategory(context, categoryId)) {
+                return CategoryLandingScreen(
+                  categoryId: '$categoryId',
+                  categoryName: categoryName,
+                );
+              }
 
               var tagId = tag ?? configValue.tag;
 
@@ -426,15 +436,37 @@ class Routes {
               SubcategoryModel(parentId: arguments.parentId)..getData();
           return _buildRoute(
             settings,
-            (context) => ChangeNotifierProvider.value(
-              value: subcategoryModel,
-              child: ChangeNotifierProvider.value(
-                value: subcategoryModel.listSubcategoryModel,
-                child: SubcategoryScreen(
+            (context) {
+              // A main (top-level) category shows the merchandised landing
+              // page (86d3g36q4) rather than a bare subcategory grid.
+              if (_isTopLevelCategory(context, arguments.parentId)) {
+                return CategoryLandingScreen(
+                  categoryId: arguments.parentId,
                   categoryName: arguments.categoryName,
-                  level: arguments.level,
+                );
+              }
+              return ChangeNotifierProvider.value(
+                value: subcategoryModel,
+                child: ChangeNotifierProvider.value(
+                  value: subcategoryModel.listSubcategoryModel,
+                  child: SubcategoryScreen(
+                    categoryName: arguments.categoryName,
+                    level: arguments.level,
+                  ),
                 ),
-              ),
+              );
+            },
+          );
+        }
+        return _errorRoute();
+      case RouteList.categoryLanding:
+        final arguments = settings.arguments;
+        if (arguments is BackDropArguments) {
+          return _buildRoute(
+            settings,
+            (context) => CategoryLandingScreen(
+              categoryId: '${arguments.cateId}',
+              categoryName: arguments.cateName,
             ),
           );
         }
@@ -530,6 +562,23 @@ class Routes {
       builder: builder,
       fullscreenDialog: fullscreenDialog,
     );
+  }
+
+  /// A top-level (main) category — Kidswear, Menswear, etc. — is stored with
+  /// `parent == '0'` by [MagentoService.getCategories]. These open the
+  /// merchandised landing page (86d3g36q4); everything below them keeps the
+  /// normal product-list / subcategory behaviour.
+  static bool _isTopLevelCategory(BuildContext context, dynamic categoryId) {
+    if (categoryId == null) {
+      return false;
+    }
+    try {
+      final model = Provider.of<CategoryModel>(context, listen: false);
+      final category = model.categoryList['$categoryId'];
+      return category != null && category.parent == '0';
+    } catch (_) {
+      return false;
+    }
   }
 }
 

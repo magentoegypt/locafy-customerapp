@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:html/parser.dart';
 import 'package:inspireui/inspireui.dart';
 
 import '../../../generated/l10n.dart';
@@ -73,9 +74,19 @@ class ProductShortDescription extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
-          product.shortDescription!,
+          _htmlToString(product.shortDescription!),
         ),
       ),
     );
+  }
+
+  /// Magento sends the short description as HTML — show plain text.
+  String _htmlToString(String htmlData) {
+    try {
+      var document = parse(htmlData);
+      return parse(document.body!.text).documentElement!.text.trim();
+    } catch (_) {
+      return htmlData;
+    }
   }
 }

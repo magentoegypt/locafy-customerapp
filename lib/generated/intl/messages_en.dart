@@ -501,6 +501,12 @@ class MessageLookup extends MessageLookupByLibrary {
         "featureProducts":
             MessageLookupByLibrary.simpleMessage("Feature Products"),
         "featured": MessageLookupByLibrary.simpleMessage("Featured"),
+        "newArrival": MessageLookupByLibrary.simpleMessage("New Arrival"),
+        "shopNow": MessageLookupByLibrary.simpleMessage("Shop Now"),
+        "featuredBrands":
+            MessageLookupByLibrary.simpleMessage("Featured Brands"),
+        "shopByCategory":
+            MessageLookupByLibrary.simpleMessage("Shop by Category"),
         "features": MessageLookupByLibrary.simpleMessage("Features"),
         "fileIsTooBig": MessageLookupByLibrary.simpleMessage(
             "The file is too big. Please choose a smaller file!"),
@@ -661,7 +667,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "markAsUnread": MessageLookupByLibrary.simpleMessage("Mark as unread"),
         "maximumFileSizeMb": m15,
         "maybeLater": MessageLookupByLibrary.simpleMessage("Maybe Later"),
-        "menuOrder": MessageLookupByLibrary.simpleMessage("Menu order"),
+        "menuOrder": MessageLookupByLibrary.simpleMessage("Position"),
         "message": MessageLookupByLibrary.simpleMessage("Message"),
         "messageTo": MessageLookupByLibrary.simpleMessage("Send Message To"),
         "minimumQuantityIs":
@@ -850,6 +856,8 @@ class MessageLookup extends MessageLookupByLibrary {
             "Please input fill in all fields"),
         "pleaseInputFillAllFields":
             MessageLookupByLibrary.simpleMessage("Please fill in all fields"),
+        "pleaseUpdateAddress": MessageLookupByLibrary.simpleMessage(
+            "This saved address is incomplete. Please edit it and select the city and zone again."),
         "pleaseSelectADate": MessageLookupByLibrary.simpleMessage(
             "Please select a booking date"),
         "pleaseSelectALocation":
@@ -1039,15 +1047,6 @@ class MessageLookup extends MessageLookupByLibrary {
             MessageLookupByLibrary.simpleMessage("Searching Address"),
         "secondsAgo": m23,
         "seeAll": MessageLookupByLibrary.simpleMessage("See All"),
-        "welcomeToLocafyMarket":
-            MessageLookupByLibrary.simpleMessage("Welcome to Locafy Market"),
-        "changeLanguageTitle":
-            MessageLookupByLibrary.simpleMessage("Change language"),
-        "signOut": MessageLookupByLibrary.simpleMessage("Sign Out"),
-        "mustLoginToWishlist": MessageLookupByLibrary.simpleMessage(
-            "You must login or register to add items to your wishlist."),
-        "goToShoppingCart":
-            MessageLookupByLibrary.simpleMessage("Go to the shopping cart"),
         "seeNewAppConfig": MessageLookupByLibrary.simpleMessage(
             "Continue to see new content on your app."),
         "seeOrder": MessageLookupByLibrary.simpleMessage("See Order"),
@@ -1073,6 +1072,8 @@ class MessageLookup extends MessageLookupByLibrary {
         "sendBack": MessageLookupByLibrary.simpleMessage("Send back"),
         "sendSMSCode": MessageLookupByLibrary.simpleMessage("Get code"),
         "serbian": MessageLookupByLibrary.simpleMessage("Serbian"),
+        "requestedQtyNotAvailable": MessageLookupByLibrary.simpleMessage(
+            "The requested quantity is not available"),
         "sessionExpired":
             MessageLookupByLibrary.simpleMessage("Session Expired"),
         "setAnAddressInSettingPage": MessageLookupByLibrary.simpleMessage(
@@ -1155,7 +1156,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "street2": MessageLookupByLibrary.simpleMessage("Street 2"),
         "streetIsRequired": MessageLookupByLibrary.simpleMessage(
             "The street name field is required"),
-        "streetName": MessageLookupByLibrary.simpleMessage("Street Name"),
+        "streetName": MessageLookupByLibrary.simpleMessage("Street Address"),
         "streetNameApartment":
             MessageLookupByLibrary.simpleMessage("Apartment"),
         "streetNameBlock": MessageLookupByLibrary.simpleMessage("Block"),
@@ -1386,5 +1387,15 @@ class MessageLookup extends MessageLookupByLibrary {
     "discountCoupons": MessageLookupByLibrary.simpleMessage("Discount Coupons"),
     "returnMerchandiseAuthorization": MessageLookupByLibrary.simpleMessage("Return Merchandise Authorization"),
     "signOut": MessageLookupByLibrary.simpleMessage("Sign Out"),
+    "welcomeToLocafyMarket":
+        MessageLookupByLibrary.simpleMessage("Welcome to Locafy Market"),
+    "changeLanguageTitle":
+        MessageLookupByLibrary.simpleMessage("Change language"),
+    "mustLoginToWishlist": MessageLookupByLibrary.simpleMessage(
+        "You must login or register to add items to your wishlist."),
+    "goToShoppingCart":
+        MessageLookupByLibrary.simpleMessage("Go to the shopping cart"),
+    "noCustomerWithMobile": MessageLookupByLibrary.simpleMessage(
+        "There is no customer registered with this number."),
       };
 }

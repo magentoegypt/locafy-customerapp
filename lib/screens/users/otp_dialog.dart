@@ -30,6 +30,7 @@ class OtpDialog  {
 
         return AlertDialog(
           title: Text(S.of(context).phoneNumberVerification),
+          contentPadding: const EdgeInsets.fromLTRB(12, 20, 12, 24),
           content: Wrap(
             children: [
               Padding(
@@ -76,10 +77,12 @@ class OtpDialog  {
                     pinTheme: PinTheme(
                       shape: PinCodeFieldShape.underline,
                       borderWidth: 2,
+                      fieldWidth: 36,
                       activeFillColor: Theme.of(context).colorScheme.background,
                       disabledColor: Theme.of(context).disabledColor,
                     ),
                     length: 6,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     cursorHeight: 25,
                     autoFocus: true,
                     obscuringCharacter: '*',

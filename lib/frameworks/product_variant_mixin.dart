@@ -26,7 +26,6 @@ mixin ProductVariantMixin {
   ) {
     final templateVariation =
         variations.isNotEmpty ? variations.first.attributes : null;
-    final listAttributes = variations.map((e) => e.attributes);
     ProductVariation productVariation;
     var attributeString = '';
 
@@ -56,18 +55,24 @@ mixin ProductVariantMixin {
         productVariation = variations[0];
       }
     }else{
-      /// Find attributeS contain attribute selected
-      final validAttribute = listAttributes.lastWhereOrNull(
-            (attributes) =>
-            attributes.map((e) => e.toString()).join().contains(attributeString),
+      /// Find the variation whose attributes all agree with the selection.
+      /// Exact per-attribute matching — a substring match over joined
+      /// "nameValue" strings can pick a wrong sibling when one option id is
+      /// a prefix of another (e.g. size ids 77/773/777).
+      final validVariation = variations.lastWhereOrNull(
+        (variation) =>
+            variation.attributes.isNotEmpty &&
+            variation.attributes.every((attr) {
+              final selected = mapAttribute[attr.name];
+              if (selected == null) return true;
+              final option = attr.option;
+              if (option == null || option.isEmpty) return true;
+              return option.toString() == selected.toString();
+            }),
       );
 
-      if (validAttribute == null) return null;
-
-      /// Find ProductVariation contain attribute selected
-      /// Compare address because use reference
-      productVariation =
-          variations.lastWhere((element) => element.attributes == validAttribute);
+      if (validVariation == null) return null;
+      productVariation = validVariation;
 
       for (var element in productVariation.attributes) {
         if (!mapAttribute.containsKey(element.name)) {
@@ -427,18 +432,19 @@ mixin ProductVariantMixin {
   }
 
   /// Add to Cart & Buy Now function
-  Future<void> addToCart(BuildContext context, Product product, int quantity,
+  /// Returns true when the product was actually added to the cart.
+  Future<bool> addToCart(BuildContext context, Product product, int quantity,
       ProductVariation? productVariation, Map<String?, String?> mapAttribute,
       [bool buyNow = false, bool inStock = false, bool inBackground = false]) async {
     /// Out of stock || Variable product but not select any variant.
     if (!inStock || (product.isVariableProduct && mapAttribute.isEmpty)) {
-      return;
+      return false;
     }
 
     final cartModel = Provider.of<CartModel>(context, listen: false);
     if (product.type == 'external') {
       openExternal(context, product);
-      return;
+      return false;
     }
 
     final mapAttr = <String, String>{};
@@ -452,29 +458,37 @@ mixin ProductVariantMixin {
 
     productVariation =
         Provider.of<ProductModel>(context, listen: false).selectedVariation;
-    var message = await cartModel.addProductToCart(
-        context: context,
-        product: product,
-        quantity: quantity,
-        variation: productVariation,
-        options: mapAttr);
+    String message;
+    try {
+      message = await cartModel.addProductToCart(
+          context: context,
+          product: product,
+          quantity: quantity,
+          variation: productVariation,
+          options: mapAttr);
+    } catch (e, trace) {
+      // Network errors / unexpected payloads must not die unhandled.
+      printError(e, trace);
+      message = S.of(context).somethingWrong;
+    }
 
     if (message.isNotEmpty) {
       FlashHelper.errorMessage(context, message: message);
-    } else {
+      return false;
+    }
 
-      if (buyNow) {
-        FluxNavigate.pushNamed(
-          RouteList.cart,
-          arguments: CartScreenArgument(isModal: true, isBuyNow: true),
-        );
-      }
-      FlashHelper.message(
-        context,
-        title: product.name,
-        message: S.of(context).addToCartSucessfully,
+    if (buyNow) {
+      FluxNavigate.pushNamed(
+        RouteList.cart,
+        arguments: CartScreenArgument(isModal: true, isBuyNow: true),
       );
     }
+    FlashHelper.message(
+      context,
+      title: product.name,
+      message: S.of(context).addToCartSucessfully,
+    );
+    return true;
   }
 
   /// Support Affiliate product

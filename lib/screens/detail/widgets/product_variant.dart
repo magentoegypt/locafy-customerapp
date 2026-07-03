@@ -78,14 +78,17 @@ class _StateProductVariant extends State<ProductVariant> {
           }
           this.mapAttribute = mapAttribute ?? {};
           if (variations != null) {
-            context.read<ProductModel>().changeProductVariations(
-                  variations,
-                  notify: false,
-                );
+            final model = context.read<ProductModel>();
+            model.changeProductVariations(
+              variations,
+              notify: false,
+            );
             productVariation = variation;
-            context
-                .read<ProductModel>()
-                .changeSelectedVariation(productVariation);
+            // Don't overwrite a selection the user already made (the bottom
+            // bar runs this same flow and may finish later).
+            if (model.selectedVariation == null) {
+              model.changeSelectedVariation(productVariation);
+            }
           }
           if (!mounted) {
             return;
@@ -307,6 +310,12 @@ class _StateProductVariant extends State<ProductVariant> {
         ServerConfig().type != ConfigType.notion;
 
     return Column(
+      // Left-align every attribute block. Without this the Column centers
+      // its children, so a narrow block (e.g. Color, a few swatches) appears
+      // centered while a wide one (e.g. Size, whose boxes fill the row) looks
+      // left-aligned — an inconsistent header/option alignment between
+      // attributes.
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         ...getProductTitleWidget(),
         if (!isVariationLoading) ...getProductAttributeWidget(),

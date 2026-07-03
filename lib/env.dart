@@ -7,13 +7,16 @@ Map<String, dynamic> environment = {
   /// ➡️ lib/common/config.dart
   "serverConfig": {
     "type": "magento",
-    "url": "https://stg.locafy.market",
-    "accessToken": "9jgtmp9ghrhmrgib63grpehxxjledv03",
+    "url": "https://locafy.market",
+    "accessToken": "jd7u3bu9g7ca1vgocv0dvpr77xof57jf",
     'blog': "https://mstore.io",
     //"https://magentoegypt.com/blog/ar/",
     //'https://magentoegypt.com/userguide/ug/%d9%85%d9%82%d8%af%d9%85%d8%a9-%d8%b9%d9%86-%d9%82%d8%a7%d8%a6%d9%85%d8%a9-%d8%a7%d9%84%d9%85%d8%a8%d9%8a%d8%b9%d8%a7%d8%aa-sales-menu-%d9%81%d9%89-%d9%85%d8%aa%d8%ac%d8%b1-%d9%85%d8%a7%d8%ac%d9%86%d8%aa%d9%88-2/',
-    "forgetPassword":
-        "https://stg.locafy.market/admin_dnx0xy/admin/auth/forgotpassword/"
+    // Empty → login screen uses the app's native customer forgot-password flow
+    // (wapplogin mobile-OTP, verified live on production). The old value pointed
+    // at the STAGING Magento *admin* password-reset page (admin_dnx0xy), which
+    // doesn't exist on production and isn't the customer flow anyway.
+    "forgetPassword": ""
   },
 
   /// ➡️ lib/common/config/general.dart
@@ -336,7 +339,7 @@ Map<String, dynamic> environment = {
       "icon": "assets/images/country/ar.png",
       "code": "ar",
       "text": "Arabic",
-      "storeViewCode": "ar"
+      "storeViewCode": "eg-ar"
     }
   ],
   "unsupportedLanguages": ['ku'],
@@ -455,6 +458,9 @@ Map<String, dynamic> environment = {
     "layout": "simpleType",
     "borderRadius": 3.0,
 
+    /// Show the full product image (letterboxed) instead of cropping it.
+    "boxFit": "contain",
+
     /// Enable this to show selected image variant in the top banner.
     "ShowSelectedImageVariant": true,
 
@@ -465,7 +471,7 @@ Map<String, dynamic> environment = {
     "AutoSelectFirstAttribute": true,
 
     /// Enable this to show review in product description.
-    "enableReview": false,
+    "enableReview": true,
     "attributeImagesSize": 50.0,
     "showSku": true,
     "showStockQuantity": true,

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../common/config.dart';
+import '../../models/entities/ProdcutOptionAttribute.dart'
+    show ConfigurableSwatch, SwatchOption;
 import '../../models/index.dart'
     show Product, ProductAttribute, ProductModel, ProductVariation;
 import '../../services/index.dart';
@@ -40,40 +42,37 @@ mixin MagentoVariantMixin on ProductVariantMixin {
             ifAbsent: () => attr.options![0]);
       }
     } else {
-      for (var variant in variations) {
-        if (variant.price == product.price) {
-          for (var attribute in variant.attributes) {
-            for (var attr in product.attributes!) {
-              mapAttribute.update(attr.name!, (value) {
-                final option = attr.options!.firstWhere(
-                    (o) => o['label'] == attribute.name,
-                    orElse: () => null);
-                if (option != null) {
-                  return option['value'].toString();
-                }
-                return attribute.name;
-              }, ifAbsent: () => attribute.name);
-            }
-            mapAttribute.update(attribute.name, (value) => attribute.option,
-                ifAbsent: () => attribute.option);
-          }
-          break;
-        }
-        if (mapAttribute.isEmpty) {
-          for (var attribute in product.attributes!) {
-            mapAttribute.update(attribute.name, (value) => value, ifAbsent: () {
-              return (attribute.options?.isNotEmpty ?? false)
-                  ? attribute.options![0]['value']
-                  : null;
-            });
-          }
+      /// Seed the default selection with the first valid option of each
+      /// configurable attribute (AutoSelectFirstAttribute behaviour).
+      /// Option lists can contain junk entries whose label is not a String.
+      for (var attribute in product.attributes!) {
+        final option = (attribute.options ?? []).firstWhere(
+            (o) => o is Map && o['label'] is String && o['value'] != null,
+            orElse: () => null);
+        if (option != null) {
+          mapAttribute[attribute.name] = option['value'].toString();
         }
       }
     }
-    final productVariation = updateVariation(variations, mapAttribute);
-    context?.read<ProductModel>().changeProductVariations(variations);
-    if (productVariation != null) {
-      context?.read<ProductModel>().changeSelectedVariation(productVariation);
+    var productVariation = updateVariation(variations, mapAttribute);
+
+    /// The seeded first-option combination may not exist as a child product;
+    /// fall back to the first child's own attribute values.
+    if (productVariation == null && variations.isNotEmpty) {
+      for (var attr in variations.first.attributes) {
+        if (attr.name != null && attr.option != null) {
+          mapAttribute[attr.name] = attr.option;
+        }
+      }
+      productVariation = updateVariation(variations, mapAttribute);
+    }
+    final model = context?.read<ProductModel>();
+    model?.changeProductVariations(variations);
+    // Two widgets (body + bottom bar) each run this flow on load. Only seed
+    // the default when nothing is selected yet, so a late-finishing second
+    // run can't reset a variant the user already picked.
+    if (productVariation != null && model?.selectedVariation == null) {
+      model?.changeSelectedVariation(productVariation);
     }
     onLoad!(
         productInfo: productInfo,
@@ -137,21 +136,64 @@ mixin MagentoVariantMixin on ProductVariantMixin {
 
           String? selectedValue = mapAttribute![attr.name!] ?? '';
 
-          final o = attr.options!.firstWhere((f) => f['value'] == selectedValue,
+          final o = attr.options!.firstWhere(
+              (f) =>
+                  f is Map &&
+                  '${f['value']}' == selectedValue &&
+                  f['label'] is String,
               orElse: () => null);
           if (o != null) {
             selectedValue = o['label'];
           }
+
+          /// The store's attribute codes are technical (all_color, top_size…)
+          /// — resolve the human label from the options/list response, then
+          /// translate it via the config map when possible.
+          final labelKey = (attr.label ?? attr.name!).toLowerCase();
+          final nameKey = attr.name!.toLowerCase();
+          final langMap = kProductVariantLanguage[lang];
+          final title = langMap?[labelKey] ??
+              langMap?[nameKey] ??
+              attr.label ??
+              attr.name!;
+          final type = kProductVariantLayout[labelKey] ??
+              kProductVariantLayout[nameKey] ??
+              'box';
+
+          /// Swatch hex codes shipped in the options/list payload.
+          final swatchCodes = <String, String>{};
+          for (var option in attr.options!) {
+            if (option is Map &&
+                option['label'] is String &&
+                option['swatch'] is Map &&
+                option['swatch']['value'] is String) {
+              swatchCodes[option['label']] = option['swatch']['value'];
+            }
+          }
+
+          /// Richer swatches from extension_attributes.swatches (product image
+          /// per option, so color swatches show the variant photo like the
+          /// website). Matched to this attribute by attribute_code, keyed by
+          /// option label.
+          final swatchOptions = <String, SwatchOption>{};
+          final swatchAttr = product.swatches?.firstWhere(
+            (s) => s.attributeCode == attr.name,
+            orElse: () => ConfigurableSwatch(),
+          );
+          for (final opt in swatchAttr?.options ?? <SwatchOption>[]) {
+            if (opt.label != null) {
+              swatchOptions[opt.label!] = opt;
+            }
+          }
+
           listWidget.add(
             BasicSelection(
               product: product,
               options: options,
-              title: (kProductVariantLanguage[lang] != null &&
-                      kProductVariantLanguage[lang][attr.name!.toLowerCase()] !=
-                          null)
-                  ? kProductVariantLanguage[lang][attr.name!.toLowerCase()]
-                  : attr.name!.toLowerCase(),
-              type: kProductVariantLayout[attr.name!.toLowerCase()] ?? 'box',
+              swatchCodes: swatchCodes,
+              swatchOptions: swatchOptions,
+              title: title,
+              type: type,
               value: selectedValue,
               onChanged: (val) => onSelectProductVariant(
                   attr: attr,

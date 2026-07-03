@@ -37,6 +37,11 @@ abstract class CartModel
 
   void clearCart(bool isFromCartScreen);
 
+  /// Re-fetch the cart from the server so changes made on another platform
+  /// (web / other app) are reflected without re-login. Overridden by
+  /// frameworks that support a server cart (Magento); no-op by default.
+  Future<void> reloadCartFromServer() async {}
+
   void setOrderNotes(String note);
 
   void initData();

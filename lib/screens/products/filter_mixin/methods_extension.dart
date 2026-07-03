@@ -33,7 +33,11 @@ extension ProductsFilterMixinMethodExtension on ProductsFilterMixin {
     }
 
     if (search != null) {
-      this.search = search;
+      // An empty string means the user cleared the search box (e.g. via the
+      // field's clear button) — treat it as "no search" so the title and
+      // product list revert to the category being browsed instead of
+      // getting stuck on the "Results" view.
+      this.search = search.isEmpty ? null : search;
     }
 
     // set attribute
@@ -100,7 +104,11 @@ extension ProductsFilterMixinMethodExtension on ProductsFilterMixin {
     maxPrice = null;
     page = 1;
     attribute = null;
-    search = null;
+    // Route an incoming search keyword (e.g. from a search-results
+    // navigation) through the working name/SKU "like" filter. The backend's
+    // full-text `q=` parameter (sent separately as `searchText`) 500s when
+    // combined with searchCriteria filters, so it must not be relied on.
+    search = config?.searchText;
     filterSortBy = const FilterSortBy();
 
     categoryId = config?.category;

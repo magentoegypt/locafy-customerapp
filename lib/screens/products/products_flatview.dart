@@ -194,7 +194,10 @@ class _ProductFlatViewState extends State<ProductFlatView> with ProductsMixin {
       );
     }
 
-    return Container(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.translucent,
+      child: Container(
       color: Theme.of(context).colorScheme.background,
       child: Column(
         children: [
@@ -368,6 +371,7 @@ class _ProductFlatViewState extends State<ProductFlatView> with ProductsMixin {
             ),
           ),
         ],
+      ),
       ),
     );
   }

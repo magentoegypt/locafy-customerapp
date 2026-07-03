@@ -54,6 +54,9 @@ class RouteList {
   //Subcategory
   static const String subCategories = 'subcategories';
 
+  // Main-category merchandised landing page (86d3g36q4)
+  static const String categoryLanding = 'category-landing';
+
   // Search
   static const String search = 'search';
 

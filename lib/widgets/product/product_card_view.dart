@@ -11,12 +11,14 @@ import '../../modules/dynamic_layout/config/product_config.dart';
 import '../../modules/dynamic_layout/helper/helper.dart';
 import '../../services/services.dart';
 import 'action_button_mixin.dart';
+import 'widgets/product_card_swatches.dart';
 import 'index.dart'
     show
         CartButton,
         CartIcon,
         CartQuantity,
         HeartButton,
+        ProductBrand,
         ProductImage,
         ProductOnSale,
         ProductPricing,
@@ -92,8 +94,9 @@ class _ProductCardState extends State<ProductCard> with ActionButtonMixin {
         //const TempStartRating(),
 
         ///=====
-        const Divider(),
+        const Divider(height: 10),
         // const SizedBox(height: 10),
+        ProductBrand(product: widget.item),
         Center(
           child: ProductTitle(
             product: widget.item,
@@ -101,12 +104,22 @@ class _ProductCardState extends State<ProductCard> with ActionButtonMixin {
             maxLines: widget.config.titleLine,
           ),
         ),
-        StoreName(product: widget.item, hide: widget.config.hideStore),
-        const SizedBox(height: 5),
-        ProductPricing(
-          product: widget.item,
-          hide: widget.config.hidePrice,
+        // Seller "Sold by" belongs on the product detail page, not the compact
+        // grid card — showing it here overflows the fixed-height card.
+        StoreName(product: widget.item, hide: true),
+        // Balanced breathing room above and below the price.
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: ProductPricing(
+            product: widget.item,
+            hide: widget.config.hidePrice,
+            // Blue current price to match the design; struck-through original
+            // price keeps its grey styling.
+            mainPriceColor: const Color(0xFF1273EB),
+          ),
         ),
+        // Colour options (as product-image circles) + size chips, below price.
+        ProductCardSwatches(product: widget.item),
         // Align(
         //   alignment: Alignment.bottomLeft,
         //   child: Stack(

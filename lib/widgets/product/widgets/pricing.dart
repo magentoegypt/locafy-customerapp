@@ -11,11 +11,16 @@ class ProductPricing extends StatelessWidget {
   final bool hide;
   final TextStyle? priceTextStyle;
 
+  /// Colour applied to the current (sale) price only — the struck-through
+  /// original price keeps its grey styling.
+  final Color? mainPriceColor;
+
   const ProductPricing({
     Key? key,
     required this.product,
     required this.hide,
     this.priceTextStyle,
+    this.mainPriceColor,
   }) : super(key: key);
 
   @override
@@ -79,6 +84,7 @@ class ProductPricing extends StatelessWidget {
               .titleLarge!
               .copyWith(
             fontWeight: FontWeight.w600,
+            color: mainPriceColor,
           )
               .apply(fontSizeFactor: 0.8)
               .merge(priceTextStyle),

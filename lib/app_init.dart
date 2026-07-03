@@ -118,8 +118,10 @@ class _AppInitState extends BaseScreen<AppInit> {
               statusBarColor: Colors.transparent,
               systemNavigationBarColor: Colors.black,
             ));
+      // Hide the on-screen device (navigation) buttons app-wide; keep only
+      // the top status bar visible.
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
-          overlays: SystemUiOverlay.values);
+          overlays: const [SystemUiOverlay.top]);
     }
 
     if (appConfig == null) {

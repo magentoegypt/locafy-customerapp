@@ -151,6 +151,8 @@ class WishlistItem extends StatelessWidget {
                                 Text(
                                   product.name ?? '',
                                   style: localTheme.textTheme.bodySmall,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 7),
                                 ProductPricing(
@@ -171,9 +173,14 @@ class WishlistItem extends StatelessWidget {
                                       minimumSize: const Size.fromHeight(40), // height fixed
                                       maximumSize: const Size(double.infinity, 40), // full width
                                     ),
-                                    onPressed: () => DialogAddToCart.show(
-                                        context,
-                                        product: product),
+                                    // Use the wishlist screen's type-aware
+                                    // handler (simple -> add directly,
+                                    // configurable -> open product page). Fall
+                                    // back to the add-to-cart dialog if no
+                                    // handler was supplied.
+                                    onPressed: onAddToCart ??
+                                        () => DialogAddToCart.show(context,
+                                            product: product),
                                     child: (product.isPurchased &&
                                         product.isDownloadable!)
                                         ? Text(S

@@ -137,8 +137,6 @@ class MessageLookup extends MessageLookupByLibrary {
         "agree": MessageLookupByLibrary.simpleMessage("موافقة"),
         "agreeWithPrivacy":
             MessageLookupByLibrary.simpleMessage("سياسة الخصوصية والشروط"),
-        "passwordNotMatch": MessageLookupByLibrary.simpleMessage(
-            "كلمة المرور وتأكيد كلمة المرور غير متطابقتين"),
         "albanian": MessageLookupByLibrary.simpleMessage("الألبانية"),
         "all": MessageLookupByLibrary.simpleMessage("الكل"),
         "allBrands": MessageLookupByLibrary.simpleMessage("جميع الماركات"),
@@ -492,6 +490,12 @@ class MessageLookup extends MessageLookupByLibrary {
         "favorite": MessageLookupByLibrary.simpleMessage("مفضل"),
         "featureProducts": MessageLookupByLibrary.simpleMessage("منتجات مميزة"),
         "featured": MessageLookupByLibrary.simpleMessage("متميز"),
+        "newArrival": MessageLookupByLibrary.simpleMessage("وصل حديثاً"),
+        "shopNow": MessageLookupByLibrary.simpleMessage("تسوق الآن"),
+        "featuredBrands":
+            MessageLookupByLibrary.simpleMessage("العلامات المميزة"),
+        "shopByCategory":
+            MessageLookupByLibrary.simpleMessage("تسوق حسب الفئة"),
         "features": MessageLookupByLibrary.simpleMessage("المميزات"),
         "fileIsTooBig": MessageLookupByLibrary.simpleMessage(
             "الملف كبير جدًا. الرجاء اختيار ملف أصغر!"),
@@ -654,7 +658,7 @@ class MessageLookup extends MessageLookupByLibrary {
             MessageLookupByLibrary.simpleMessage("وضع علامة كغير مقروءة"),
         "maximumFileSizeMb": m15,
         "maybeLater": MessageLookupByLibrary.simpleMessage("يمكن لاحقاً"),
-        "menuOrder": MessageLookupByLibrary.simpleMessage("ترتيب القائمة"),
+        "menuOrder": MessageLookupByLibrary.simpleMessage("موقع"),
         "message": MessageLookupByLibrary.simpleMessage("رسالة"),
         "messageTo": MessageLookupByLibrary.simpleMessage("إرسال رسالة إلى"),
         "minimumQuantityIs":
@@ -846,6 +850,8 @@ class MessageLookup extends MessageLookupByLibrary {
             MessageLookupByLibrary.simpleMessage("يرجى ملء جميع الحقول"),
         "pleaseInputFillAllFields":
             MessageLookupByLibrary.simpleMessage("يرجى ملء جميع الخانات"),
+        "pleaseUpdateAddress": MessageLookupByLibrary.simpleMessage(
+            "هذا العنوان غير مكتمل. يرجى تعديله واختيار المدينة والمنطقة مرة أخرى."),
         "pleaseSelectADate":
             MessageLookupByLibrary.simpleMessage("الرجاء تحديد تاريخ الحجز"),
         "pleaseSelectALocation":
@@ -1027,15 +1033,6 @@ class MessageLookup extends MessageLookupByLibrary {
             MessageLookupByLibrary.simpleMessage("البحث عن عنوان"),
         "secondsAgo": m23,
         "seeAll": MessageLookupByLibrary.simpleMessage("اظهار الكل"),
-        "welcomeToLocafyMarket":
-            MessageLookupByLibrary.simpleMessage("مرحباً بك في متجر لوكافاي"),
-        "changeLanguageTitle":
-            MessageLookupByLibrary.simpleMessage("تغيير اللغة"),
-        "signOut": MessageLookupByLibrary.simpleMessage("تسجيل الخروج"),
-        "mustLoginToWishlist": MessageLookupByLibrary.simpleMessage(
-            "يجب عليك تسجيل الدخول أو التسجيل لإضافة عناصر إلى قائمة أمنياتك."),
-        "goToShoppingCart":
-            MessageLookupByLibrary.simpleMessage("اذهب إلى سلة التسوق"),
         "seeNewAppConfig": MessageLookupByLibrary.simpleMessage(
             "استمر في رؤية المحتوى الجديد على تطبيقك."),
         "seeOrder": MessageLookupByLibrary.simpleMessage("انظر الطلب"),
@@ -1059,6 +1056,8 @@ class MessageLookup extends MessageLookupByLibrary {
         "sendSMSCode":
             MessageLookupByLibrary.simpleMessage("إرسال كود التفعيل للواتس اب"),
         "serbian": MessageLookupByLibrary.simpleMessage("الصربية"),
+        "requestedQtyNotAvailable": MessageLookupByLibrary.simpleMessage(
+            "الكمية المطلوبة غير متوفرة"),
         "sessionExpired": MessageLookupByLibrary.simpleMessage("انتهت الجلسة"),
         "setAnAddressInSettingPage": MessageLookupByLibrary.simpleMessage(
             "يرجى تحديد عنوان في صفحة الإعدادات"),
@@ -1138,7 +1137,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "street2": MessageLookupByLibrary.simpleMessage("شارع 2"),
         "streetIsRequired":
             MessageLookupByLibrary.simpleMessage("خانة اسم الشارع مطلوبة"),
-        "streetName": MessageLookupByLibrary.simpleMessage("اسم الشارع"),
+        "streetName": MessageLookupByLibrary.simpleMessage("عنوان الشارع"),
         "streetNameApartment": MessageLookupByLibrary.simpleMessage("الشقة"),
         "streetNameBlock": MessageLookupByLibrary.simpleMessage("الحي"),
         "submit": MessageLookupByLibrary.simpleMessage("أرسال"),
@@ -1359,5 +1358,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "discountCoupons": MessageLookupByLibrary.simpleMessage("كوبونات الخصم"),
     "returnMerchandiseAuthorization": MessageLookupByLibrary.simpleMessage("طلب إرجاع المنتجات"),
     "signOut": MessageLookupByLibrary.simpleMessage("تسجيل الخروج"),
+    "passwordNotMatch": MessageLookupByLibrary.simpleMessage(
+        "كلمة المرور وتأكيد كلمة المرور غير متطابقتين"),
+    "welcomeToLocafyMarket":
+        MessageLookupByLibrary.simpleMessage("مرحباً بك في متجر لوكافاي"),
+    "changeLanguageTitle":
+        MessageLookupByLibrary.simpleMessage("تغيير اللغة"),
+    "mustLoginToWishlist": MessageLookupByLibrary.simpleMessage(
+        "يجب عليك تسجيل الدخول أو التسجيل لإضافة عناصر إلى قائمة أمنياتك."),
+    "goToShoppingCart":
+        MessageLookupByLibrary.simpleMessage("اذهب إلى سلة التسوق"),
+    "noCustomerWithMobile": MessageLookupByLibrary.simpleMessage(
+        "العميل مع رقم الهاتف المحمول هذا غير موجود"),
       };
 }

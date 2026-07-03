@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:inspireui/extensions/build_context_ext.dart';
 import 'package:inspireui/inspireui.dart' show Skeleton;
 import 'package:provider/provider.dart';
 import 'package:transparent_image/transparent_image.dart';
@@ -12,6 +13,7 @@ import '../../../routes/flux_navigate.dart';
 import '../../../widgets/common/index.dart';
 import '../../../widgets/common/parallax_image.dart';
 import '../../../widgets/common/refresh_scroll_physics.dart';
+import '../../home/home_sections_view.dart';
 import '../../index.dart';
 
 class CardCategories extends StatefulWidget {
@@ -132,6 +134,13 @@ class _StateCardCategories extends BaseScreen<CardCategories> {
 
   @override
   Widget build(BuildContext context) {
+    // Home tab: render the backend-curated homepage sections (banner ->
+    // shop-by-category -> featured brands) instead of the plain category-card
+    // list. Scoped to the home ("categogies") so category browsing elsewhere
+    // is unaffected.
+    if (widget.isComingFrom == "categogies") {
+      return const HomeSectionsView();
+    }
     if (kEnableLargeCategories) {
       return PagingList<CategoryModel, Category>(
         lengthLoadingWidget: 6,
@@ -199,10 +208,14 @@ class _StateCardCategories extends BaseScreen<CardCategories> {
                 onTap: hasChildren(category.id)
                     ? (){
                   if(widget.isComingFrom == "categogies"){
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CategorySearch(isNavigation: true,isComingFrom: "categogies",newCategoryId: category.id,),
+                    // Main (top-level) categories open the merchandised
+                    // landing page (86d3g36q4): hero subcategories + New
+                    // Arrival + Sale + Featured Brands.
+                    Navigator.of(context).pushNamed(
+                      RouteList.categoryLanding,
+                      arguments: BackDropArguments(
+                        cateId: category.id,
+                        cateName: category.name,
                       ),
                     );
                   }
@@ -389,8 +402,14 @@ class SubItem extends StatelessWidget {
   final String seeAll;
   final int level;
   final bool hasChild;
+  // Overrides what the trailing arrow does when tapped. Defaults to opening
+  // the category's product list (same as tapping the row); callers that need
+  // the arrow to drill into child categories instead (see category_search_screen)
+  // can supply their own handler without affecting other SubItem usages.
+  final void Function(BuildContext context)? onArrowTap;
 
-  const SubItem(this.category, {this.seeAll = '', this.level = 0, this.hasChild = true});
+  const SubItem(this.category,
+      {this.seeAll = '', this.level = 0, this.hasChild = true, this.onArrowTap});
 
   void showProductList(BuildContext context) {
     Navigator.of(context).pushNamed(
@@ -468,13 +487,15 @@ class SubItem extends StatelessWidget {
                   ),
                 if(hasChild)
                   IconButton(
-                      icon: Icon(
-                        Directionality.of(context) == TextDirection.rtl
-                            ? Icons.keyboard_arrow_left
-                            : Icons.keyboard_arrow_right,
-                      ),
+                      icon: Icon(context.isRtl
+                          ? Icons.keyboard_arrow_left
+                          : Icons.keyboard_arrow_right),
                       onPressed: () {
-                        showProductList(context);
+                        if (onArrowTap != null) {
+                          onArrowTap!(context);
+                        } else {
+                          showProductList(context);
+                        }
                       })
               ],
             ),

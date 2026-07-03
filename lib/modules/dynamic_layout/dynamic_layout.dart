@@ -122,22 +122,22 @@ class _DynamicLayoutState extends State<DynamicLayout> {
 
             if ((banners?.length ?? 0) > 0 && banners?[0].image1 != null) {
               bannerConfig.items[0].image =
-                  "https://stg.locafy.market/media/${banners?[0].image1}";
+                  "${kMediaDomain}/media/${banners?[0].image1}";
             }
 
             if ((banners?.length ?? 0) > 0 && banners?[0].image2 != null) {
               bannerConfig.items[1].image =
-                  "https://stg.locafy.market/media/${banners?[0].image2}";
+                  "${kMediaDomain}/media/${banners?[0].image2}";
             }
 
             if ((banners?.length ?? 0) > 0 && banners?[0].image3 != null) {
               bannerConfig.items[2].image =
-                  "https://stg.locafy.market/media/${banners?[0].image3}";
+                  "${kMediaDomain}/media/${banners?[0].image3}";
             }
 
             if ((banners?.length ?? 0) > 0 && banners?[0].image4 != null) {
               bannerConfig.items[3].image =
-                  "https://stg.locafy.market/media/${banners?[0].image4}";
+                  "${kMediaDomain}/media/${banners?[0].image4}";
             }
           }
 
@@ -177,32 +177,32 @@ class _DynamicLayoutState extends State<DynamicLayout> {
           if (bannerConfig.items[0].image.contains('HomeTopBanner')) {
             if ((banners?.length ?? 0) > 0 && banners?[0].image1 != null) {
               bannerConfig.items[0].image =
-                  "https://stg.locafy.market/media/${banners?[0].image1}";
+                  "${kMediaDomain}/media/${banners?[0].image1}";
             }
           }
 
           if (bannerConfig.items[0].image.contains('category-banner-two')) {
             if ((banners?.length ?? 0) > 4 && banners?[0].image1 != null) {
               bannerConfig.items[0].image =
-              "https://stg.locafy.market/media/${banners?[4].image1}";
+              "${kMediaDomain}/media/${banners?[4].image1}";
             }
           }
 
           if (bannerConfig.items[0].image.contains('winter-products-banner')) {
             if ((banners?.length ?? 0) > 2 && banners?[2].image1 != null) {
               bannerConfig.items[0].image =
-                  "https://stg.locafy.market/media/${banners?[2].image1}";
+                  "${kMediaDomain}/media/${banners?[2].image1}";
             }
           }
 
           if (bannerConfig.items[0].image.contains('advertizing-banner')) {
             if ((banners?.length ?? 0) > 3 && banners?[3].image1 != null) {
               bannerConfig.items[0].image =
-                  "https://stg.locafy.market/media/${banners?[3].image1}";
+                  "${kMediaDomain}/media/${banners?[3].image1}";
             }
           }
 
-          //https://stg.locafy.market/media/
+          //${kMediaDomain}/media/
           print(bannerConfig.items.first.image);
           return Padding(
             padding: const EdgeInsets.only(top: 8.0),
@@ -244,16 +244,16 @@ class _DynamicLayoutState extends State<DynamicLayout> {
           "⏰ ⏰ ⏰ ⏰ ⏰ ⏰ ⏰ ${categoryConfig.items[0].image}".log();
           if((banners?.length ?? 0) > 1) {
             categoryConfig.items[0].image =
-            "https://stg.locafy.market/media/${banners?[1].image1}";
+            "${kMediaDomain}/media/${banners?[1].image1}";
             categoryConfig.items[1].image =
-            "https://stg.locafy.market/media/${banners?[1].image2}";
+            "${kMediaDomain}/media/${banners?[1].image2}";
 
             categoryConfig.items[2].image =
-            "https://stg.locafy.market/media/${banners?[1].image3}";
+            "${kMediaDomain}/media/${banners?[1].image3}";
             categoryConfig.items[3].image =
-            "https://stg.locafy.market/media/${banners?[1].image4}";
+            "${kMediaDomain}/media/${banners?[1].image4}";
           }
-          //https://stg.locafy.market/media/
+          //${kMediaDomain}/media/
 
           return Column(
             children: [

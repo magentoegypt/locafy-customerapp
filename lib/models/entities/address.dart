@@ -152,10 +152,32 @@ class Address {
       phoneNumber = json['phone'];
       zipCode = json['postcode'];
       mapUrl = json['mapUrl'];
+
+      // Addresses saved before the region fix kept the governorate in `city`
+      // and the district in `block`, with `state` unset or holding the dead
+      // "SG" default. Shift them to the Magento layout so old saved addresses
+      // display and submit correctly: state = governorate, city = district.
+      // Server-synced legacy entries never carried the district (block empty)
+      // — the shift still applies and leaves city empty, which the checkout
+      // flags so the user re-selects the zone.
+      final hasRealState =
+          state != null && state!.isNotEmpty && state != 'SG';
+      if (!hasRealState && (city?.isNotEmpty ?? false)) {
+        state = city;
+        city = block ?? '';
+        block = '';
+      }
     } catch (e) {
       printLog(e.toString());
     }
   }
+
+  /// Email is optional at checkout. Orders still need a value for Magento,
+  /// so an empty email falls back to a per-phone default, mirroring the
+  /// website's default-email behaviour.
+  String get effectiveEmail => (email?.isNotEmpty ?? false)
+      ? email!
+      : 'guest${(phoneNumber ?? '').replaceAll(RegExp(r'[^0-9]'), '')}@locafy.market';
 
   Map<String, dynamic> toMagentoJson() {
     return {
@@ -169,11 +191,13 @@ class Address {
           '$apartment${(block?.isEmpty ?? true) ? '' : ' - $block'}',
         ],
         'postcode': zipCode,
-        'region': city,
-        'city': block,//city,
+        // state holds the governorate (Magento region) name; city holds the
+        // district — the same mapping the website checkout submits.
+        'region': state,
+        'city': city,
         'firstname': firstName,
         'lastname': lastName,
-        'email': emailOrDefault,
+        'email': effectiveEmail,
         'telephone': phoneNumber,
         'same_as_billing': 1
       }
@@ -198,28 +222,14 @@ class Address {
   }
 
   bool isValid() {
-    // Email is intentionally NOT required here — it is optional at checkout to
-    // match the website, and a default is assigned in toMagentoJson when empty.
-    return firstName!.isNotEmpty &&
-        lastName!.isNotEmpty &&
-        street!.isNotEmpty &&
-        city!.isNotEmpty &&
-        state!.isNotEmpty &&
-        country!.isNotEmpty &&
-        phoneNumber!.isNotEmpty;
-  }
-
-  /// Returns the customer email, or a generated default when the customer did
-  /// not provide one (matching the website's "assign a default email"
-  /// behaviour). Uses the phone number when available to keep it unique.
-  String get emailOrDefault {
-    if (email != null && email!.trim().isNotEmpty) {
-      return email!.trim();
-    }
-    final phone = (phoneNumber ?? '').replaceAll(RegExp(r'[^0-9]'), '');
-    return phone.isNotEmpty
-        ? '$phone@locafy.market'
-        : 'guest@locafy.market';
+    // Email is optional at checkout; a default is substituted before submit.
+    return (firstName?.isNotEmpty ?? false) &&
+        (lastName?.isNotEmpty ?? false) &&
+        (street?.isNotEmpty ?? false) &&
+        (city?.isNotEmpty ?? false) &&
+        (state?.isNotEmpty ?? false) &&
+        (country?.isNotEmpty ?? false) &&
+        (phoneNumber?.isNotEmpty ?? false);
   }
 
   Map<String, String?> toJsonEncodable() {

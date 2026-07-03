@@ -24,10 +24,54 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   printLog('Handling a background message ${message.messageId}');
 }
 
+/// Global fallback for widget-build errors.
+///
+/// Previously the app set `ErrorWidget.builder = (_) => const SizedBox()` from
+/// inside a widget's build() (the custom tab bar), which silently turned ANY
+/// build error anywhere into an invisible empty box. A single failed screen
+/// then appeared as a blank white page, and a recurring build error read as a
+/// hang — the "application freezes / all screens blank" bug.
+///
+/// Instead: always log the error, keep the informative red box in debug, and
+/// in release show a neutral, fully self-contained fallback (its own
+/// Directionality + explicit text style, so the fallback itself can never throw
+/// and trigger an error loop). The tab bar stays alive, so the user can switch
+/// tabs to recover instead of being stuck on a dead white screen.
+Widget _globalErrorWidget(FlutterErrorDetails details) {
+  printLog('🔴 Widget build error: ${details.exceptionAsString()}');
+  if (!foundation.kReleaseMode) {
+    return ErrorWidget(details.exception);
+  }
+  return Directionality(
+    textDirection: TextDirection.ltr,
+    child: Container(
+      color: Colors.white,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(24),
+      child: const Text(
+        'Something went wrong.\nPlease go back and try again.',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: Colors.black54,
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          decoration: TextDecoration.none,
+        ),
+      ),
+    ),
+  );
+}
+
 void main() {
   final talker = TalkerFlutter.init();
   printLog('[main] ===== START main.dart =======');
   WidgetsFlutterBinding.ensureInitialized();
+
+  /// Configure the global build-error fallback ONCE, up front, so no widget
+  /// can later mute the whole app's errors into a blank screen. See
+  /// [_globalErrorWidget].
+  ErrorWidget.builder = _globalErrorWidget;
+
   Services.getNotificationService().requestNotificationPermission();
 
   Configurations().setConfigurationValues(environment);

@@ -9,6 +9,12 @@ final bool isWindow = UniversalPlatform.isWindows;
 final bool isMobile = UniversalPlatform.isIOS || UniversalPlatform.isAndroid;
 final bool isDesktop = UniversalPlatform.isMacOS || UniversalPlatform.isWindows;
 
+/// CDN host that serves catalog media (product/category images, banners).
+/// Staging (stg.locafy.market) does not hold media files, so the CDN is used
+/// for both live and staging builds. Note: the CDN serves media under
+/// `/media/...` (NOT `/pub/media/...`).
+const String kMediaDomain = 'https://cdn.locafy.market';
+
 /// constant for Magento payment
 const kMagentoPayments = [
   'HyperPay_Amex',

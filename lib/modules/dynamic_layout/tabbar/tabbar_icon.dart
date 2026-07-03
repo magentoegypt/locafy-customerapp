@@ -89,6 +89,8 @@ class IconCart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Stack(
+      // Never hard-clip the badge when the icon slot is tight.
+      clipBehavior: Clip.none,
       children: <Widget>[
         Container(
           padding: const EdgeInsets.only(top: 5, right: 5),

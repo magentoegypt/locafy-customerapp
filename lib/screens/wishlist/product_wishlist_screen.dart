@@ -130,15 +130,13 @@ class _WishListState extends State<ProductWishListScreen> with AppBarMixin {
                               Tools.launchURL(product.files![0]!);
                               return;
                             }
-                            // Configurable products (those carrying selectable
-                            // attributes/variants) must open the full product
-                            // page so the user can pick the required options.
-                            // Simple products are added to the cart directly.
-                            final isConfigurable =
-                                (product.attributes?.isNotEmpty ?? false) ||
-                                    product.isVariableProduct;
-                            if (isConfigurable) {
-                              Navigator.of(context).pushNamed(
+                            // Configurable/variable products need option
+                            // selection: open the detail page instead of adding
+                            // directly to the cart.
+                            if (product.type == 'configurable' ||
+                                product.isVariableProduct) {
+                              Navigator.pushNamed(
+                                context,
                                 RouteList.productDetail,
                                 arguments: product,
                               );

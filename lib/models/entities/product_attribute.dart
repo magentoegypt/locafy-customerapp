@@ -194,7 +194,7 @@ class Attribute {
   }
 
   Attribute.fromMagentoJson(Map parsedJson) {
-    id = int.parse(parsedJson['value']);
+    id = int.tryParse('${parsedJson['value']}');
     name = parsedJson['attribute_code'];
     option = parsedJson['value'];
   }

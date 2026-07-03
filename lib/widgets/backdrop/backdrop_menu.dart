@@ -11,7 +11,12 @@ import '../../common/tools.dart';
 import '../../generated/l10n.dart';
 import '../../models/entities/filter_sorty_by.dart';
 import '../../models/index.dart'
-    show AppModel, BlogModel, FilterAttributeModel, ProductModel;
+    show
+        AppModel,
+        BlogModel,
+        CategoryFilterModel,
+        FilterAttributeModel,
+        ProductModel;
 import '../../modules/dynamic_layout/helper/helper.dart';
 import '../../services/index.dart';
 import 'filters/category_menu.dart';
@@ -69,6 +74,13 @@ class BackdropMenu extends StatefulWidget {
 class _BackdropMenuState extends State<BackdropMenu> {
   double minPrice = 0.0;
   double maxPrice = 0.0;
+  // The RangeSlider's outer bound. Defaults to kMaxPriceFilter so an
+  // already-applied filter can still be widened upward (the currently
+  // loaded product list only reflects the filtered subset in that case, so
+  // it can't tell us the true catalog max). When no filter is applied yet,
+  // this is tightened to the current list's real max in initState so the
+  // slider fills the track instead of only occupying a sliver of it.
+  double _sliderMaxBound = kMaxPriceFilter;
   String? currentSlug;
   String? _categoryId = '-1';
   FilterSortBy? _currentSortBy;
@@ -92,10 +104,39 @@ class _BackdropMenuState extends State<BackdropMenu> {
   void initState() {
     super.initState();
     _categoryId = widget.categoryId;
-    minPrice = widget.minPrice ?? 0;
-    maxPrice = widget.maxPrice ?? 0;
     _currentSortBy = widget.sortBy;
 
+    if (widget.minPrice != null || widget.maxPrice != null) {
+      minPrice = widget.minPrice ?? 0;
+      maxPrice = widget.maxPrice ?? 0;
+    } else {
+      // No price filter has been applied yet — default the slider to the
+      // actual price range of the currently loaded products instead of
+      // 0.00-0.00, which reads as broken/empty.
+      final prices = productModel.productsList
+              ?.map((p) => double.tryParse(p.price ?? ''))
+              .whereType<double>()
+              .where((p) => p > 0)
+              .toList() ??
+          [];
+      if (prices.isNotEmpty) {
+        minPrice = prices.reduce((a, b) => a < b ? a : b).clamp(0, kMaxPriceFilter);
+        maxPrice = prices.reduce((a, b) => a > b ? a : b).clamp(0, kMaxPriceFilter);
+        // Safe here because nothing is filtered yet, so the loaded list is
+        // the full unfiltered catalog for this category/search — its max is
+        // a true ceiling, not just the top of an already-narrowed range.
+        if (maxPrice > 0) {
+          _sliderMaxBound = maxPrice;
+        }
+      }
+    }
+
+    // Load the web-parity attribute filters (Brand/Colour/Size/Gender/…) for
+    // the category this sheet was opened on. load() refreshes counts for the
+    // current category and resets a stale selection if the category changed.
+    final lang = Provider.of<AppModel>(context, listen: false).langCode;
+    Provider.of<CategoryFilterModel>(context, listen: false)
+        .load(widget.categoryId, lang);
   }
 
   void _onFilter({
@@ -234,7 +275,7 @@ class _BackdropMenuState extends State<BackdropMenu> {
           ),
           child: RangeSlider(
             min: 0.0,
-            max: kMaxPriceFilter,
+            max: _sliderMaxBound,
             divisions: kFilterDivision,
             values: RangeValues(minPrice, maxPrice),
             onChanged: (RangeValues value) {
@@ -255,6 +296,84 @@ class _BackdropMenuState extends State<BackdropMenu> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Web-parity layered-navigation filters (Brand, Colour, Size, Gender,
+  /// Material, Pattern, Sleeve length, Style, Product Type, …). Options and
+  /// counts come from GraphQL aggregations (via [CategoryFilterModel]); each
+  /// attribute is a collapsible section of multi-select checkboxes. Toggling
+  /// an option re-runs the product query with the new selection applied as a
+  /// REST filter group.
+  Widget renderCategoryAttributeFilters() {
+    return Consumer<CategoryFilterModel>(
+      builder: (context, model, child) {
+        if (model.isLoading && model.attributes.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+        if (model.attributes.isEmpty) return const SizedBox();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final attr in model.attributes)
+              ExpansionWidget(
+                key: PageStorageKey('catfilter_${attr.label}'),
+                showDivider: true,
+                initiallyExpanded: false,
+                padding: const EdgeInsets.only(
+                  left: 15,
+                  right: 15,
+                  top: 15,
+                  bottom: 10,
+                ),
+                title: Text(
+                  attr.label,
+                  style: Theme.of(context).textTheme.titleLarge!.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                children: [
+                  for (final opt in attr.options)
+                    CheckboxListTile(
+                      dense: true,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 8),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: Theme.of(context).primaryColor,
+                      value: model.isSelected(opt.code, opt.value),
+                      title: Text(
+                        opt.label,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      secondary: Text(
+                        '${opt.count}',
+                        style:
+                            Theme.of(context).textTheme.bodySmall!.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .secondary
+                                      .withOpacity(0.5),
+                                ),
+                      ),
+                      onChanged: (_) {
+                        model.toggle(opt.code, opt.value);
+                        _onFilter();
+                      },
+                    ),
+                ],
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -445,7 +564,7 @@ class _BackdropMenuState extends State<BackdropMenu> {
               ),
             ),
 
-        //  if (widget.showLayout) ...renderLayout(),
+          //  if (widget.showLayout) ...renderLayout(),
 
           if ((!ServerConfig().isListingType)) renderFilterSortBy(),
 
@@ -455,9 +574,16 @@ class _BackdropMenuState extends State<BackdropMenu> {
           if (!ServerConfig().isListingType &&
               ServerConfig().type != ConfigType.shopify &&
               widget.showPrice) ...[
-         //   renderPriceSlider(),
-         //   renderAttributes(),
+            renderPriceSlider(),
           ],
+
+          // Web-parity attribute filters (Brand, Colour, Size, Gender, …),
+          // driven by GraphQL aggregations. Replaces the old no-op
+          // renderAttributes() (which had no Magento backend). See
+          // docs/qa-followups.md item 3.
+          if (!ServerConfig().isListingType &&
+              ServerConfig().type != ConfigType.shopify)
+            renderCategoryAttributeFilters(),
 
           /// filter by tags
           widget.isUseBlog

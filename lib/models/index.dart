@@ -1,5 +1,6 @@
 export 'app_model.dart';
 export 'cart/cart_model.dart';
+export 'category/category_filter_model.dart';
 export 'category/category_model.dart';
 export 'credit_card_model.dart';
 export 'entities/index.dart';

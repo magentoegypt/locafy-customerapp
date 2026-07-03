@@ -57,6 +57,12 @@ class Product {
   List<dynamic>? groupedProducts;
   List<String?>? files;
   List<ProdcutOptionAttribute>? productOptions;
+
+  /// Configurable swatches from extension_attributes.swatches — per attribute,
+  /// each option carries its swatch (color/image/text), the variant's product
+  /// image and the child product_ids. Transient (freshly parsed from the API,
+  /// not cached locally).
+  List<ConfigurableSwatch>? swatches;
   dynamic configurable_product_options;
   dynamic configurable_product_links;
   int? shopQuantity;
@@ -1580,6 +1586,10 @@ class Product {
   Product.fromWislitJson(Map<String, dynamic> productJson,String domain): id = productJson['product_id'].toString() {
     itemID = productJson['wishlist_item_id'];
     stockQuantity = productJson['qty'];//(double.parse()).toInt();
+    // Preserve the Magento product type so the wishlist's "Add to cart" can
+    // decide between adding a simple product directly and opening the product
+    // page for a configurable product, even when loaded from the server.
+    type = productJson['product_type'];
     sku = productJson['product_sku'];
     vendor = productJson['vendor_id'];
     price = productJson['regular_price'];

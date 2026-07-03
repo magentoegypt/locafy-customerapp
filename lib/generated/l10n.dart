@@ -70,56 +70,6 @@ class S {
     );
   }
 
-  /// `Welcome to Locafy Market`
-  String get welcomeToLocafyMarket {
-    return Intl.message(
-      'Welcome to Locafy Market',
-      name: 'welcomeToLocafyMarket',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Change language`
-  String get changeLanguageTitle {
-    return Intl.message(
-      'Change language',
-      name: 'changeLanguageTitle',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Sign Out`
-  String get signOut {
-    return Intl.message(
-      'Sign Out',
-      name: 'signOut',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `You must login or register to add items to your wishlist.`
-  String get mustLoginToWishlist {
-    return Intl.message(
-      'You must login or register to add items to your wishlist.',
-      name: 'mustLoginToWishlist',
-      desc: '',
-      args: [],
-    );
-  }
-
-  /// `Go to the shopping cart`
-  String get goToShoppingCart {
-    return Intl.message(
-      'Go to the shopping cart',
-      name: 'goToShoppingCart',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `Feature Products`
   String get featureProducts {
     return Intl.message(
@@ -1224,6 +1174,16 @@ class S {
     return Intl.message(
       'Please input fill in all fields',
       name: 'pleaseInput',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This saved address is incomplete. Please edit it and select the city and zone again.`
+  String get pleaseUpdateAddress {
+    return Intl.message(
+      'This saved address is incomplete. Please edit it and select the city and zone again.',
+      name: 'pleaseUpdateAddress',
       desc: '',
       args: [],
     );
@@ -2338,10 +2298,10 @@ class S {
     );
   }
 
-  /// `Create Account`
+  /// `Register`
   String get newcreateAccount {
     return Intl.message(
-      'Create Account',
+      'Register',
       name: 'newcreateAccount',
       desc: '',
       args: [],
@@ -2512,6 +2472,46 @@ class S {
     return Intl.message(
       'On Sale',
       name: 'onSale',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `New Arrival`
+  String get newArrival {
+    return Intl.message(
+      'New Arrival',
+      name: 'newArrival',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Shop Now`
+  String get shopNow {
+    return Intl.message(
+      'Shop Now',
+      name: 'shopNow',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Featured Brands`
+  String get featuredBrands {
+    return Intl.message(
+      'Featured Brands',
+      name: 'featuredBrands',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Shop by Category`
+  String get shopByCategory {
+    return Intl.message(
+      'Shop by Category',
+      name: 'shopByCategory',
       desc: '',
       args: [],
     );
@@ -8787,6 +8787,16 @@ class S {
     );
   }
 
+  /// `The requested quantity is not available`
+  String get requestedQtyNotAvailable {
+    return Intl.message(
+      'The requested quantity is not available',
+      name: 'requestedQtyNotAvailable',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `No conversation yet`
   String get noConversation {
     return Intl.message(
@@ -8807,10 +8817,10 @@ class S {
     );
   }
 
-  /// `Menu order`
+  /// `Position`
   String get menuOrder {
     return Intl.message(
-      'Menu order',
+      'Position',
       name: 'menuOrder',
       desc: '',
       args: [],
@@ -9301,6 +9311,66 @@ class S {
     return Intl.message(
       'Return Merchandise Authorization',
       name: 'returnMerchandiseAuthorization',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign Out`
+  String get signOut {
+    return Intl.message(
+      'Sign Out',
+      name: 'signOut',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Welcome to Locafy Market`
+  String get welcomeToLocafyMarket {
+    return Intl.message(
+      'Welcome to Locafy Market',
+      name: 'welcomeToLocafyMarket',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Change language`
+  String get changeLanguageTitle {
+    return Intl.message(
+      'Change language',
+      name: 'changeLanguageTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You must login or register to add items to your wishlist.`
+  String get mustLoginToWishlist {
+    return Intl.message(
+      'You must login or register to add items to your wishlist.',
+      name: 'mustLoginToWishlist',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Go to the shopping cart`
+  String get goToShoppingCart {
+    return Intl.message(
+      'Go to the shopping cart',
+      name: 'goToShoppingCart',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `There is no customer registered with this number.`
+  String get noCustomerWithMobile {
+    return Intl.message(
+      'There is no customer registered with this number.',
+      name: 'noCustomerWithMobile',
       desc: '',
       args: [],
     );

@@ -149,13 +149,6 @@ class CheckoutOption extends StatelessWidget {
                       ],
                     ),
 
-                    const SizedBox(height: 4),
-
-                    Text(
-                      S.of(context).includesDeliveryFee,
-                      style: TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-
                     const SizedBox(height: 40),
 
                   ],

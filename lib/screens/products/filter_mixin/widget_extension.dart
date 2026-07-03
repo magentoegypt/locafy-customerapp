@@ -129,6 +129,31 @@ extension ProductsFilterMixinWidgetExtension on ProductsFilterMixin {
               label:
                   '${minPrice?.toStringAsFixed(0) ?? ''} - ${maxPrice?.toStringAsFixed(0) ?? ''}',
             ),
+
+          /// Active layered-navigation attribute filters (Brand/Colour/Size/…),
+          /// each removable — tapping clears just that option and re-runs the
+          /// query. Rebuilds instantly on toggle via its own Consumer.
+          Consumer<CategoryFilterModel>(
+            builder: (context, filterModel, _) {
+              if (!filterModel.hasSelection) return const SizedBox.shrink();
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final opt in filterModel.selectedOptions)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 5),
+                      child: FilterLabel(
+                        label: opt.label,
+                        onTap: () {
+                          filterModel.toggle(opt.code, opt.value);
+                          onFilter();
+                        },
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );

@@ -131,6 +131,13 @@ class _StateReviews extends BaseScreen<Reviews> {
           reviews = reviewList;
         });
       }
+    }).catchError((e) {
+      // Show the empty state instead of an endless spinner on failure.
+      if (mounted) {
+        setState(() {
+          reviews = <Review>[];
+        });
+      }
     });
   }
 

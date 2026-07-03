@@ -82,50 +82,49 @@ class SettingScreenState extends State<SettingScreen>
   final bannerHigh = 150.0;
 
   List<SectionItem> items = [];
-  late List<SectionItem> myAccountItems = [
+  // Getter (not a cached `late` field) so the labels rebuild in the current
+  // language when the user switches locale — otherwise they stay frozen in the
+  // language that was active when the screen first built.
+  List<SectionItem> get myAccountItems => [
     SectionItem(title: S.of(context).myOrders, url: "myOrders"),
     SectionItem(title: S.of(context).myWishList, url: "myWishList"),
     SectionItem(title: S.of(context).addressBook, url: "addressBook"),
     SectionItem(title: S.of(context).accountInformation, url: "accountInformation"),
-    SectionItem(title: S.of(context).storedPaymentMethods, url: "https://stg.locafy.market/eg-en/vault/cards/listaction/"),
-    SectionItem(title: S.of(context).myProductReviews, url: "https://stg.locafy.market/eg-en/review/customer/"),
-    SectionItem(title: S.of(context).newsletterSubscriptions, url: "https://stg.locafy.market/eg-en/newsletter/manage/"),
-    SectionItem(title: S.of(context).discountCoupons, url: "https://stg.locafy.market/eg-en/referralsystem/payout/"),
-    SectionItem(title: S.of(context).myWallet, url: "https://stg.locafy.market/eg-en/wallet/wallet/transaction/"),
-    SectionItem(title: S.of(context).returnMerchandiseAuthorization, url: "https://stg.locafy.market/eg-en/csrma/customerrma/index/"),
+    SectionItem(title: S.of(context).storedPaymentMethods, url: "https://locafy.market/eg-en/vault/cards/listaction/"),
+    SectionItem(title: S.of(context).myProductReviews, url: "https://locafy.market/eg-en/review/customer/"),
+    SectionItem(title: S.of(context).newsletterSubscriptions, url: "https://locafy.market/eg-en/newsletter/manage/"),
+    SectionItem(title: S.of(context).discountCoupons, url: "https://locafy.market/eg-en/referralsystem/payout/"),
+    SectionItem(title: S.of(context).myWallet, url: "https://locafy.market/eg-en/wallet/wallet/transaction/"),
+    SectionItem(title: S.of(context).returnMerchandiseAuthorization, url: "https://locafy.market/eg-en/csrma/customerrma/index/"),
   ];
 
-  late final List<Section> sections = [
+  // Getter (not a cached `late final` field) so section titles/items rebuild in
+  // the current language on locale switch instead of staying in the language
+  // active at first build.
+  List<Section> get sections => [
     Section(
       title: S.of(context).customerService,
       items: [
-        SectionItem(title: S.of(context).contactUs, url: "https://stg.locafy.market/eg-en/contact"),
-        SectionItem(title: S.of(context).faqs, url: "https://stg.locafy.market/eg-en/faqs-english"),
-        SectionItem(title: S.of(context).deliveryReturns, url: "https://stg.locafy.market/eg-en/delivery-returns-en"),
-        SectionItem(title: S.of(context).termsConditions, url: "https://stg.locafy.market/eg-en/terms-conditions-en"),
-        SectionItem(title: S.of(context).privacyPolicy, url: "https://stg.locafy.market/eg-en/privacy-policy-en"),
+        SectionItem(title: S.of(context).contactUs, url: "https://locafy.market/eg-en/contact"),
+        SectionItem(title: S.of(context).faqs, url: "https://locafy.market/eg-en/faqs-english"),
+        SectionItem(title: S.of(context).deliveryReturns, url: "https://locafy.market/eg-en/delivery-returns-en"),
+        SectionItem(title: S.of(context).termsConditions, url: "https://locafy.market/eg-en/terms-conditions-en"),
+        SectionItem(title: S.of(context).privacyPolicy, url: "https://locafy.market/eg-en/privacy-policy-en"),
       ],
     ),
     Section(
       title:  S.of(context).aboutLocafy,
       items: [
-        SectionItem(title: S.of(context).aboutUs, url: "https://stg.locafy.market/eg-en/about-us"),
-      ],
-    ),
-    Section(
-      title: S.of(context).forSellers,
-      items: [
-        SectionItem(title: S.of(context).whySellOnLocafy, url: "https://stg.locafy.market/eg-en/why-sell-on-locafy-en"),
-        SectionItem(title: S.of(context).joinAsSeller, url: "https://stg.locafy.market/eg-en/csmarketplace/account/approval/"),
+        SectionItem(title: S.of(context).aboutUs, url: "https://locafy.market/eg-en/about-us"),
       ],
     ),
     Section(
       title: S.of(context).quickLinks,
       items: [
-        SectionItem(title: S.of(context).mensCollections, url: "https://stg.locafy.market/eg-en/loca-men/clothing.html"),
-        SectionItem(title: S.of(context).womanCollections, url: "https://stg.locafy.market/eg-en/women-wear/clothing.html"),
-        SectionItem(title: S.of(context).kidsCollections, url: "https://stg.locafy.market/eg-en/kidswear/kids-3-12-years.html"),
-        SectionItem(title: S.of(context).allBrands, url: "https://stg.locafy.market/eg-en/csmarketplace/vshops/index/?search="),
+        SectionItem(title: S.of(context).mensCollections, url: "https://locafy.market/eg-en/loca-men/clothing.html"),
+        SectionItem(title: S.of(context).womanCollections, url: "https://locafy.market/eg-en/women-wear/clothing.html"),
+        SectionItem(title: S.of(context).kidsCollections, url: "https://locafy.market/eg-en/kidswear/kids-3-12-years.html"),
+        SectionItem(title: S.of(context).allBrands, url: "https://locafy.market/eg-en/csmarketplace/vshops/index/?search="),
       ],
     ),
     Section(
@@ -138,60 +137,6 @@ class SettingScreenState extends State<SettingScreen>
       ],
     ),
   ];
-
-  /// Opens a [SectionItem] from the My Account / Support lists.
-  /// Full http(s) urls open in an authenticated WebView; the known
-  /// route-keys map to their native screens.
-  void _openSectionItem(SectionItem item) {
-    final url = item.url;
-    if (url.isEmpty) return;
-    if (url.startsWith('http')) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              WebView(auth: true, url: url, title: item.title),
-        ),
-      );
-      return;
-    }
-    switch (url) {
-      case 'myOrders':
-        {
-          final currentUser =
-              Provider.of<UserModel>(context, listen: false).user;
-          FluxNavigate.pushNamed(RouteList.orders, arguments: currentUser);
-        }
-        break;
-      case 'myWishList':
-        MainTabControlDelegate.getInstance().tabAnimateTo(2);
-        break;
-      case 'addressBook':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => WebView(
-                auth: true,
-                url: 'https://stg.locafy.market/eg-en/customer/address/',
-                title: item.title),
-          ),
-        );
-        break;
-      case 'accountInformation':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => WebView(
-                auth: true,
-                url: 'https://stg.locafy.market/eg-en/customer/account/',
-                title: item.title),
-          ),
-        );
-        break;
-      default:
-        break;
-    }
-  }
 
   void checkAddPostRole() {
     for (var legitRole in addPostAccessibleRoles) {
@@ -1031,6 +976,12 @@ class SettingScreenState extends State<SettingScreen>
   Widget build(BuildContext context) {
     super.build(context);
 
+    // Listen to the auth state so this screen rebuilds immediately on
+    // login/logout (the `user` getter reads with listen:false). Without this the
+    // My Account page kept showing the old logged-in/out state until a language
+    // switch forced a rebuild.
+    Provider.of<UserModel>(context);
+
     var settings = widget.settings ?? kDefaultSettings;
     var background = widget.background ?? kProfileBackground;
 
@@ -1135,7 +1086,9 @@ class SettingScreenState extends State<SettingScreen>
                                   vertical: 6.0 //isTitle ? 0.0 : itemPadding,
                               ),
                               child: GestureDetector(
-                                onTap: () => _openSectionItem(item),
+                                onTap: () {
+                                  _openSectionItem(item);
+                                },
                                 child: Text(
                                   item.title,
                                   style: const TextStyle(
@@ -1284,7 +1237,9 @@ class SettingScreenState extends State<SettingScreen>
                               ),
                               child: _SettingItem(
                                 title:section.title,
-                                onTap: () => _openSectionItem(section),
+                                onTap: () async {
+                                  _openSectionItem(section);
+                                },
                               ),
                             );
                           },
@@ -1322,7 +1277,7 @@ class SettingScreenState extends State<SettingScreen>
                         icon: SettingScreenItemIcon(icon: CupertinoIcons.info),
                         title: S.of(context).contactUs,
                         onTap: (){
-                          Tools.launchURL("https://stg.locafy.market/contact");
+                          Tools.launchURL("https://locafy.market/contact");
                         },
                       ),
                     ),
@@ -1463,7 +1418,7 @@ class SettingScreenState extends State<SettingScreen>
                             onPressed: _onLogout,
                             child: Text(
                               S.of(context).signOut,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Colors.black,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
@@ -1501,6 +1456,85 @@ class SettingScreenState extends State<SettingScreen>
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       throw 'Could not launch $url';
+    }
+  }
+
+  void _openAuthWebView(String url, String title) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WebView(
+          auth: true,
+          url: url,
+          title: title,
+        ),
+      ),
+    );
+  }
+
+  /// Rewrites a store-view URL to the Arabic store view when the app language
+  /// is Arabic, so support / quick-link pages open in the matching language
+  /// (Arabic pages -> /eg-ar/..., English pages -> /eg-en/...).
+  /// CMS pages whose Arabic slug differs are mapped explicitly; pages that
+  /// have no Arabic version yet keep the English URL to avoid a 404.
+  String _localizeUrl(String url) {
+    final isArabic =
+        (Provider.of<AppModel>(context, listen: false).langCode ?? '')
+            .toLowerCase()
+            .startsWith('ar');
+    if (!isArabic || !url.contains('/eg-en/')) return url;
+
+    // CMS pages that do not have an Arabic version yet -> keep English.
+    const keepEnglish = ['faqs-english', 'privacy-policy-en'];
+    for (final slug in keepEnglish) {
+      if (url.contains(slug)) return url;
+    }
+
+    var localized = url.replaceFirst('/eg-en/', '/eg-ar/');
+    // CMS pages whose Arabic slug differs from the English one.
+    const slugMap = {
+      'delivery-returns-en': 'delivery-returns-ar',
+      'terms-conditions-en': 'terms-conditions-ar',
+    };
+    slugMap.forEach((en, ar) {
+      localized = localized.replaceFirst(en, ar);
+    });
+    return localized;
+  }
+
+  void _openSectionItem(SectionItem item) {
+    final url = item.url;
+    if (url.startsWith('http')) {
+      _openAuthWebView(_localizeUrl(url), item.title);
+      return;
+    }
+    switch (url) {
+      case 'myOrders':
+        FluxNavigate.pushNamed(
+          RouteList.orders,
+          arguments: user,
+        );
+        break;
+      case 'myWishList':
+        MainTabControlDelegate.getInstance().tabAnimateTo(2);
+        break;
+      case 'addressBook':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ShippingAddress(
+              isFromAddrssHistory: true,
+              isFromCheckout: false,
+            ),
+          ),
+        );
+        break;
+      case 'accountInformation':
+        _openAuthWebView(
+          '${ServerConfig().url}/my-account',
+          item.title,
+        );
+        break;
     }
   }
 

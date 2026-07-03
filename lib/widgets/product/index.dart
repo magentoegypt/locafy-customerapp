@@ -12,6 +12,7 @@ export 'widgets/heart_button.dart';
 export 'widgets/image.dart';
 export 'widgets/on_sale.dart';
 export 'widgets/pricing.dart';
+export 'widgets/product_brand.dart';
 export 'widgets/quantity_selection.dart';
 export 'widgets/rating.dart';
 export 'widgets/sale_progress.dart';
