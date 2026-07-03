@@ -95,6 +95,7 @@
 	"settings": "ضبط الإعدادات",
 	"generalSetting": "الإعدادات العامة",
 	"getNotification": "الحصول على إشعارات",
+	"notificationBlockedMessage": "الإشعارات مغلقة لهذا التطبيق. الرجاء تفعيلها من إعدادات جهازك.",
 	"listMessages": "قائمة الرسائل",
 	"language": "اللغات",
 	"darkTheme": "الوضع الداكن",

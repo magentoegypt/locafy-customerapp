@@ -535,6 +535,8 @@ class MessageLookup extends MessageLookupByLibrary {
         "getNotification":
             MessageLookupByLibrary.simpleMessage("Get Notification"),
         "getNotified": MessageLookupByLibrary.simpleMessage("Get notified!"),
+        "notificationBlockedMessage": MessageLookupByLibrary.simpleMessage(
+            "Notifications are turned off for this app. Please enable them in your device settings."),
         "getPasswordLink":
             MessageLookupByLibrary.simpleMessage("Reset My Password"),
     "getPasswordInstruction":

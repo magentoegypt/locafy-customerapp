@@ -999,6 +999,16 @@ class S {
     );
   }
 
+  /// `Notifications are turned off for this app. Please enable them in your device settings.`
+  String get notificationBlockedMessage {
+    return Intl.message(
+      'Notifications are turned off for this app. Please enable them in your device settings.',
+      name: 'notificationBlockedMessage',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Notify Messages`
   String get listMessages {
     return Intl.message(
