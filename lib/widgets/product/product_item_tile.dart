@@ -153,7 +153,9 @@ class _ProductDescription extends StatelessWidget {
               maxLines: config.titleLine,
             ),
             const SizedBox(height: 4),
-            StoreName(product: item, hide: config.hideStore),
+            // Seller "Sold by" is a product-detail feature; keep it off list
+            // tiles (it wasn't shown before seller data existed).
+            StoreName(product: item, hide: true),
             if (item.tagLine != null)
               Text(
                 item.tagLine.toString(),

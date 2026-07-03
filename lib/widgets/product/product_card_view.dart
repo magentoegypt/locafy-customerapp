@@ -103,7 +103,9 @@ class _ProductCardState extends State<ProductCard> with ActionButtonMixin {
             maxLines: widget.config.titleLine,
           ),
         ),
-        StoreName(product: widget.item, hide: widget.config.hideStore),
+        // Seller "Sold by" belongs on the product detail page, not the compact
+        // grid card — showing it here overflows the fixed-height card.
+        StoreName(product: widget.item, hide: true),
         const SizedBox(height: 2),
         ProductPricing(
           product: widget.item,

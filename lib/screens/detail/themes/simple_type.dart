@@ -131,6 +131,17 @@ class _SimpleLayoutState extends State<SimpleLayout>
     }
 
     final userModel = Provider.of<UserModel>(context, listen: false);
+
+    // When the PDP is pushed inside a tab's nested navigator, the app tab bar
+    // stays below it and already clears the system-nav inset — so the action
+    // bar must sit flush (no extra bottom inset) or a gap appears above the
+    // tab bar. When pushed full-screen (e.g. from search) there is no tab bar,
+    // so it must clear the inset itself.
+    final isNestedInTab =
+        Navigator.of(context) != Navigator.of(context, rootNavigator: true);
+    final bottomBarInset =
+        isNestedInTab ? 0.0 : MediaQuery.of(context).padding.bottom;
+
     return Container(
       color: Theme.of(context).colorScheme.background,
       child: SafeArea(
@@ -225,15 +236,12 @@ class _SimpleLayoutState extends State<SimpleLayout>
                     ),
                   ],
                 ),
-                // SafeArea(top: false) keeps the action buttons above the
-                // system navigation/gesture bar. The outer SafeArea uses
-                // bottom: false, so without this the bar sits under the
-                // system buttons and gets clipped on devices with an
-                // on-screen nav bar.
-                bottomNavigationBar: SafeArea(
-                  top: false,
+                bottomNavigationBar: Container(
+                  // See bottomBarInset above: flush under a tab bar, inset
+                  // when full-screen.
+                  padding: EdgeInsets.only(bottom: bottomBarInset),
+                  color: Theme.of(context).cardColor,
                   child: Container(
-                    margin: getMargin(bottom: 10),
                     height: 80,
                     padding:
                         getPadding(left: 10, right: 10, top: 10, bottom: 10),
@@ -452,11 +460,9 @@ class _SimpleLayoutState extends State<SimpleLayout>
                           ),
                         ),
                       ),
-                      if (product.shortDescription?.isNotEmpty ?? false)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                          child: ProductShortDescription(product),
-                        ),
+                      // Short description is rendered by makeProductTitleWidget
+                      // (under the price), so it is intentionally not repeated
+                      // here — doing both showed it twice.
                       Padding(
                         padding: const EdgeInsets.symmetric(
                           // horizontal: 15.0,
