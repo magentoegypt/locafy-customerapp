@@ -90,11 +90,14 @@ jobs:
       - name: Build IPA
         run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
 
+      - name: Rename IPA
+        run: mv build/ios/ipa/*.ipa build/ios/ipa/locafy-customerapp.ipa
+
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release.ipa
-          path: build/ios/ipa/*.ipa
+          name: locafy-customerapp.ipa
+          path: build/ios/ipa/locafy-customerapp.ipa
 
       - name: Clean up keychain
         if: ${{ always() }}
