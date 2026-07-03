@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>method</key>
-    <string>app-store</string>
+    <string>ad-hoc</string>
     <key>teamID</key>
     <string>544Y9RU66L</string>
     <key>uploadBitcode</key>
@@ -15,7 +15,7 @@
     <key>provisioningProfiles</key>
     <dict>
         <key>com.magentoegypt.ajstore</key>
-        <string>Locafy_AppStore_Profile</string>
+        <string>locafy_customer_app_adhoc</string>
     </dict>
 </dict>
 </plist>
