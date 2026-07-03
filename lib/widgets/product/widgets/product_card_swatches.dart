@@ -4,126 +4,174 @@ import 'package:inspireui/inspireui.dart' show HexColor;
 import '../../../models/entities/ProdcutOptionAttribute.dart';
 import '../../../models/entities/product.dart';
 
-/// Compact colour-swatch strip for a product grid card. Shows the available
-/// colours of a configurable product (from extension_attributes.swatches) as
-/// small dots, so shoppers can see the colour options without opening the PDP.
-/// Renders nothing unless the product genuinely has 2+ colour options.
+/// Variant preview shown on a product grid card, below the price:
+///  - colour options as circular product-image thumbnails (the variant photo),
+///  - size options as small outlined chips.
+/// Both come from extension_attributes.swatches; renders nothing for the part
+/// a product doesn't have (e.g. a size-only product shows just the size chips).
 class ProductCardSwatches extends StatelessWidget {
   final Product product;
-  final int maxDots;
+  final int maxColors;
+  final int maxSizes;
 
   const ProductCardSwatches({
     super.key,
     required this.product,
-    this.maxDots = 4,
+    this.maxColors = 4,
+    this.maxSizes = 6,
   });
 
+  /// The colour attribute — visual swatches (swatch_type color/image), 2+ opts.
   ConfigurableSwatch? _colorSwatch() {
-    final swatches = product.swatches;
-    if (swatches == null || swatches.isEmpty) {
-      return null;
-    }
-    ConfigurableSwatch? candidate;
-    for (final s in swatches) {
-      final isColorAttr = s.attributeCode == 'all_color' ||
-          s.options.any((o) => o.isColor || (o.productImage?.isNotEmpty ?? false));
-      if (isColorAttr && s.options.length > 1) {
-        // Prefer the canonical colour attribute.
-        if (s.attributeCode == 'all_color') {
-          return s;
-        }
-        candidate ??= s;
+    for (final s in product.swatches ?? const <ConfigurableSwatch>[]) {
+      final isColor = s.attributeCode == 'all_color' ||
+          s.options
+              .any((o) => o.swatchType == 'color' || o.swatchType == 'image');
+      if (isColor && s.options.length > 1) {
+        return s;
       }
     }
-    return candidate;
+    return null;
+  }
+
+  /// The size attribute — text swatches (swatch_type text), 2+ opts.
+  ConfigurableSwatch? _sizeSwatch() {
+    for (final s in product.swatches ?? const <ConfigurableSwatch>[]) {
+      final isText = s.options.isNotEmpty &&
+          s.options.every((o) => o.swatchType == 'text' || o.swatchType == null);
+      if (isText && s.options.length > 1) {
+        return s;
+      }
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    final swatch = _colorSwatch();
-    if (swatch == null) {
+    final color = _colorSwatch();
+    final size = _sizeSwatch();
+    if (color == null && size == null) {
       return const SizedBox.shrink();
     }
-    final options = swatch.options
-        .where((o) =>
-            (o.swatchValue?.isNotEmpty ?? false) ||
-            (o.productImage?.isNotEmpty ?? false))
-        .toList();
-    if (options.length < 2) {
-      return const SizedBox.shrink();
-    }
-
-    final shown = options.take(maxDots).toList();
-    final extra = options.length - shown.length;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.85),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < shown.length; i++)
-            Padding(
-              padding: EdgeInsets.only(right: i == shown.length - 1 ? 0 : 4),
-              child: _dot(context, shown[i]),
-            ),
-          if (extra > 0)
-            Padding(
-              padding: const EdgeInsets.only(left: 3),
-              child: Text(
-                '+$extra',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.secondary,
-                ),
-              ),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (color != null) ...[
+          const SizedBox(height: 8),
+          _colorRow(context, color),
         ],
-      ),
+        if (size != null) ...[
+          const SizedBox(height: 8),
+          _sizeRow(context, size),
+        ],
+      ],
     );
   }
 
-  Widget _dot(BuildContext context, SwatchOption option) {
-    final border = Border.all(
-      color: Theme.of(context).colorScheme.secondary.withOpacity(0.35),
+  Widget _colorRow(BuildContext context, ConfigurableSwatch swatch) {
+    final options = swatch.options
+        .where((o) =>
+            (o.productImage?.isNotEmpty ?? false) ||
+            (o.swatchValue?.isNotEmpty ?? false))
+        .toList();
+    final shown = options.take(maxColors).toList();
+    final extra = options.length - shown.length;
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 8,
+      runSpacing: 6,
+      children: [
+        for (final o in shown) _colorCircle(context, o),
+        if (extra > 0) _moreLabel(context, extra),
+      ],
     );
-    final hex = option.swatchValue;
-    final isHex = option.isColor && (hex?.startsWith('#') ?? false);
+  }
 
-    if (isHex) {
-      return Container(
-        width: 14,
-        height: 14,
-        decoration: BoxDecoration(
-          color: HexColor(hex!),
-          shape: BoxShape.circle,
-          border: border,
-        ),
-      );
-    }
-
-    // Fall back to a tiny product-image dot when there's no hex colour.
+  Widget _colorCircle(BuildContext context, SwatchOption option) {
+    final border = Border.all(
+      color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
+    );
     final imageUrl = (option.productImage?.isNotEmpty ?? false)
         ? option.productImage
-        : ((hex?.contains('http') ?? false) ? hex : null);
+        : ((option.swatchValue?.contains('http') ?? false)
+            ? option.swatchValue
+            : null);
     if (imageUrl != null) {
       return Container(
-        width: 14,
-        height: 14,
+        width: 40,
+        height: 40,
         decoration: BoxDecoration(shape: BoxShape.circle, border: border),
         child: ClipOval(
           child: Image.network(
             imageUrl,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            errorBuilder: (_, __, ___) =>
+                _hexFill(context, option.swatchValue),
           ),
         ),
       );
     }
-    return const SizedBox.shrink();
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(shape: BoxShape.circle, border: border),
+      child: ClipOval(child: _hexFill(context, option.swatchValue)),
+    );
   }
+
+  Widget _hexFill(BuildContext context, String? hex) => Container(
+        color: (hex?.startsWith('#') ?? false) ? HexColor(hex!) : Colors.white,
+      );
+
+  Widget _sizeRow(BuildContext context, ConfigurableSwatch swatch) {
+    final options =
+        swatch.options.where((o) => (o.label?.isNotEmpty ?? false)).toList();
+    final shown = options.take(maxSizes).toList();
+    final extra = options.length - shown.length;
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final o in shown) _sizeChip(context, o.label!),
+        if (extra > 0) _moreLabel(context, extra),
+      ],
+    );
+  }
+
+  Widget _sizeChip(BuildContext context, String label) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 34),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+        ),
+      ),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 12,
+          color: Theme.of(context).colorScheme.secondary,
+        ),
+      ),
+    );
+  }
+
+  Widget _moreLabel(BuildContext context, int extra) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Text(
+          '+$extra',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.secondary,
+          ),
+        ),
+      );
 }

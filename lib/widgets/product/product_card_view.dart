@@ -111,7 +111,12 @@ class _ProductCardState extends State<ProductCard> with ActionButtonMixin {
         ProductPricing(
           product: widget.item,
           hide: widget.config.hidePrice,
+          // Blue current price to match the design; struck-through original
+          // price keeps its grey styling.
+          mainPriceColor: const Color(0xFF1273EB),
         ),
+        // Colour options (as product-image circles) + size chips, below price.
+        ProductCardSwatches(product: widget.item),
         // Align(
         //   alignment: Alignment.bottomLeft,
         //   child: Stack(
@@ -239,14 +244,6 @@ class _ProductCardState extends State<ProductCard> with ActionButtonMixin {
                               onTapProduct: () => onTapProduct(context,
                                   product: widget.item, config: widget.config),
                             ),
-                          ),
-                          // Colour options overlaid on the image so they don't
-                          // add height to the fixed-size card.
-                          Positioned(
-                            left: context.isRtl ? null : 6,
-                            right: context.isRtl ? 6 : null,
-                            bottom: 6,
-                            child: ProductCardSwatches(product: widget.item),
                           ),
                           if (widget.config.showCartButtonWithQuantity &&
                               widget.item.canBeAddedToCartFromList(
