@@ -146,8 +146,16 @@ class TabBarCustom extends StatelessWidget {
   Widget build(BuildContext context) {
     var tabConfig = config.tabBarConfig;
 
-    /// error could happen on hide tab menu length
-    ErrorWidget.builder = (error) => const SizedBox();
+    /// The tab list always has [tabData.length] children, so the shared
+    /// [TabController] must have the same length or the underlying TabBar
+    /// asserts. During a tab/config reload (e.g. language switch) the two can
+    /// briefly disagree — hide the bar for that one frame instead of throwing.
+    ///
+    /// This used to be "handled" by `ErrorWidget.builder = (_) => SizedBox()`,
+    /// which muted EVERY build error in the whole app into a blank box — the
+    /// root cause of the "app hangs / all screens go blank white" reports.
+    /// The global handler is now configured once, safely, in main().
+    final tabCountMismatch = tabController.length != tabData.length;
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 500),
@@ -158,7 +166,7 @@ class TabBarCustom extends StatelessWidget {
           child: child,
         );
       },
-      child: shouldHideTabBar
+      child: (shouldHideTabBar || tabCountMismatch)
           ? const SizedBox()
           : Container(
               padding: EdgeInsets.only(
