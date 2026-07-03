@@ -86,7 +86,11 @@ abstract class NotificationService {
 
   Future<bool> isGranted() async {
     if (kIsWeb) return false;
-    final status = await ph.Permission.notification.request();
+    // Use .status (a pure check) not .request() — this is called to reflect the
+    // current permission state (e.g. syncing the settings toggle) and must not
+    // pop the OS permission prompt. The explicit opt-in still uses
+    // requestPermission().
+    final status = await ph.Permission.notification.status;
     return status.isGranted;
   }
 

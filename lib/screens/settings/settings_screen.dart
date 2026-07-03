@@ -70,6 +70,7 @@ class SettingScreenState extends State<SettingScreen>
         AutomaticKeepAliveClientMixin<SettingScreen>,
         DeleteAccountMixin,
         RateMyAppMixin,
+        WidgetsBindingObserver,
         AppBarMixin {
   final ScrollController _scrollController = ScrollController();
 
@@ -152,6 +153,31 @@ class SettingScreenState extends State<SettingScreen>
   void initState() {
     super.initState();
     screenScrollController = _scrollController;
+    WidgetsBinding.instance.addObserver(this);
+    // Reflect the real OS notification permission on the toggle. Previously the
+    // toggle showed only a stale local flag, so a notification that was enabled
+    // at the OS level (iOS/Android) could still read as OFF here.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<NotificationModel>(context, listen: false).checkGranted();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Returning from the OS Settings (where the permission may have been
+    // toggled) — re-sync the notification toggle to the real state.
+    if (state == AppLifecycleState.resumed && mounted) {
+      Provider.of<NotificationModel>(context, listen: false).checkGranted();
+    }
   }
 
   void updateAddress(Address? newAddress) {
