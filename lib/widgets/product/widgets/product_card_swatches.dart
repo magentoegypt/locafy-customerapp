@@ -17,8 +17,11 @@ class ProductCardSwatches extends StatelessWidget {
   const ProductCardSwatches({
     super.key,
     required this.product,
-    this.maxColors = 4,
-    this.maxSizes = 6,
+    // Bounded so the preview never wraps past the card's reserved height:
+    // colours stay on one row, sizes on at most two — the rest collapse to a
+    // "+N" chip. See the height budget in product_list.dart.
+    this.maxColors = 3,
+    this.maxSizes = 4,
   });
 
   /// The colour attribute — visual swatches (swatch_type color/image), 2+ opts.
@@ -53,9 +56,9 @@ class ProductCardSwatches extends StatelessWidget {
     if (color == null && size == null) {
       return const SizedBox.shrink();
     }
-    // When both rows show, cap the sizes so colour circles + size chips stay
-    // within the card's reserved height.
-    final sizeLimit = color != null ? 4 : maxSizes;
+    // When both rows show, cap the sizes harder so a colour row + size chips
+    // stay within the card's reserved height (never more than ~3 rows total).
+    final sizeLimit = color != null ? 3 : maxSizes;
     final rows = <Widget>[
       if (color != null) _colorRow(context, color),
       if (size != null) _sizeRow(context, size, sizeLimit),

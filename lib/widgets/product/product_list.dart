@@ -146,12 +146,15 @@ class _ProductListState extends State<ProductList> {
     }
     itemHeight -= 50;
     // Extra room under the price for the on-card variant preview
-    // (colour-image circles + size chips). Multi-column layouts get less since
-    // their narrower cards show fewer chips per row.
+    // (colour-image circles + size chips). Sized for the worst bounded case —
+    // one colour row plus up to two size-chip rows (the swatch widget caps the
+    // rest to a "+N" chip) — so a product with many sizes no longer overflows
+    // the fixed grid cell. Multi-column layouts get less since their narrower
+    // cards show fewer chips per row.
     if (widget.layout != 'columns') {
-      itemHeight += 138;
+      itemHeight += 186;
     } else {
-      itemHeight += 104;
+      itemHeight += 150;
     }
     childAspectRatio = widthContent /
         (widthContent * (widget.ratioProductImage ?? 1.2) + itemHeight);
@@ -246,29 +249,63 @@ class _ProductListState extends State<ProductList> {
     double? widthContent,
     required List<Product> products,
   }) {
-    return SliverGrid(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        childAspectRatio: childAspectRatio,
-      ),
-      delegate: SliverChildBuilderDelegate(
-        addAutomaticKeepAlives: false,
-        childCount: products.length,
-        (BuildContext context, int i) {
-          return Services().widget.renderProductCardView(
-                item: products[i],
-                width: widthContent,
-                ratioProductImage: widget.ratioProductImage ?? 1.2,
-                config: ProductConfig.empty()
-                  ..showHeart = true
-                  ..imageRatio = widget.ratioProductImage ?? 1.2
-                  ..showCountDown = kSaleOffProduct.showCountDown &&
-                      widget.layout == Layout.saleOff
-                  ..showCartIcon = ProductConfig.empty().showCartIcon &&
-                      (widget.layout != Layout.columns &&
-                          products[i].canBeAddedToCartFromList()),
+    // Aligned rows with per-row equal-height cards. Each row is chunked into
+    // `crossAxisCount` cards and wrapped in IntrinsicHeight, so the row takes
+    // only the height its *tallest* card needs and both cards stretch to match
+    // it. This keeps left/right cards the same height (no staggering) while
+    // avoiding the old fixed grid's one-height-for-all reservation, which left
+    // a large gap under cards with few swatches. `childAspectRatio` is no
+    // longer used here.
+    const gap = 8.0;
+    final rowCount = (products.length / crossAxisCount).ceil();
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          addAutomaticKeepAlives: false,
+          childCount: rowCount,
+          (BuildContext context, int rowIndex) {
+            final start = rowIndex * crossAxisCount;
+            final cells = <Widget>[];
+            for (var c = 0; c < crossAxisCount; c++) {
+              if (c > 0) cells.add(const SizedBox(width: gap));
+              final idx = start + c;
+              cells.add(
+                Expanded(
+                  child: idx < products.length
+                      ? Services().widget.renderProductCardView(
+                            item: products[idx],
+                            width: widthContent,
+                            ratioProductImage: widget.ratioProductImage ?? 1.2,
+                            config: ProductConfig.empty()
+                              ..showHeart = true
+                              // The row owns the spacing; drop card margins so
+                              // the cards fill their cell and align edge to edge.
+                              ..hMargin = 0
+                              ..vMargin = 0
+                              ..imageRatio = widget.ratioProductImage ?? 1.2
+                              ..showCountDown = kSaleOffProduct.showCountDown &&
+                                  widget.layout == Layout.saleOff
+                              ..showCartIcon = ProductConfig.empty()
+                                      .showCartIcon &&
+                                  (widget.layout != Layout.columns &&
+                                      products[idx].canBeAddedToCartFromList()),
+                          )
+                      : const SizedBox.shrink(),
+                ),
               );
-        },
+            }
+            return Padding(
+              padding: const EdgeInsets.only(bottom: gap),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: cells,
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

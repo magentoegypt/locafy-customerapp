@@ -7,7 +7,9 @@ Map<String, dynamic> environment = {
   /// ➡️ lib/common/config.dart
   "serverConfig": {
     "type": "magento",
-    "url": "https://locafy.market",
+    // QA: pointing the app's live/base URL at the testing environment.
+    // Revert to "https://locafy.market" when the user says to go back to live.
+    "url": "https://testing.locafy.market",
     "accessToken": "jd7u3bu9g7ca1vgocv0dvpr77xof57jf",
     'blog': "https://mstore.io",
     //"https://magentoegypt.com/blog/ar/",

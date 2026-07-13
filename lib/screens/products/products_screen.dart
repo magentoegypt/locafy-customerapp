@@ -270,7 +270,7 @@ class ProductsScreenState extends State<ProductsScreen>
                         enableSearchHistory: widget.enableSearchHistory,
                         currentTitle: currentTitle,
                         productCount:
-                            '${model.productsList?.length} ${S.of(context).items}',
+                            '${model.totalCount ?? model.productsList?.length ?? 0} ${S.of(context).items}',
                         builder: layout.isListView
                             ? ProductList(
                                 products: model.productsList,
@@ -307,42 +307,41 @@ class ProductsScreenState extends State<ProductsScreen>
                                   //     onFilter(categoryId: categoryId);
                                   //   },
                                   // ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                        left: 10,
-                                        right: 10,
-                                        bottom: 10,
-                                        top: 25),
-                                    child: Column(
-                                      children: [
-                                        if (productConfig.showCountDown) ...[
-                                          const SizedBox(height: 5),
-                                          Row(
-                                            children: [
-                                              Text(
-                                                S
-                                                    .of(context)
-                                                    .endsIn('')
-                                                    .toUpperCase(),
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .titleMedium!
-                                                    .copyWith(
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .secondary
-                                                          .withOpacity(0.8),
-                                                    )
-                                                    .apply(fontSizeFactor: 0.6),
-                                              ),
-                                              CountDownTimer(
-                                                  widget.countdownDuration),
-                                            ],
+                                  // Only render the header block when there's
+                                  // countdown content. Previously this padded
+                                  // Column was always present, so its top:25 /
+                                  // bottom:10 padding left an empty gap between
+                                  // the filter toolbar and the product grid.
+                                  if (productConfig.showCountDown)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          left: 10,
+                                          right: 10,
+                                          bottom: 10,
+                                          top: 25),
+                                      child: Row(
+                                        children: [
+                                          Text(
+                                            S
+                                                .of(context)
+                                                .endsIn('')
+                                                .toUpperCase(),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium!
+                                                .copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .secondary
+                                                      .withOpacity(0.8),
+                                                )
+                                                .apply(fontSizeFactor: 0.6),
                                           ),
+                                          CountDownTimer(
+                                              widget.countdownDuration),
                                         ],
-                                      ],
+                                      ),
                                     ),
-                                  )
                                 ],
                               )
                             : AsymmetricView(

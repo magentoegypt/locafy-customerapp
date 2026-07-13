@@ -36,6 +36,11 @@ class ProductModel with ChangeNotifier {
   String? errMsg;
   bool? isEnd;
 
+  /// Real total for the current list from the API's `total_count` (not just the
+  /// loaded page size), for the product-list header. Null until the first page
+  /// resolves; the header falls back to the loaded count.
+  int? totalCount;
+
   List<Product>? recentSearch;
 
   List<ProductVariation> variations = [];
@@ -220,6 +225,17 @@ class ProductModel with ChangeNotifier {
       ));
 
       final products = await _cancelLoadProduct!.value;
+
+      // Real category/brand total from the API's `total_count`, exposed by the
+      // Magento service after each fetch (falls back to the loaded count for
+      // frameworks that don't provide it).
+      try {
+        final dynamic api = _service.api;
+        final t = api.lastCategoryProductsTotal;
+        totalCount = t is int ? t : null;
+      } catch (_) {
+        totalCount = null;
+      }
 
       isEnd = products!.isEmpty;
 

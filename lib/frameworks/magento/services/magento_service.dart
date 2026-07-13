@@ -48,6 +48,11 @@ class MagentoService extends BaseServices {
   List<String> brandIds = [];
   Map<String, String>? _brandLabelsCache;
 
+  /// The API's `total_count` from the last `fetchProductsByCategory` response,
+  /// so the product-list header can show the real category/brand total instead
+  /// of just the loaded page size (e.g. "100 items" for every list).
+  int? lastCategoryProductsTotal;
+
   MagentoService({
     required String domain,
     String? blogDomain,
@@ -642,6 +647,103 @@ class MagentoService extends BaseServices {
     return [];
   }
 
+  List<ShopBrand>? _shopBrandsCache;
+  bool _shopBrandsFetched = false;
+
+  /// `GET mstore/shopbrands` — the Shop-by-Brand grid, each tile carrying the
+  /// `option_id` (brand attribute option value) that keys the brand's product
+  /// listing. Not present on every environment yet; returns [] when absent so
+  /// callers fall back to the homepage `brands` section. Registers every
+  /// option id in [brandIds] so `fetchProductsByCategory` filters by brand.
+  Future<List<ShopBrand>> fetchShopBrands() async {
+    if (_shopBrandsFetched) return _shopBrandsCache ?? const <ShopBrand>[];
+    try {
+      final response = await httpGet(
+        MagentoHelper.buildUrl(domain, 'mstore/shopbrands', null)!,
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
+      if (response.statusCode == 200) {
+        final data = convert.jsonDecode(response.body);
+        if (data is List) {
+          _shopBrandsCache =
+              data.whereType<Map>().map(ShopBrand.fromJson).toList();
+          for (final b in _shopBrandsCache!) {
+            if ((b.optionId?.isNotEmpty ?? false) &&
+                !brandIds.contains(b.optionId)) {
+              brandIds.add(b.optionId!);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    _shopBrandsFetched = true;
+    return _shopBrandsCache ?? const <ShopBrand>[];
+  }
+
+  static String _normalizeBrand(String? s) =>
+      (s ?? '').toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+  /// The `shopbrand/<slug>-store.html` slug from a storefront brand url,
+  /// normalized — used to join a homepage `brands` item to a shopbrands tile.
+  static String? _brandSlug(String? url) {
+    final m =
+        RegExp(r'shopbrand/([^/]+?)(?:-store)?\.html').firstMatch(url ?? '');
+    return m != null ? _normalizeBrand(m.group(1)) : null;
+  }
+
+  /// Resolve a featured brand (a homepage `brands` item, which only has a
+  /// positional id) to its `brand` attribute option value, so the app can open
+  /// a native product listing instead of the storefront WebView. Prefers the
+  /// authoritative `mstore/shopbrands` join (shop-url slug, then name); falls
+  /// back to a normalized name match against `mstore/brands`. Ensures the id is
+  /// in [brandIds] so the products query filters by brand. Returns null when it
+  /// can't be resolved (caller keeps the web fallback).
+  Future<String?> resolveBrandOptionId({String? shopUrl, String? name}) async {
+    void register(String? id) {
+      if ((id?.isNotEmpty ?? false) && !brandIds.contains(id)) {
+        brandIds.add(id!);
+      }
+    }
+
+    // 1) Authoritative: mstore/shopbrands (carries option_id).
+    final shop = await fetchShopBrands();
+    if (shop.isNotEmpty) {
+      final wantSlug = _brandSlug(shopUrl);
+      final wantName = _normalizeBrand(name);
+      for (final b in shop) {
+        if (!(b.optionId?.isNotEmpty ?? false)) continue;
+        if ((wantSlug != null && _brandSlug(b.url) == wantSlug) ||
+            (wantName.isNotEmpty && _normalizeBrand(b.name) == wantName)) {
+          register(b.optionId);
+          return b.optionId;
+        }
+      }
+    }
+
+    // 2) Fallback: normalized name match against mstore/brands.
+    final want = _normalizeBrand(name);
+    if (want.isEmpty) return null;
+    final brands = await fetchBrands();
+    for (final b in brands) {
+      if (_normalizeBrand(b.label) == want) {
+        register(b.value);
+        return b.value;
+      }
+    }
+    // Unique containment match handles suffix/prefix differences
+    // ("Zazu Kids" -> "Zazu", "Do Dress On" -> "Dress on"). Only resolve when
+    // exactly one brand matches, so ambiguity safely falls through to the web.
+    final contained = brands.where((b) {
+      final l = _normalizeBrand(b.label);
+      return l.length >= 4 && (want.contains(l) || l.contains(want));
+    }).toList();
+    if (contained.length == 1) {
+      register(contained.first.value);
+      return contained.first.value;
+    }
+    return null;
+  }
+
   /// Backend-curated home / main-category sections
   /// (`GET mstore/homepage-sections`): a list of groups of typed sections
   /// (banner / category / brands). Rendered banner -> category -> brands; the
@@ -1040,8 +1142,13 @@ class MagentoService extends BaseServices {
 
       var list = <Product>[];
       if (response.statusCode == 200) {
+        final decoded = convert.jsonDecode(response.body);
+        final total = decoded is Map ? decoded['total_count'] : null;
+        lastCategoryProductsTotal =
+            total is int ? total : int.tryParse('$total');
         final brandLabels = await getBrandLabels();
-        for (var item in convert.jsonDecode(response.body)['items']) {
+        for (var item
+            in (decoded is Map ? decoded['items'] : null) ?? const []) {
           var product = parseProductFromJson(item, brandLabels: brandLabels);
           list.add(product);
         }
@@ -1866,17 +1973,43 @@ class MagentoService extends BaseServices {
       'login response is ${response.body}'.log();
       'login response StatusCode is ${response.statusCode}'.log();
 
-      if (response.statusCode == 200) {
-        final responseData = convert.jsonDecode(response.body);
-        final token = responseData['data']['token'];
-        var user = await getUserInfo(token);
-        return user;
-      } else {
-        final body = convert.jsonDecode(response.body);
-        throw Exception(body['message'] != null
-            ? MagentoHelper.getErrorMessage(body)
+      // The wapplogin endpoint returns an HTML error page (not JSON) on a
+      // server error, and has been observed to 500 even when the customer DOES
+      // exist (the "customer found" path crashes). So a failure here must never
+      // be shown as "no account found": parse defensively and only report a
+      // missing account when the endpoint actually says so.
+      dynamic responseData;
+      try {
+        responseData = convert.jsonDecode(response.body);
+      } catch (_) {
+        responseData = null;
+      }
+
+      if (response.statusCode == 200 && responseData is Map) {
+        final data = responseData['data'];
+        final token = data is Map ? data['token'] : null;
+        if (token != null && '$token'.trim().isNotEmpty) {
+          return await getUserInfo(token);
+        }
+        // 200 without a token: the endpoint reports the lookup outcome in
+        // data.customer[].message (e.g. "There is no customer registered with
+        // this number.") — surface that real message when present.
+        final customer = data is Map ? data['customer'] : null;
+        final message = (customer is List &&
+                customer.isNotEmpty &&
+                customer.first is Map)
+            ? customer.first['message']?.toString()
+            : null;
+        throw Exception((message != null && message.isNotEmpty)
+            ? message
             : 'Can not get token');
       }
+
+      // Non-200 (or an unparseable HTML error page) is a backend failure, not a
+      // missing account — show a neutral message instead of "user not found".
+      throw Exception(responseData is Map && responseData['message'] != null
+          ? MagentoHelper.getErrorMessage(responseData)
+          : 'Something went wrong. Please try again.');
     } catch (err) {
       rethrow;
     }

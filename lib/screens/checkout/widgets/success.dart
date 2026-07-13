@@ -31,11 +31,28 @@ class _OrderedSuccessState extends BaseScreen<OrderedSuccess> {
     }
   }
 
+  Future<bool> _backToShop() async {
+    // Local reset only: the order already consumed the server quote, so there
+    // are no server items to delete.
+    Provider.of<CartModel>(context, listen: false).clearCart(false);
+    // Forget the tab that was active when checkout started (usually the cart)
+    // so the dashboard opens on the default home tab.
+    MainTabControlDelegate.getInstance().index = null;
+    Navigator.of(context)
+        .pushNamedAndRemoveUntil(RouteList.dashboard, (route) => false);
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final userModel = Provider.of<UserModel>(context);
 
-    return ListView(
+    // The device back button would otherwise pop to the already-consumed
+    // checkout stack (a blank screen); send it to the home dashboard instead,
+    // matching the "Back to shop" button.
+    return WillPopScope(
+      onWillPop: _backToShop,
+      child: ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: <Widget>[
         Container(
@@ -147,18 +164,7 @@ class _OrderedSuccessState extends BaseScreen<OrderedSuccess> {
                     style: OutlinedButton.styleFrom(
                       shape: const RoundedRectangleBorder(),
                     ),
-                    onPressed: () {
-                      // Local reset only: the order already consumed the
-                      // server quote, so there are no server items to delete.
-                      Provider.of<CartModel>(context, listen: false)
-                          .clearCart(false);
-                      // Forget the tab that was active when checkout started
-                      // (usually the cart) so the dashboard opens on the
-                      // default home tab.
-                      MainTabControlDelegate.getInstance().index = null;
-                      Navigator.of(context).pushNamedAndRemoveUntil(
-                          RouteList.dashboard, (route) => false);
-                    },
+                    onPressed: _backToShop,
                     child: Text(
                       S.of(context).backToShop.toUpperCase(),
                       style: TextStyle(
@@ -171,6 +177,7 @@ class _OrderedSuccessState extends BaseScreen<OrderedSuccess> {
           ),
         )
       ],
+      ),
     );
   }
 }

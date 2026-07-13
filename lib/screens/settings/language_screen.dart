@@ -59,6 +59,11 @@ class _LanguageScreenState extends State<LanguageScreen> with AppBarMixin {
                     context,
                   )
                       .then((_) {
+                    // Changing the language rebuilds the app for the new
+                    // locale, which can dispose this screen before the future
+                    // resolves. Bail out if we're no longer mounted so we don't
+                    // setState()/use context on a defunct State.
+                    if (!mounted) return;
                     setState(() {
                       isUpdating = false;
                     });

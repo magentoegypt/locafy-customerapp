@@ -9,11 +9,20 @@ final bool isWindow = UniversalPlatform.isWindows;
 final bool isMobile = UniversalPlatform.isIOS || UniversalPlatform.isAndroid;
 final bool isDesktop = UniversalPlatform.isMacOS || UniversalPlatform.isWindows;
 
-/// CDN host that serves catalog media (product/category images, banners).
-/// Staging (stg.locafy.market) does not hold media files, so the CDN is used
-/// for both live and staging builds. Note: the CDN serves media under
-/// `/media/...` (NOT `/pub/media/...`).
-const String kMediaDomain = 'https://cdn.locafy.market';
+/// Host that serves catalog media (product/category images, banners).
+///
+/// Derived from the active server config (`serverConfig.url` in env.dart) so it
+/// always matches the environment the app is pointed at — switch environments
+/// in one place and media follows. Media is served under `/media/...` (NOT
+/// `/pub/media/...`). Falls back to production if the config isn't loaded yet.
+///
+/// Note: an earlier build hardcoded `cdn.locafy.market`, which only
+/// 302-redirects to production — so on any non-production environment the
+/// catalog media 404'd. Deriving from the server URL avoids that class of bug.
+String get kMediaDomain {
+  final url = serverConfig['url'];
+  return (url is String && url.isNotEmpty) ? url : 'https://locafy.market';
+}
 
 /// constant for Magento payment
 const kMagentoPayments = [

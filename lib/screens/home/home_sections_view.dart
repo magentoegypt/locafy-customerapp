@@ -24,7 +24,32 @@ void _openCategory(String? id, String? name) {
   );
 }
 
-void _openBrand(BuildContext context, HomeBrand brand) {
+Future<void> _openBrand(BuildContext context, HomeBrand brand) async {
+  // Prefer a native brand product listing: resolve the brand's `option_id`
+  // (via mstore/shopbrands, else a name match on mstore/brands) and open the
+  // standard product screen, which filters by the `brand` attribute when the
+  // id is a known brand option. Falls back to the storefront WebView when the
+  // option id can't be resolved.
+  final api = Services().api;
+  String? optionId;
+  if (api is MagentoService) {
+    optionId = await api.resolveBrandOptionId(
+      shopUrl: brand.shopUrl,
+      name: brand.name,
+    );
+  }
+  if (!context.mounted) return;
+  if (optionId != null && optionId.isNotEmpty) {
+    FluxNavigate.pushNamed(
+      RouteList.backdrop,
+      arguments: BackDropArguments(
+        cateId: optionId,
+        cateName: brand.name,
+        brandImg: brand.logoUrl,
+      ),
+    );
+    return;
+  }
   final url = brand.shopUrl;
   if (url == null || url.isEmpty) return;
   Navigator.of(context).push(

@@ -186,9 +186,14 @@ class Address {
         // 'region_id': state != null && int.tryParse(state!) != null
         //     ? int.parse(state!)
         //     : 0,
+        // Only include the apartment/block as a second street line when it
+        // actually has content. Emitting an empty/`"null"` second line makes
+        // Magento reject the order ("Street Address" cannot contain more than
+        // 1 lines) on stores configured for a single street line.
         'street': [
-          street,
-          '$apartment${(block?.isEmpty ?? true) ? '' : ' - $block'}',
+          street ?? '',
+          if ((apartment?.isNotEmpty ?? false) || (block?.isNotEmpty ?? false))
+            '${apartment ?? ''}${(block?.isEmpty ?? true) ? '' : ' - $block'}',
         ],
         'postcode': zipCode,
         // state holds the governorate (Magento region) name; city holds the

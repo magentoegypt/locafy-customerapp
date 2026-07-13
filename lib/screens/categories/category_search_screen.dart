@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:html/parser.dart' as html_parser;
 import 'package:inspireui/inspireui.dart' show AutoHideKeyboard;
 import 'package:magentoegypt/ajstoreui/widgets/app_bar/appbar_title.dart';
 import 'package:magentoegypt/models/SearchResponse.dart';
@@ -783,10 +784,13 @@ class ProductListTile extends StatelessWidget {
 
                   Text(product.price ?? ''),
 
-                  Text(
-                    product.description ?? '',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
+                  if (_plainTextFromHtml(product.description).isNotEmpty)
+                    Text(
+                      _plainTextFromHtml(product.description),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
 
                 ],
               ),
@@ -795,6 +799,35 @@ class ProductListTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// The search autocomplete returns `description` as a short, truncated
+/// fragment. PageBuilder products lead with a `<style>` block, so that
+/// fragment is often raw CSS like `#html-body [data-pb-style=...]{justify-...`
+/// with no closing tag. Strip any real `<style>`/`<script>`/tags, then drop
+/// the result entirely if it still looks like CSS/markup rather than prose —
+/// so the search card shows a clean description or nothing, never raw code.
+String _plainTextFromHtml(String? htmlData) {
+  if (htmlData == null || htmlData.isEmpty) return '';
+  try {
+    final document = html_parser.parse(htmlData);
+    document.querySelectorAll('style, script').forEach((e) => e.remove());
+    final text =
+        (document.body?.text ?? '').replaceAll(RegExp(r'\s+'), ' ').trim();
+    // Leftover CSS/markup fragment (truncated PageBuilder style, stray tag) —
+    // not something worth showing to the shopper.
+    if (text.isEmpty ||
+        text.contains('#html-body') ||
+        text.contains('data-pb-style') ||
+        text.contains('{') ||
+        text.contains('}') ||
+        text.contains('<')) {
+      return '';
+    }
+    return text;
+  } catch (_) {
+    return '';
   }
 }
 

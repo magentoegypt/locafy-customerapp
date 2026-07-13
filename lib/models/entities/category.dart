@@ -351,3 +351,23 @@ class Brand {
     );
   }
 }
+
+/// A tile from `GET mstore/shopbrands` — the Shop-by-Brand grid. Carries the
+/// `option_id` (the `brand` attribute's option value) that keys the brand's
+/// product listing (`products?brand=option_id`), plus the display image/name
+/// and the storefront `url` used to join against the homepage `brands` section.
+class ShopBrand {
+  final String? name;
+  final String? image;
+  final String? url;
+  final String? optionId;
+
+  ShopBrand({this.name, this.image, this.url, this.optionId});
+
+  factory ShopBrand.fromJson(Map json) => ShopBrand(
+        name: json['name']?.toString(),
+        image: json['image']?.toString(),
+        url: json['url']?.toString(),
+        optionId: json['option_id']?.toString(),
+      );
+}
