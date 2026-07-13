@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
@@ -12,6 +13,12 @@ class OtpDialog  {
   static  String generateOtp() {
     final rnd = Random.secure();
     final code = rnd.nextInt(900000) + 100000; // ensures 6 digits
+    // Debug-only: surfaces the OTP in `adb logcat -s flutter` for QA testing.
+    // Guarded by kDebugMode so it is tree-shaken out of release/profile builds
+    // and can never leak the code in a shipped app.
+    if (kDebugMode) {
+      print('GENERATED_OTP=$code');
+    }
     return code.toString();
   }
 
