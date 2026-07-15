@@ -38,6 +38,34 @@ jobs:
           name: app-release.apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
+      - name: Upload APK to Loadly
+        env:
+          LOADLY_API_KEY: ${{ secrets.LOADLY_API_KEY }}
+        run: |
+          if [ -z "$LOADLY_API_KEY" ]; then
+            echo "::warning::LOADLY_API_KEY secret not set — skipping Loadly upload."
+            exit 0
+          fi
+          DESC="Android build ${{ github.run_number }} — ${{ github.ref_name }}@${GITHUB_SHA:0:7}"
+          RESPONSE=$(curl -sS -X POST https://api.loadly.io/apiv2/app/upload \
+            -F "_api_key=$LOADLY_API_KEY" \
+            -F "buildInstallType=1" \
+            -F "buildUpdateDescription=$DESC" \
+            -F "file=@build/app/outputs/flutter-apk/app-release.apk")
+          echo "Loadly response: $RESPONSE"
+          CODE=$(echo "$RESPONSE" | jq -r '.code // empty')
+          if [ "$CODE" != "0" ]; then
+            echo "::error::Loadly upload failed (code=$CODE): $(echo "$RESPONSE" | jq -r '.message // .')"
+            exit 1
+          fi
+          SHORTCUT=$(echo "$RESPONSE" | jq -r '.data.buildShortcutUrl // empty')
+          QRCODE=$(echo "$RESPONSE" | jq -r '.data.buildQRCodeURL // empty')
+          {
+            echo "### 🤖 Android uploaded to Loadly"
+            [ -n "$SHORTCUT" ] && echo "- Install: https://loadly.io/$SHORTCUT"
+            [ -n "$QRCODE" ] && echo "- ![QR]($QRCODE)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   build_ios:
     name: Build iOS IPA (Signed)
     runs-on: macos-latest
@@ -98,6 +126,34 @@ jobs:
         with:
           name: locafy-customerapp.ipa
           path: build/ios/ipa/locafy-customerapp.ipa
+
+      - name: Upload IPA to Loadly
+        env:
+          LOADLY_API_KEY: ${{ secrets.LOADLY_API_KEY }}
+        run: |
+          if [ -z "$LOADLY_API_KEY" ]; then
+            echo "::warning::LOADLY_API_KEY secret not set — skipping Loadly upload."
+            exit 0
+          fi
+          DESC="iOS build ${{ github.run_number }} — ${{ github.ref_name }}@${GITHUB_SHA:0:7}"
+          RESPONSE=$(curl -sS -X POST https://api.loadly.io/apiv2/app/upload \
+            -F "_api_key=$LOADLY_API_KEY" \
+            -F "buildInstallType=1" \
+            -F "buildUpdateDescription=$DESC" \
+            -F "file=@build/ios/ipa/locafy-customerapp.ipa")
+          echo "Loadly response: $RESPONSE"
+          CODE=$(echo "$RESPONSE" | jq -r '.code // empty')
+          if [ "$CODE" != "0" ]; then
+            echo "::error::Loadly upload failed (code=$CODE): $(echo "$RESPONSE" | jq -r '.message // .')"
+            exit 1
+          fi
+          SHORTCUT=$(echo "$RESPONSE" | jq -r '.data.buildShortcutUrl // empty')
+          QRCODE=$(echo "$RESPONSE" | jq -r '.data.buildQRCodeURL // empty')
+          {
+            echo "### 📱 iOS uploaded to Loadly"
+            [ -n "$SHORTCUT" ] && echo "- Install: https://loadly.io/$SHORTCUT"
+            [ -n "$QRCODE" ] && echo "- ![QR]($QRCODE)"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Clean up keychain
         if: ${{ always() }}
