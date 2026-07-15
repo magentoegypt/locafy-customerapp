@@ -731,6 +731,11 @@ abstract class BaseServices {
     return null;
   }
 
+  /// Returns true when [phone] is already tied to an existing account.
+  /// Used as a friendly pre-check during registration; the backend
+  /// uniqueness rule remains the authoritative guard.
+  Future<bool> isPhoneRegistered(String phone) async => false;
+
   // Future<Map<String, dynamic>?> mobileVerifyOtp(Map<String, dynamic> params)async {
   //   return null;
   // }

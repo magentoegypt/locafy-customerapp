@@ -2150,9 +2150,16 @@ class MagentoService extends BaseServices {
         if (res.statusCode == 200) {
           if (cartInfo is int) {
            // await deleteItemsInCart([], token);
-            cartModel.shoppingList.forEach((element) async {
+            // Await each delete BEFORE re-adding. `forEach` with an async
+            // callback does not await, so addToCart used to run while the old
+            // items were still on the server — Magento then sums the re-added
+            // SKU's quantity and rejects it ("The requested qty is not
+            // available"), so checkout failed on the first attempt and only
+            // worked after a retry (once the stray deletes had finished). This
+            // race is why opening checkout needed multiple tries.
+            for (final element in cartModel.shoppingList) {
               await Services().api.deleteItemInCart(element.itemID ?? "");
-            });
+            }
             return await addToCart(cartModel, token, cartInfo);
           }else if (cartInfo['items'] is List) {
             await deleteItemsInCart(List<Map>.from(cartInfo['items']), token);
@@ -2883,6 +2890,29 @@ class MagentoService extends BaseServices {
       return body;
     } catch (e) {
       return null;
+    }
+  }
+
+  /// Pre-check for "one phone ↔ one account": returns true when [phone] is
+  /// already registered. Backed by the MagentoEgypt_CustomerPhoneUnique
+  /// module's anonymous endpoint (POST /rest/V1/mstore/phone/is-registered,
+  /// body {"phone": "..."} -> bare boolean at HTTP 200).
+  @override
+  Future<bool> isPhoneRegistered(String phone) async {
+    try {
+      var response = await httpPost(
+        MagentoHelper.buildUrl(domain, 'mstore/phone/is-registered')!,
+        body: convert.jsonEncode({'phone': phone}),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'content-type': 'application/json'
+        },
+      );
+      return convert.jsonDecode(response.body) == true;
+    } catch (e) {
+      // Fail open: never block registration on a pre-check error — the
+      // backend uniqueness rule is the authoritative guard.
+      return false;
     }
   }
 

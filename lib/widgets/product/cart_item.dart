@@ -253,7 +253,10 @@ class ShoppingCartRow extends StatelessWidget with ActionButtonMixin {
                           ),
                         ),
                   if(isEdit ?? true)
-                  if (kProductDetail.showStockQuantity)
+                    // Always show the quantity selector in the cart so shoppers
+                    // (including guests) can adjust amounts like on the website.
+                    // Previously gated behind kProductDetail.showStockQuantity,
+                    // which hid it entirely when that config was off.
                     context.isRtl
                         ? Positioned(
                             left: 5,

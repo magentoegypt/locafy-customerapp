@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/entities/firebase_error_exception.dart';
 import '../models/entities/user.dart';
@@ -62,7 +63,17 @@ class BaseFirebaseServices {
   /// init Firebase Dynamic link
   void initDynamicLinkService(context) {}
 
-  void shareDynamicLinkProduct({itemUrl}) {}
+  /// Share a product/page link through the native OS share sheet.
+  ///
+  /// Firebase Dynamic Links have been shut down, so instead of generating a
+  /// dynamic link we simply share the item's canonical web URL (the product
+  /// permalink) via share_plus. This is what every caller actually wants and
+  /// it works on both the product detail page and the product list.
+  void shareDynamicLinkProduct({itemUrl}) {
+    final url = itemUrl?.toString().trim() ?? '';
+    if (url.isEmpty) return;
+    Share.share(url);
+  }
 
   /// register new user with email and password
   void createUserWithEmailAndPassword({email, password}) {}

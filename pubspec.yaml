@@ -37,6 +37,9 @@ dependencies:
   cupertino_icons: ^1.0.2
   country_code_picker: ^3.3.0
   country_pickers:
+  # Native OS share sheet (used for product/link sharing). Pinned to the
+  # version already resolved transitively to avoid changing dependency resolution.
+  share_plus: 6.3.4
   devicelocale:
   dotted_decoration:
   easy_debounce:

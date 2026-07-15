@@ -31,7 +31,7 @@ mixin ProductsMixin {
     //       ?.generateProductTagUrl(currentTagId);
     // }
 
-    if (url.isNotEmpty) {
+    if (url != null && url.toString().isNotEmpty) {
       Services().firebase.shareDynamicLinkProduct(itemUrl: url);
     } else {
       unawaited(

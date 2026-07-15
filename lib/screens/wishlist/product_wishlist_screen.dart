@@ -36,16 +36,17 @@ class _WishListState extends State<ProductWishListScreen> with AppBarMixin {
       routeName: RouteList.wishlist,
       secondAppBar: AppBar(
         elevation: 0,
-        // leading: IconButton(
-        //   icon: Icon(
-        //     Icons.arrow_back_ios,
-        //     color: Theme.of(context).colorScheme.secondary,
-        //     size: 24,
-        //   ),
-        //   onPressed: () {
-        //     Navigator.pop(context);
-        //   },
-        // ),
+        automaticallyImplyLeading: false,
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios,
+                  color: Theme.of(context).colorScheme.secondary,
+                  size: 24,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         backgroundColor: Theme.of(context).colorScheme.background,
         // title: Text(
         //   S.of(context).myWishList,

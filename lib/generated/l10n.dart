@@ -9195,6 +9195,26 @@ class S {
     );
   }
 
+  /// `Newborn Collections`
+  String get newbornCollections {
+    return Intl.message(
+      'Newborn Collections',
+      name: 'newbornCollections',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This phone number is already registered. Please sign in.`
+  String get phoneAlreadyRegistered {
+    return Intl.message(
+      'This phone number is already registered. Please sign in.',
+      name: 'phoneAlreadyRegistered',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Follow Us`
   String get followUs {
     return Intl.message(

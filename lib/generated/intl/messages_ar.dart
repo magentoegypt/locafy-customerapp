@@ -215,7 +215,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "byCategory": MessageLookupByLibrary.simpleMessage("حسب التصنيف"),
         "byPrice": MessageLookupByLibrary.simpleMessage("حسب السعر"),
         "bySignup":
-            MessageLookupByLibrary.simpleMessage("بالتسجيل ، فإنك توافق على"),
+            MessageLookupByLibrary.simpleMessage("بالتسجيل ، فإنك توافق على "),
         "byTag": MessageLookupByLibrary.simpleMessage("بواسطة الوسم"),
         "call": MessageLookupByLibrary.simpleMessage("مكالمة"),
         "callTo": MessageLookupByLibrary.simpleMessage("إجراء مكالمة إلى"),
@@ -1345,6 +1345,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "mensCollections": MessageLookupByLibrary.simpleMessage("مجموعة الرجال"),
     "womensCollections": MessageLookupByLibrary.simpleMessage("مجموعة النساء"),
     "kidsCollections": MessageLookupByLibrary.simpleMessage("مجموعة الأطفال"),
+    "newbornCollections":
+        MessageLookupByLibrary.simpleMessage("مجموعة حديثي الولادة"),
+    "phoneAlreadyRegistered": MessageLookupByLibrary.simpleMessage(
+        "رقم الهاتف هذا مسجّل بالفعل. من فضلك سجّل الدخول."),
     "followUs": MessageLookupByLibrary.simpleMessage("تابعنا"),
     "myAccount": MessageLookupByLibrary.simpleMessage("حسابي"),
     "zone": MessageLookupByLibrary.simpleMessage("المنطقة"),

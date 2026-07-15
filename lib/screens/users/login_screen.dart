@@ -276,16 +276,9 @@ class _LoginPageState extends BaseScreen<LoginScreen>
             },
           ),
           elevation: 0.0,
-          actions: !Services().widget.isRequiredLogin &&
-                  !ModalRoute.of(context)!.canPop
-              ? [
-                  IconButton(
-                      onPressed: () {
-                        _welcomeMessage();
-                      },
-                      icon: const Icon(Icons.close, size: 25))
-                ]
-              : null,
+          // Close (X) removed per QA: the back arrow already returns the user
+          // to the previous page (or the dashboard when login is the root),
+          // so the extra dismiss icon is redundant.
         ),
         body: SafeArea(
           child: SingleChildScrollView(
@@ -541,6 +534,12 @@ class _LoginPageState extends BaseScreen<LoginScreen>
                                       onTap: (){
                                         setState(() {
                                           isLoginOTP = !isLoginOTP;
+                                          // The email login field and the OTP
+                                          // phone field share `username`;
+                                          // clear it on toggle so a typed email
+                                          // doesn't carry over into the phone
+                                          // field (and vice-versa).
+                                          username.clear();
                                         });
                                       },
                                       child: Container(

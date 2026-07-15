@@ -144,24 +144,38 @@ class _ProductDetailPageState extends BaseScreen<ProductDetailScreen>
     screenScrollController = _scrollController;
     WidgetsBinding.instance.endOfFrame.then((_) async {
       if (mounted) {
-        if (widget.product is Product) {
-          /// Get more detail info from product
-          setState(() {
-            product = widget.product;
-          });
-          final check = await _checkProductPermission(widget.product);
-          if (check) {
-            product =
-                await Services().widget.getProductDetail(context, product);
+        try {
+          if (widget.product is Product) {
+            /// Get more detail info from product
+            setState(() {
+              product = widget.product;
+            });
+            final check = await _checkProductPermission(widget.product);
+            if (check) {
+              // Keep the product we already have if the detail fetch fails or
+              // returns null. Products opened from the wishlist/local storage
+              // can be missing fields (e.g. configurable_product_options), which
+              // made getProductDetail throw and left the page stuck on a blank
+              // loading spinner forever.
+              final full =
+                  await Services().widget.getProductDetail(context, product);
+              if (full != null) {
+                product = full;
+              }
+            }
+          } else {
+            /// Request the product by Product ID which is using for web param
+            product = await Services().api.getProduct(widget.id);
+            await _checkProductPermission(product);
           }
-        } else {
-          /// Request the product by Product ID which is using for web param
-          product = await Services().api.getProduct(widget.id);
-          await _checkProductPermission(product);
-        }
-        isLoading = false;
-        if (mounted) {
-          setState(() {});
+        } catch (_) {
+          // Fall back to whatever product we already have so the page renders
+          // with partial data instead of hanging on a blank loader.
+        } finally {
+          isLoading = false;
+          if (mounted) {
+            setState(() {});
+          }
         }
       }
     });

@@ -117,6 +117,28 @@ class CheckoutOption extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Shipping cost line — shows the delivery fee that is
+                    // included in the total below (previously the total hid the
+                    // shipping cost by subtracting it, so shoppers never saw it).
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          S.of(context).shipping,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        Text(
+                          PriceTools.getCurrencyFormatted(
+                              cartModel.getShippingCost() ?? 0,
+                              currencyRate,
+                              currency: cartModel.isWalletCart()
+                                  ? defaultCurrency?.currencyCode
+                                  : currency)!,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children:  [
@@ -137,8 +159,7 @@ class CheckoutOption extends StatelessWidget {
                         )
                             : Text(
                           PriceTools.getCurrencyFormatted(
-                              cartModel.getTotal()! -
-                                  cartModel.getShippingCost()!,
+                              cartModel.getTotal()!,
                               currencyRate,
                               currency: cartModel.isWalletCart()
                                   ? defaultCurrency

@@ -651,6 +651,11 @@ class _ShippingAddressState extends State<ShippingAddress> {
                                         phoneNumber: currentFieldController?.text,
                                       ),
                                       formatInput: kPhoneNumberConfig.formatInput,
+                                      // Cap the national number at 10 digits
+                                      // (Egyptian mobile length, without the
+                                      // leading 0) — matches the login/register
+                                      // validation and stops over-long entries.
+                                      maxLength: 10,
                                       countries: kPhoneNumberConfig.customCountryList,
                                     )),
                                     // SizedBox(height: 5,),

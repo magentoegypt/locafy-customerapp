@@ -258,7 +258,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     final appModel = Provider.of<AppModel>(context, listen: true);
     final themeConfig = appModel.themeConfig;
 
-    return ScaffoldMessenger(
+    return WillPopScope(
+      onWillPop: _handleWillPop,
+      child: ScaffoldMessenger(
       key: _scaffoldMessengerKey,
       child: Container(
         decoration: const BoxDecoration(
@@ -276,9 +278,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 color: Theme.of(context).colorScheme.secondary,
                 size: 24,
               ),
-              onPressed: () {
-                Navigator.pop(context);
-              },
+              onPressed: _handleBackButton,
             ),
             backgroundColor: Colors.transparent,
             elevation: 0.0,
@@ -299,7 +299,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: <Widget>[
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   _buildButton(S.of(context).login, 0),
                                   const SizedBox(width: 16),
@@ -416,6 +416,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                               final fullPhone = "$selectedCode$phone";
                                               final currentOtp = OtpDialog.generateOtp();
                                               try {
+                                                // One phone ↔ one account: bail out before sending an OTP if
+                                                // this number is already tied to an account, and tell the user
+                                                // to sign in. The backend rule (MagentoEgypt_CustomerPhoneUnique)
+                                                // is still the authoritative guard; this is just a friendlier,
+                                                // earlier check so the user isn't asked to fill out a form the
+                                                // server will reject.
+                                                if (await Services().api.isPhoneRegistered(fullPhone)) {
+                                                  if (mounted) {
+                                                    _showMessage(S.of(context).phoneAlreadyRegistered);
+                                                  }
+                                                  return;
+                                                }
                                                 final json = await Services().api.mobileSendOtp(fullPhone, currentOtp);
                                                 if (!mounted) return;
                                                 final message = json?['error']?['message'] ?? '';
@@ -639,7 +651,33 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ),
         ),
       ),
-    );
+    ));
+  }
+
+  /// Register can be the root route — it is opened from the welcome/onboarding
+  /// screen via pushReplacement, which removes the welcome screen from the
+  /// stack. An unconditional pop then empties the navigator and shows a blank
+  /// white screen. So when there is nothing to pop, go to the dashboard
+  /// instead, mirroring the login screen's back button.
+  ///
+  /// [_handleWillPop] covers the system/gesture back; [_handleBackButton]
+  /// covers the AppBar back arrow.
+  Future<bool> _handleWillPop() async {
+    if (ModalRoute.of(context)?.canPop ?? false) {
+      return true;
+    }
+    Navigator.of(App.fluxStoreNavigatorKey.currentContext!)
+        .pushReplacementNamed(RouteList.dashboard);
+    return false;
+  }
+
+  void _handleBackButton() {
+    if (ModalRoute.of(context)?.canPop ?? false) {
+      Navigator.of(context).pop();
+    } else {
+      Navigator.of(App.fluxStoreNavigatorKey.currentContext!)
+          .pushReplacementNamed(RouteList.dashboard);
+    }
   }
 
   Widget _buildButton(String title, int index) {

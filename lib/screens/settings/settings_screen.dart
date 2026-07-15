@@ -121,10 +121,11 @@ class SettingScreenState extends State<SettingScreen>
     ),
     Section(
       title: S.of(context).quickLinks,
+      // Quick Links mirror the website footer (testing.locafy.market):
+      // Kids Collections, Newborn Collections, All Brands.
       items: [
-        SectionItem(title: S.of(context).mensCollections, url: "${serverConfig['url']}/eg-en/loca-men/clothing.html"),
-        SectionItem(title: S.of(context).womanCollections, url: "${serverConfig['url']}/eg-en/women-wear/clothing.html"),
         SectionItem(title: S.of(context).kidsCollections, url: "${serverConfig['url']}/eg-en/kidswear/kids-3-12-years.html"),
+        SectionItem(title: S.of(context).newbornCollections, url: "${serverConfig['url']}/eg-en/newborn.html"),
         SectionItem(title: S.of(context).allBrands, url: "${serverConfig['url']}/eg-en/csmarketplace/vshops/index/?search="),
       ],
     ),

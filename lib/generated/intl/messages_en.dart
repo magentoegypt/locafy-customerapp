@@ -1252,7 +1252,7 @@ class MessageLookup extends MessageLookupByLibrary {
             "This username/email is not available."),
         "userNameInCorrect": MessageLookupByLibrary.simpleMessage(
             "The username or password is incorrect."),
-        "username": MessageLookupByLibrary.simpleMessage("Username"),
+        "username": MessageLookupByLibrary.simpleMessage("Email Address"),
         "usernameAndPasswordRequired": MessageLookupByLibrary.simpleMessage(
             "Username and password are required"),
         "vacationMessage":
@@ -1374,6 +1374,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "mensCollections": MessageLookupByLibrary.simpleMessage("Men's Collections"),
     "womensCollections": MessageLookupByLibrary.simpleMessage("Women's Collections"),
     "kidsCollections": MessageLookupByLibrary.simpleMessage("Kids Collections"),
+    "newbornCollections":
+        MessageLookupByLibrary.simpleMessage("Newborn Collections"),
+    "phoneAlreadyRegistered": MessageLookupByLibrary.simpleMessage(
+        "This phone number is already registered. Please sign in."),
     "followUs": MessageLookupByLibrary.simpleMessage("Follow Us"),
     "myAccount": MessageLookupByLibrary.simpleMessage("My Account"),
     "zone": MessageLookupByLibrary.simpleMessage("Zone"),

@@ -30,8 +30,12 @@ List<Widget> createShoppingCartRows(CartModel model, BuildContext context) {
     var productCheck = await Services().api.getStockStatus(key);
     var product = model.getProductById(key);
 
-    // remove product if its out of stock
-    if (productCheck?.inStock != true) {
+    // Only drop the line when the server EXPLICITLY reports the product out of
+    // stock. Previously any inconclusive stock response (non-200 -> null, or a
+    // null inStock) matched `!= true` and silently removed a just-added item —
+    // the "product doesn't get added right away" bug. A genuinely out-of-stock
+    // item is still re-validated server-side at checkout.
+    if (productCheck != null && productCheck.inStock == false) {
       model.removeItemFromCart(key);
     }
 
