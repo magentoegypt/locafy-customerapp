@@ -28,13 +28,30 @@ class _CategoryTreeState extends State<CategoryMenu> {
 
   String _categoryId = '0';
 
+  /// The category this filter sheet was opened on — the root of the tree shown
+  /// below. The website's layered navigation lists only the CURRENT category's
+  /// children (e.g. Boys -> Outwear/Homewear/Footwear/Underwear) and omits the
+  /// "Category" filter entirely on a leaf category, so we mirror that. It is
+  /// captured once and stays fixed while the user selects a child, otherwise
+  /// the tree would re-root (and vanish) mid-interaction (86d3g3mea/86d3g43qr).
+  ///
+  /// Null when there is no category context (e.g. the search screen), where we
+  /// keep the previous behaviour of listing the whole tree from the roots.
+  String? _rootCategoryId;
+
   // Store category id from parent to children
   List<String?> selectedCategoryTree = [];
 
   @override
   void initState() {
-    _categoryId =
-        Provider.of<ProductModel>(context, listen: false).categoryId.toString();
+    final currentId =
+        Provider.of<ProductModel>(context, listen: false).categoryId;
+    _categoryId = currentId.toString();
+    final root = currentId?.toString();
+    _rootCategoryId =
+        (root == null || root.isEmpty || root == 'null' || root == kEmptyCategoryID)
+            ? null
+            : root;
     super.initState();
   }
 
@@ -127,6 +144,10 @@ class _CategoryTreeState extends State<CategoryMenu> {
     return TreeView(
       parentList: _getCategoryItems(
         categories,
+        // Root the tree at the current category so we list its children, the
+        // way the website's layered navigation does. Null (search) still falls
+        // back to the roots inside getSubCategories().
+        id: _rootCategoryId,
         onFilter: widget.onFilter,
       ),
     );
@@ -134,31 +155,37 @@ class _CategoryTreeState extends State<CategoryMenu> {
 
   @override
   Widget build(BuildContext context) {
-    return ExpansionWidget(
-      showDivider: true,
-      padding: const EdgeInsets.only(
-        left: 15,
-        right: 15,
-        top: 15,
-        bottom: 5,
-      ),
-      title: Text(
-        S.of(context).byCategory,
-        style: Theme.of(context).textTheme.titleLarge!.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-      ),
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 10.0),
-          child: Selector<CategoryModel, List<Category>>(
-                  builder: (context, categories, child) => getTreeView(
-                    categories: categories,
-                  ),
-                  selector: (_, model) => model.categories ?? [],
+    return Selector<CategoryModel, List<Category>>(
+      selector: (_, model) => model.categories ?? [],
+      builder: (context, categories, child) {
+        // Website parity: a leaf category has no "Category" filter at all —
+        // only its attribute filters (Brand, Colour, Price, …).
+        if (_rootCategoryId != null &&
+            !hasChildren(categories, _rootCategoryId)) {
+          return const SizedBox.shrink();
+        }
+        return ExpansionWidget(
+          showDivider: true,
+          padding: const EdgeInsets.only(
+            left: 15,
+            right: 15,
+            top: 15,
+            bottom: 5,
+          ),
+          title: Text(
+            S.of(context).byCategory,
+            style: Theme.of(context).textTheme.titleLarge!.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
-        ),
-      ],
+          ),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 10.0),
+              child: getTreeView(categories: categories),
+            ),
+          ],
+        );
+      },
     );
   }
 }

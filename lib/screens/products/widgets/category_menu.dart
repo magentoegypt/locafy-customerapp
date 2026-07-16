@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../common/config.dart';
-import '../../../generated/l10n.dart';
 import '../../../models/index.dart';
 import 'item_category.dart';
 
@@ -105,35 +104,28 @@ class StateProductCategoryMenu extends State<ProductCategoryMenu> {
     }
 
     return Consumer<CategoryModel>(builder: (context, categoryModel, child) {
-      var parentCategoryId = widget.newCategoryId;
-
-      parentCategoryId =
-          getParentCategories(categoryModel.categories, parentCategoryId) ??
-              parentCategoryId;
-      var parentCategory =
-          categoryModel.categoryList[parentCategoryId.toString()]?.copyWith() ??
-              Category(subCategories: [], id: parentCategoryId);
-      parentCategory.name = S.of(context).seeAll;
-      final listSubCategory =
-          getSubCategories(categoryModel.categories, parentCategoryId)!;
       if (categoryModel.isLoading) {
         return Center(child: kLoadingWidget(context));
       }
-      if (listSubCategory.length < 2) {
+
+      /// Website parity: a category page lists its OWN child categories —
+      /// Boys -> Outwear / Homewear / Footwear / Underwear.
+      ///
+      /// This used to walk UP to the parent and list the parent's children,
+      /// i.e. the current category's SIBLINGS, which is exactly what QA
+      /// reported as the page showing "the remaining subcategories of the main
+      /// category" (86d3g3mea). A leaf category (a sub-subcategory such as
+      /// "Outwear boy") has no children, so the row now disappears on its own —
+      /// which is what 86d3g43qr asks for ("all tabs showing categories or
+      /// subcategories should be removed from this page").
+      final children =
+          getSubCategories(categoryModel.categories, widget.newCategoryId) ??
+              <Category>[];
+      if (children.isEmpty) {
         return const SizedBox(width: double.infinity);
       }
-    //  listSubCategory.insert(0, parentCategory);
-      return renderListCategories(listSubCategory);
+      return renderListCategories(children);
     });
-  }
-
-  String? getParentCategories(List<Category>? categories, id) {
-    for (var item in (categories ?? <Category>[])) {
-      if (item.id == id) {
-        return (item.parent == null || item.isRoot) ? null : item.parent;
-      }
-    }
-    return null;
   }
 
   List<Category>? getSubCategories(categories, id) {

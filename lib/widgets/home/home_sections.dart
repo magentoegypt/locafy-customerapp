@@ -284,10 +284,15 @@ class FeaturedBrandsSection extends StatelessWidget {
   final HomeSection section;
   final void Function(HomeBrand) onTap;
 
+  /// Opens the full brands listing ("Shop All Brands"). The CTA is hidden when
+  /// this is null.
+  final VoidCallback? onShopAll;
+
   const FeaturedBrandsSection({
     super.key,
     required this.section,
     required this.onTap,
+    this.onShopAll,
   });
 
   @override
@@ -303,18 +308,71 @@ class FeaturedBrandsSection extends StatelessWidget {
         for (final b in section.brands)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: _BrandCard(brand: b, onTap: () => onTap(b)),
+            child: BrandCard(
+              name: b.name,
+              logoUrl: b.logoUrl,
+              onTap: () => onTap(b),
+            ),
+          ),
+        if (onShopAll != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            child: ShopAllBrandsButton(onTap: onShopAll!),
           ),
       ],
     );
   }
 }
 
-class _BrandCard extends StatelessWidget {
-  final HomeBrand brand;
+/// The website's `.brands-cta` pill, closing the Featured Brands block: a
+/// near-black (#111827) full-radius button with centred white uppercase
+/// 12px/700 text and wide (2.4px) letter-spacing.
+class ShopAllBrandsButton extends StatelessWidget {
   final VoidCallback onTap;
 
-  const _BrandCard({required this.brand, required this.onTap});
+  const ShopAllBrandsButton({super.key, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 34),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          // Arabic has no case, so toUpperCase() only affects the English copy
+          // — matching the site's `text-transform: uppercase`.
+          S.of(context).shopAllBrands.toUpperCase(),
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 2.4,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// White rounded logo card — shared by the Featured Brands block and the All
+/// Brands screen. Takes primitives so it works for both the homepage `brands`
+/// section (HomeBrand) and the `mstore/shopbrands` tiles (ShopBrand).
+class BrandCard extends StatelessWidget {
+  final String? name;
+  final String? logoUrl;
+  final VoidCallback onTap;
+
+  const BrandCard({
+    super.key,
+    required this.name,
+    required this.logoUrl,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -341,7 +399,7 @@ class _BrandCard extends StatelessWidget {
             SizedBox(
               height: 64,
               width: 170,
-              child: (brand.logoUrl ?? '').isEmpty
+              child: (logoUrl ?? '').isEmpty
                   ? const Center(
                       child: Icon(
                         Icons.storefront_outlined,
@@ -349,11 +407,11 @@ class _BrandCard extends StatelessWidget {
                         color: Color(0xFFBDBDBD),
                       ),
                     )
-                  : FluxImage(imageUrl: brand.logoUrl!, fit: BoxFit.contain),
+                  : FluxImage(imageUrl: logoUrl!, fit: BoxFit.contain),
             ),
             const SizedBox(height: 16),
             Text(
-              (brand.name ?? '').toUpperCase(),
+              (name ?? '').toUpperCase(),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 13,

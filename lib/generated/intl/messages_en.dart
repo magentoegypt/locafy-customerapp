@@ -1378,6 +1378,7 @@ class MessageLookup extends MessageLookupByLibrary {
         MessageLookupByLibrary.simpleMessage("Newborn Collections"),
     "phoneAlreadyRegistered": MessageLookupByLibrary.simpleMessage(
         "This phone number is already registered. Please sign in."),
+    "shopAllBrands": MessageLookupByLibrary.simpleMessage("Shop All Brands"),
     "followUs": MessageLookupByLibrary.simpleMessage("Follow Us"),
     "myAccount": MessageLookupByLibrary.simpleMessage("My Account"),
     "zone": MessageLookupByLibrary.simpleMessage("Zone"),

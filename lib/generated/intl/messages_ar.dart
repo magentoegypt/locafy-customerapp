@@ -1349,6 +1349,8 @@ class MessageLookup extends MessageLookupByLibrary {
         MessageLookupByLibrary.simpleMessage("مجموعة حديثي الولادة"),
     "phoneAlreadyRegistered": MessageLookupByLibrary.simpleMessage(
         "رقم الهاتف هذا مسجّل بالفعل. من فضلك سجّل الدخول."),
+    "shopAllBrands":
+        MessageLookupByLibrary.simpleMessage("تسوّق جميع العلامات التجارية"),
     "followUs": MessageLookupByLibrary.simpleMessage("تابعنا"),
     "myAccount": MessageLookupByLibrary.simpleMessage("حسابي"),
     "zone": MessageLookupByLibrary.simpleMessage("المنطقة"),

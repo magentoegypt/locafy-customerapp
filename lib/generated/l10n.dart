@@ -9215,6 +9215,16 @@ class S {
     );
   }
 
+  /// `Shop All Brands`
+  String get shopAllBrands {
+    return Intl.message(
+      'Shop All Brands',
+      name: 'shopAllBrands',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Follow Us`
   String get followUs {
     return Intl.message(

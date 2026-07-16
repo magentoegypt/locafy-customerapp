@@ -974,6 +974,23 @@ abstract class BaseFrameworks {
         ],
       );
     }
+
+    /// The "special" chips shown above the sort list. Magento only exposes
+    /// "On Sale" (no "Featured"), so build the set up-front and size the grid
+    /// to it below.
+    final specialOptions = <GroupCheckBoxItem<String>>{
+      if (supportedSortByOptions.contains(OrderByType.onSale))
+        GroupCheckBoxItem(
+          title: S.of(context).onSale,
+          value: 'onSale',
+        ),
+      if (supportedSortByOptions.contains(OrderByType.featured))
+        GroupCheckBoxItem(
+          title: S.of(context).featured,
+          value: 'featured',
+        ),
+    };
+
     return ExpansionWidget(
       showDivider: showDivider,
       padding: const EdgeInsets.only(
@@ -989,11 +1006,17 @@ abstract class BaseFrameworks {
             ),
       ),
       children: [
-        if ([OrderByType.onSale, OrderByType.featured]
-            .any((element) => supportedSortByOptions.contains(element))) ...[
+        if (specialOptions.isNotEmpty) ...[
           GroupCheckBoxWidget<String>(
-            numberOfRow: 2,
-            childAspectRatio: 16 / 4,
+            // `numberOfRow` is the grid's crossAxisCount (columns). It was
+            // hard-coded to 2, but Magento supplies only "On Sale" — so the
+            // lone chip sat in a half-width cell beside an empty one, which is
+            // the broken "Sort by" layout QA reported (86d3g3mea/86d3g43qr).
+            // Match the columns to the options, and widen the aspect ratio for
+            // the single-chip case so it keeps the same height instead of
+            // stretching to a full-width block.
+            numberOfRow: specialOptions.length,
+            childAspectRatio: specialOptions.length == 1 ? 32 / 4 : 16 / 4,
             defaultValue: filterSortBy?.groupSpecial,
             onChanged: (selectedItem) {
               final value = selectedItem?.value;
@@ -1009,18 +1032,7 @@ abstract class BaseFrameworks {
               }
               onFilterChanged(filterSortBy);
             },
-            values: <GroupCheckBoxItem<String>>{
-              if (supportedSortByOptions.contains(OrderByType.onSale))
-                GroupCheckBoxItem(
-                  title: S.of(context).onSale,
-                  value: 'onSale',
-                ),
-              if (supportedSortByOptions.contains(OrderByType.featured))
-                GroupCheckBoxItem(
-                  title: S.of(context).featured,
-                  value: 'featured',
-                ),
-            },
+            values: specialOptions,
           ),
           const Divider(),
         ],

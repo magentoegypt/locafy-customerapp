@@ -283,30 +283,31 @@ class ProductsScreenState extends State<ProductsScreen>
                                 ratioProductImage: ratioProductImage,
                                 productListItemHeight: productListItemHeight,
                                 width: constraint.maxWidth,
-                                // A category/subcategory page shows just the
-                                // sort/filter toolbar, matching the website.
-                                // This used to also show a row of the current
-                                // category's sibling categories (via
-                                // ProductCategoryMenu), which made a
-                                // subcategory's page look like it was mixing
-                                // its own products with "the remaining
-                                // subcategories of the main category".
                                 appbar: Align(
                                   alignment: Alignment.centerRight,
                                   child: renderFilters(context),
                                 ),
                                 header: [
-                                  // ProductCategoryMenu(
-                                  //   imageLayout: true,
-                                  //   isComingFrom: "product_screen",
-                                  //   enableSearchHistory:
-                                  //   widget.enableSearchHistory,
-                                  //   newCategoryId: categoryId,
-                                  //   onTap: (categoryId,categoryName) {
-                                  //     include = null;
-                                  //     onFilter(categoryId: categoryId);
-                                  //   },
-                                  // ),
+                                  // The website's category page lists the
+                                  // category's OWN child categories (Boys ->
+                                  // Outwear / Homewear / …). This row used to
+                                  // show the current category's *siblings*,
+                                  // which read as "the remaining subcategories
+                                  // of the main category" and was disabled
+                                  // outright; ProductCategoryMenu now lists the
+                                  // children and hides itself on a leaf
+                                  // category (86d3g3mea / 86d3g43qr).
+                                  ProductCategoryMenu(
+                                    imageLayout: true,
+                                    isComingFrom: "product_screen",
+                                    enableSearchHistory:
+                                        widget.enableSearchHistory,
+                                    newCategoryId: categoryId,
+                                    onTap: (categoryId, categoryName) {
+                                      include = null;
+                                      onFilter(categoryId: categoryId);
+                                    },
+                                  ),
                                   // Only render the header block when there's
                                   // countdown content. Previously this padded
                                   // Column was always present, so its top:25 /

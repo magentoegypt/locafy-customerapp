@@ -67,11 +67,40 @@ class MagentoService extends BaseServices {
     final dateSaleTo = MagentoHelper.getCustomAttribute(
         productJson['custom_attributes'], 'special_to_date');
     var onSale = false;
-    var price = productJson['price'];
+
+    /// This store leaves the parent `price` at 0 on **configurable** products
+    /// (the real pricing lives on the child SKUs), but the list — "before
+    /// discount" — price is still exposed on the parent's `vendor_price`
+    /// attribute. Fall back to it so configurables get the same discount
+    /// detection as simple products; without it every configurable's "-XX%"
+    /// badge and strikethrough was silently dropped, because a base price of 0
+    /// can never be greater than the discounted price (86d3g4mna).
+    final rawPrice = productJson['price'];
+    final vendorPrice = MagentoHelper.getCustomAttribute(
+        productJson['custom_attributes'], 'vendor_price');
+    final basePrice = (double.tryParse('$rawPrice') ?? 0) > 0
+        ? rawPrice
+        : (vendorPrice ?? rawPrice);
+    final basePriceValue = double.tryParse('$basePrice') ?? 0;
+
+    var price = basePrice;
     var salePrice = MagentoHelper.getCustomAttribute(
         productJson['custom_attributes'], 'special_price');
     var minimalPrice = MagentoHelper.getCustomAttribute(
         productJson['custom_attributes'], 'minimal_price');
+
+    /// A `special_price` is only a discount when it is actually LOWER than the
+    /// list price. This catalogue contains rows where special_price is *higher*
+    /// (e.g. 312 against a 240 list price); Magento and the website both ignore
+    /// those, but the app used to apply them regardless — showing the inflated
+    /// 312 where the website shows 240 (86d3g4mna).
+    ///
+    /// When there is no reliable list price at all (base 0 and no
+    /// `vendor_price`) still fall back to special_price — showing 0 would be
+    /// worse — and `hasReliableRegularPrice` below then keeps onSale off.
+    final salePriceValue = double.tryParse('${salePrice ?? ''}');
+    final isRealDiscount = salePriceValue != null &&
+        (basePriceValue <= 0 || basePriceValue > salePriceValue);
 
     if (dateSaleFrom != null || dateSaleTo != null) {
       final now = DateTime.now();
@@ -85,16 +114,22 @@ class MagentoService extends BaseServices {
       if (dateSaleFrom == null && dateSaleTo != null) {
         onSale = now.isBefore(DateTime.parse(dateSaleTo));
       }
-      if (onSale && salePrice != null) {
+      // An in-window sale still has to be a genuine price cut.
+      onSale = onSale && isRealDiscount;
+      if (onSale) {
         price = salePrice;
         minimalPrice = salePrice;
       }
     } else if (salePrice != null &&
         dateSaleFrom == null &&
         dateSaleTo == null) {
-      onSale = double.parse("${productJson["price"]}") > double.parse(salePrice);
-      price = salePrice;
-      minimalPrice = salePrice;
+      onSale = isRealDiscount;
+      // Only take special_price as the price when it actually undercuts the
+      // list price — previously this ran unconditionally.
+      if (onSale) {
+        price = salePrice;
+        minimalPrice = salePrice;
+      }
     }
 
 
@@ -170,18 +205,15 @@ class MagentoService extends BaseServices {
     } else {
       product.price = '$price';
     }
-    // The parent/base `price` attribute is frequently 0/unset for
-    // configurable products in this store's data (real pricing lives on the
-    // child SKUs), even when special_price/date-range detection above
-    // correctly finds a discount. Only trust it as the "regular" (before
-    // discount) price when it's actually greater than the current price —
-    // otherwise claiming onSale=true with a bogus regularPrice of 0 shows a
-    // broken "0.00" strikethrough/badge instead of just the plain price.
-    final rawPriceValue = double.tryParse('${productJson["price"]}') ?? 0;
+    // Only trust the base price as the "regular" (before discount) price when
+    // it's actually greater than the current price — otherwise claiming
+    // onSale=true with a bogus regularPrice shows a broken "0.00"
+    // strikethrough/badge instead of just the plain price. `basePrice` already
+    // falls back to `vendor_price` for configurables, whose parent `price` is 0.
     final currentPriceValue = double.tryParse(product.price ?? '') ?? 0;
-    final hasReliableRegularPrice = rawPriceValue > currentPriceValue;
+    final hasReliableRegularPrice = basePriceValue > currentPriceValue;
     product.regularPrice =
-        hasReliableRegularPrice ? "${productJson["price"]}" : product.price;
+        hasReliableRegularPrice ? "$basePrice" : product.price;
     product.salePrice = onSale ? salePrice : product.price;
     product.onSale = onSale && hasReliableRegularPrice;
 

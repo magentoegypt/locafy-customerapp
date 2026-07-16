@@ -11,6 +11,7 @@ import '../../routes/flux_navigate.dart';
 import '../../services/index.dart';
 import '../../widgets/common/webview.dart';
 import '../../widgets/home/home_sections.dart';
+import '../brands/all_brands_screen.dart';
 import '../categories/categories_screen.dart' show HeaderAuthButtons;
 
 /// Opens a curated category via the backdrop route — the route resolves a
@@ -54,6 +55,13 @@ Future<void> _openBrand(BuildContext context, HomeBrand brand) async {
   if (url == null || url.isEmpty) return;
   Navigator.of(context).push(
     MaterialPageRoute(builder: (_) => WebView(url: url, title: brand.name)),
+  );
+}
+
+/// "Shop All Brands" — the storefront's `/shopbrand` page, natively.
+void _openAllBrands(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute(builder: (_) => const AllBrandsScreen()),
   );
 }
 
@@ -118,6 +126,7 @@ class _HomeSectionsViewState extends State<HomeSectionsView> {
                     FeaturedBrandsSection(
                       section: br,
                       onTap: (brand) => _openBrand(context, brand),
+                      onShopAll: () => _openAllBrands(context),
                     ),
                   const SizedBox(height: 24),
                 ],
@@ -210,6 +219,7 @@ class _LandingBrandsSectionState extends State<LandingBrandsSection> {
               FeaturedBrandsSection(
                 section: br,
                 onTap: (brand) => _openBrand(context, brand),
+                onShopAll: () => _openAllBrands(context),
               ),
           ],
         );
