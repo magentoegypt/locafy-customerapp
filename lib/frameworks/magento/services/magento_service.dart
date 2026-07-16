@@ -1452,10 +1452,25 @@ class MagentoService extends BaseServices {
       final valueId = values[(star - 1).clamp(0, values.length - 1)];
       ratings.add({'rating_id': o['rating_id'], 'value_id': valueId});
     }
+    // The store requires every configured rating (Quality/Value/Price). If the
+    // rating-option lookup came back empty — a transient failure, since it is
+    // only cached once it succeeds — posting anyway gets rejected by Magento
+    // with an opaque message, which is what made submitting look random
+    // (86d3g53dk #10). Fail here instead, with something actionable.
+    if (ratings.isEmpty) {
+      throw Exception(
+          'Could not load the rating options. Check your connection and try again.');
+    }
     final text = '${data?['review'] ?? ''}'.trim();
+    // Magento rejects a blank nickname; fall back to the email local part for
+    // accounts whose profile carries no name.
+    var nickname = '${data?['reviewer'] ?? ''}'.trim();
+    if (nickname.isEmpty) {
+      nickname = '${data?['reviewer_email'] ?? ''}'.split('@').first.trim();
+    }
     final body = {
       'review': {
-        'nickname': data?['reviewer'] ?? '',
+        'nickname': nickname,
         // Magento requires a title; derive a short one from the body.
         'summary': text.length > 40 ? '${text.substring(0, 40)}…' : text,
         'text': text,

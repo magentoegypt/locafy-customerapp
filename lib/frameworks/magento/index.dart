@@ -439,32 +439,40 @@ class MagentoWidget extends BaseFrameworks
   @override
   Future<Product?> getProductDetail(context, Product? product) async {
     try {
-      if(product?.configurable_product_options.length > 0){
-        var attrs = <ProductAttribute>[];
-        var attribute_id = product?.configurable_product_options[0]["attribute_id"];
-        var productOptions = await api.getProductAttributesWithOption(attribute_id);
-        product?.productOptions = productOptions;
-        for (var i = 0; i < product?.configurable_product_options.length; i++) {
-          final option = product?.configurable_product_options[i];
-          var optionAttr = [];
-          for (var j = 0; j < productOptions.length; j++) {
-            final item = productOptions[j];
-              List? values = option['values'];
-
-            final value = values!.firstWhere(
-                    (o) => o['value_index'].toString() == item.value,
-                orElse: () => null);
-              if (value != null && !optionAttr.contains(item)) {
-                optionAttr.add(item.toJson());
-              }
+      if (product?.configurable_product_options.length > 0) {
+        /// Seed the configurable attributes from the same options/list call
+        /// the variation loader uses. This used to walk
+        /// configurable_product_options itself, which cost one attribute
+        /// lookup per product and got two things wrong:
+        ///
+        ///  * it fetched the *first* attribute's option set and then reused it
+        ///    for every attribute, so on a Colour+Size product the Size block
+        ///    matched nothing and rendered as an empty selection box; and
+        ///  * it took the attribute *code* from `label`, which the API returns
+        ///    as the store-view label ("Color", "الألوان") as often as the real
+        ///    code, breaking the swatch lookup that keys off it.
+        ///
+        /// options/list carries the code, the label and each attribute's own
+        /// options in one response (86d3g53dk #7).
+        ///
+        /// Seeding is best-effort: the variation loader re-fetches the same
+        /// attributes moments later, so a hiccup here should cost the variant
+        /// picker a frame, not fail the whole product page.
+        try {
+          final attrs =
+              await api.getConfigurableproductsAttributes(product?.sku ?? '');
+          if (attrs.isNotEmpty) {
+            product!.attributes = attrs;
           }
-          attrs.add(ProductAttribute.fromMagentoJson({
-            'attribute_id': option["attribute_id"],
-            'attribute_code': option["label"],
-            'options': optionAttr
-          }));
+
+          /// Backs getColorCode()'s last-resort hex lookup in BasicSelection.
+          final attributeId =
+              '${product?.configurable_product_options[0]["attribute_id"]}';
+          product?.productOptions =
+              await api.getProductAttributesWithOption(attributeId);
+        } catch (e) {
+          printLog('seed configurable attributes error: $e');
         }
-        product!.attributes = attrs;
       }
       // Fetch stock and the "Product Details" rows concurrently — this is
       // awaited before the PDP renders. getProductInfors never throws (it

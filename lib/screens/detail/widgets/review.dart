@@ -31,9 +31,17 @@ class _StateReviews extends BaseScreen<Reviews> {
   final services = Services();
   double rating = 0.0;
   final comment = TextEditingController();
+  final _commentFocus = FocusNode();
+  final _formKey = GlobalKey();
   List<Review>? reviews;
   bool _isSending = false;
   List<dynamic> _images = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _commentFocus.addListener(_onCommentFocusChanged);
+  }
 
   @override
   void afterFirstLayout(BuildContext context) {
@@ -42,19 +50,51 @@ class _StateReviews extends BaseScreen<Reviews> {
 
   @override
   void dispose() {
+    _commentFocus
+      ..removeListener(_onCommentFocusChanged)
+      ..dispose();
     comment.dispose();
     super.dispose();
   }
 
+  /// The review form sits low in the product page's scroll view, above a
+  /// pinned Add-to-Bag bar. Focusing the field pops the keyboard over it, and
+  /// the caret-into-view scroll only reaches the viewport edge — so the line
+  /// being typed stayed hidden until the keyboard came back down, which is why
+  /// QA saw text appear only after they finished typing (86d3g53dk #10).
+  /// Scroll the whole form up once the keyboard's inset has settled.
+  void _onCommentFocusChanged() {
+    if (!_commentFocus.hasFocus) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      final formContext = _formKey.currentContext;
+      if (!mounted || formContext == null) {
+        return;
+      }
+      await Scrollable.ensureVisible(
+        formContext,
+        alignment: 1.0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
   Future<void> _chooseImages() async {
     try {
-    //  _images = await ImagePicker.select(context, maxFiles: 5);
-      // _images = await MultiImagePicker.pickImages(
-      //     maxImages: 5, selectedAssets: _images);
-
-      setState(() {});
+      final selected = await ImagePicker.select(context, maxFiles: 5);
+      if (selected.isEmpty) {
+        return;
+      }
+      _images = selected;
     } catch (e) {
+      printLog('review image picker error: $e');
       _images = [];
+    }
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -64,53 +104,72 @@ class _StateReviews extends BaseScreen<Reviews> {
     });
   }
 
-  void sendReview() async {
+  /// Magento's messages arrive as `Exception: <server message>`; show the
+  /// customer the message, not the wrapper.
+  String _errorText(Object error) {
+    final text = error.toString();
+    return text.startsWith('Exception: ') ? text.substring(11) : text;
+  }
+
+  Future<void> sendReview() async {
     if (rating == 0.0) {
       Tools.showSnackBar(
           ScaffoldMessenger.of(context), S.of(context).ratingFirst);
       return;
     }
-    if (comment.text.isEmpty) {
+    if (comment.text.trim().isEmpty) {
       Tools.showSnackBar(
           ScaffoldMessenger.of(context), S.of(context).commentFirst);
       return;
     }
-    final user = Provider.of<UserModel>(context, listen: false);
-    _isSending = true;
-    setState(() {});
-    var data = {
-      'review': comment.text,
-      'reviewer': user.user!.name,
-      'reviewer_email': user.user!.email,
-      'rating': rating,
-      'status': kAdvanceConfig.enableApprovedReview ? 'approved' : 'hold'
-    };
-    if (_images.isNotEmpty) {
-      var preparedImages =
-          await ImageTools.compressAndConvertImagesForUploading(_images);
-      data['images'] = preparedImages;
+    final user = Provider.of<UserModel>(context, listen: false).user;
+    if (user == null) {
+      return;
     }
-    await services.api
-        .createReview(
-            productId: widget.productId, data: data, token: user.user!.cookie)!
-        .catchError((e) {
-      Tools.showSnackBar(ScaffoldMessenger.of(context), e.toString());
-    }).then((onValue) {
-      if (onValue != null) {
-        Tools.showSnackBar(
-            ScaffoldMessenger.of(context),
-            (kAdvanceConfig.enableApprovedReview)
-                ? S.of(context).reviewSent
-                : S.of(context).reviewPendingApproval);
-        getListReviews(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isSending = true);
+    try {
+      final data = <String, dynamic>{
+        'review': comment.text.trim(),
+        'reviewer': user.name,
+        'reviewer_email': user.email,
+        'rating': rating,
+        'status': kAdvanceConfig.enableApprovedReview ? 'approved' : 'hold',
+      };
+      if (_images.isNotEmpty) {
+        data['images'] =
+            await ImageTools.compressAndConvertImagesForUploading(_images);
       }
+      await services.api.createReview(
+        productId: widget.productId,
+        data: data,
+        token: user.cookie,
+      );
+      if (!mounted) return;
+      Tools.showSnackBar(
+          messenger,
+          kAdvanceConfig.enableApprovedReview
+              ? S.of(context).reviewSent
+              : S.of(context).reviewPendingApproval);
+
+      /// Only reset once the API confirmed the review. The old chain ran this
+      /// on the error path too, so a rejected submit silently threw away
+      /// everything the customer had typed (86d3g53dk #10).
       setState(() {
         rating = 0.0;
-        comment.text = '';
-        _isSending = false;
-        _images.clear();
+        comment.clear();
+        _images = [];
       });
-    });
+      getListReviews(context);
+    } catch (e) {
+      if (mounted) {
+        Tools.showSnackBar(messenger, _errorText(e));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
+    }
   }
 
   void getListReviews(BuildContext context) {
@@ -200,8 +259,14 @@ class _StateReviews extends BaseScreen<Reviews> {
           ),
         if (isRatingAllowed)
           Container(
+            key: _formKey,
             margin: const EdgeInsets.only(bottom: 40, top: 15.0),
-            padding: const EdgeInsets.only(left: 15.0, top: 5.0),
+
+            /// Directional + on every side: `EdgeInsets.only(left:)` put the
+            /// gap on the wrong side in Arabic and left none at all on the
+            /// other, so the field ran into the rounded border and read as a
+            /// half-drawn box (86d3g53dk #10).
+            padding: const EdgeInsetsDirectional.fromSTEB(15, 5, 15, 5),
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey),
               borderRadius: BorderRadius.circular(10.0),
@@ -209,20 +274,25 @@ class _StateReviews extends BaseScreen<Reviews> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: <Widget>[
-                    Expanded(
-                      child: TextField(
-                        enabled: !_isSending,
-                        controller: comment,
-                        maxLines: 3,
-                        minLines: 1,
-                        decoration: InputDecoration(
-                            labelText: S.of(context).writeComment),
-                      ),
-                    ),
-                  ],
+                TextField(
+                  enabled: !_isSending,
+                  controller: comment,
+                  focusNode: _commentFocus,
+                  maxLines: 3,
+                  minLines: 1,
+                  keyboardType: TextInputType.multiline,
+                  textCapitalization: TextCapitalization.sentences,
+                  style: Theme.of(context).textTheme.bodyMedium,
+
+                  /// The container already draws the box; the field's own
+                  /// underline on top of it is the second half of the
+                  /// "incomplete box" QA reported.
+                  decoration: InputDecoration(
+                    hintText: S.of(context).writeComment,
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
                 ),
                 if (_images.isNotEmpty)
                   Padding(
@@ -236,12 +306,11 @@ class _StateReviews extends BaseScreen<Reviews> {
                             (index) => Padding(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 5.0),
-                                  // child: ImagePicker.getThumbnail(
-                                  //   _images[index],
-                                  //   width: 100,
-                                  //   height: 100,
-                                  // ),
-                                  child: SizedBox(),
+                                  child: ImagePicker.getThumbnail(
+                                    _images[index],
+                                    width: 100,
+                                    height: 100,
+                                  ),
                                 )),
                       ),
                     ),

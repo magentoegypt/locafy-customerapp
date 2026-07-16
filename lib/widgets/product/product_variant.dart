@@ -64,6 +64,15 @@ class BasicSelection extends StatelessWidget {
 
     /// Web-parity layout: attribute label above a wrap of selectable
     /// swatches ('color') or labeled rectangular boxes (default/'box').
+    ///
+    /// Colours render as product photos only when *every* option has one, so
+    /// the row can never mix photo tiles with hex circles — that mix is what
+    /// made a lone image-type swatch read as a stray empty box beside the
+    /// real colours (86d3g53dk #7).
+    final showOptionImages = type == 'color' &&
+        options.isNotEmpty &&
+        options.every((item) => item != null && _imageFor(item).isNotEmpty);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -82,14 +91,31 @@ class BasicSelection extends StatelessWidget {
           runSpacing: 8.0,
           children: <Widget>[
             for (final item in options)
-              if (item != null) _buildOption(context, item, primaryColor),
+              if (item != null)
+                _buildOption(context, item, primaryColor, showOptionImages),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildOption(BuildContext context, String item, Color primaryColor) {
+  /// The product photo for [item] — the variant's own image from the swatches
+  /// payload, else the one resolved from the loaded variations. Empty when the
+  /// option has no photo.
+  String _imageFor(String item) {
+    final swatch = swatchOptions?[item];
+    if (swatch?.hasImage ?? false) {
+      return swatch!.productImage!;
+    }
+    return imageUrls?[item] ?? '';
+  }
+
+  Widget _buildOption(
+    BuildContext context,
+    String item,
+    Color primaryColor,
+    bool showOptionImages,
+  ) {
     final secondary = Theme.of(context).colorScheme.secondary;
     final selected = item.toUpperCase() == (value ?? '').toUpperCase();
 
@@ -99,18 +125,9 @@ class BasicSelection extends StatelessWidget {
           ? swatch?.swatchValue
           : (swatchCodes?[item] ?? getColorCode(item));
 
-      // Prefer the variant's product image so color swatches show the actual
-      // product photo, like the website.
-      String? imageUrl;
-      if (swatch?.hasImage ?? false) {
-        imageUrl = swatch!.productImage;
-      } else if (swatch?.swatchType == 'image') {
-        imageUrl = swatch?.swatchValue;
-      } else if (hex?.contains('http') ?? false) {
-        imageUrl = hex;
-      }
+      final imageUrl = showOptionImages ? _imageFor(item) : '';
 
-      if (imageUrl != null && imageUrl.isNotEmpty) {
+      if (imageUrl.isNotEmpty) {
         return GestureDetector(
           onTap: () => onChanged?.call(item),
           child: Tooltip(
@@ -146,9 +163,12 @@ class BasicSelection extends StatelessWidget {
         );
       }
 
-      // Fallback: plain hex color circle.
+      // Fallback: plain colour circle. An image-type swatch (whose value is a
+      // small swatch PNG rather than a hex code) fills the same circle, so the
+      // row stays one uniform shape instead of sprouting a stretched tile.
       final colorCode = hex ?? '#ffffff';
       final isHex = colorCode.startsWith('#');
+      final isSwatchImage = colorCode.contains('http');
       return GestureDetector(
         onTap: () => onChanged?.call(item),
         child: Tooltip(
@@ -160,6 +180,12 @@ class BasicSelection extends StatelessWidget {
             height: 34,
             decoration: BoxDecoration(
               color: isHex ? HexColor(colorCode) : Colors.white,
+              image: isSwatchImage
+                  ? DecorationImage(
+                      image: NetworkImage(colorCode),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
               shape: BoxShape.circle,
               border: Border.all(
                 width: selected ? 2.0 : 1.0,

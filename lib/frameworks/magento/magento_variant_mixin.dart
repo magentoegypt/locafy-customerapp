@@ -173,16 +173,55 @@ mixin MagentoVariantMixin on ProductVariantMixin {
 
           /// Richer swatches from extension_attributes.swatches (product image
           /// per option, so color swatches show the variant photo like the
-          /// website). Matched to this attribute by attribute_code, keyed by
-          /// option label.
-          final swatchOptions = <String, SwatchOption>{};
+          /// website). Matched to this attribute by attribute_code.
+          ///
+          /// The join runs on the option *value id*, never the label: these
+          /// options come from configurable-products/<sku>/options/list, which
+          /// is always fetched on the default English store view, while the
+          /// swatches ride on a product payload fetched in the app's language.
+          /// Keying by label therefore missed on every translated colour in
+          /// Arabic ("Black" vs "أسود"), which dropped the product photos back
+          /// to plain hex circles (86d3g53dk #7).
+          final swatchByValue = <String, SwatchOption>{};
           final swatchAttr = product.swatches?.firstWhere(
             (s) => s.attributeCode == attr.name,
             orElse: () => ConfigurableSwatch(),
           );
           for (final opt in swatchAttr?.options ?? <SwatchOption>[]) {
-            if (opt.label != null) {
-              swatchOptions[opt.label!] = opt;
+            if (opt.value != null) {
+              swatchByValue[opt.value!] = opt;
+            }
+          }
+
+          /// Fallback option photo: the child product's own image, taken from
+          /// the first variation carrying that option. Keeps the web-parity
+          /// tile working on products whose payload ships no swatches at all.
+          final variationImages = <String, String>{};
+          for (final variation in variations) {
+            final option = variation.attributeMap[attr.name]?.option;
+            final image = variation.imageFeature;
+            if (option != null && (image?.isNotEmpty ?? false)) {
+              variationImages.putIfAbsent(option, () => image!);
+            }
+          }
+
+          final swatchOptions = <String, SwatchOption>{};
+          final optionImages = <String?, String?>{};
+          for (final option in attr.options!) {
+            if (option is! Map || option['label'] is! String) {
+              continue;
+            }
+            final label = option['label'] as String;
+            final value = '${option['value']}';
+            final swatch = swatchByValue[value];
+            if (swatch != null) {
+              swatchOptions[label] = swatch;
+            }
+            final image = (swatch?.hasImage ?? false)
+                ? swatch!.productImage
+                : variationImages[value];
+            if (image?.isNotEmpty ?? false) {
+              optionImages[label] = image;
             }
           }
 
@@ -192,6 +231,7 @@ mixin MagentoVariantMixin on ProductVariantMixin {
               options: options,
               swatchCodes: swatchCodes,
               swatchOptions: swatchOptions,
+              imageUrls: optionImages,
               title: title,
               type: type,
               value: selectedValue,

@@ -217,13 +217,31 @@ class ImageTools {
   }
 }
 
-class CustomAssetPickerTextDelegate extends AssetPickerTextDelegate {
+/// The picker ships its own strings and defaults to Chinese, which leaked into
+/// the UI as a stray "预览" next to the Confirm button. Base each delegate on
+/// the language the app is actually in and keep Confirm on our own l10n.
+class CustomAssetPickerTextDelegate extends EnglishAssetPickerTextDelegate {
   CustomAssetPickerTextDelegate({required this.context});
 
   final BuildContext context;
 
   @override
   String get confirm => S.of(context).confirm;
+}
+
+class CustomArabicAssetPickerTextDelegate extends ArabicAssetPickerTextDelegate {
+  CustomArabicAssetPickerTextDelegate({required this.context});
+
+  final BuildContext context;
+
+  @override
+  String get confirm => S.of(context).confirm;
+}
+
+AssetPickerTextDelegate _pickerTextDelegate(BuildContext context) {
+  return Localizations.localeOf(context).languageCode == 'ar'
+      ? CustomArabicAssetPickerTextDelegate(context: context)
+      : CustomAssetPickerTextDelegate(context: context);
 }
 
 class ImagePicker {
@@ -237,7 +255,7 @@ class ImagePicker {
       context,
       pickerConfig: AssetPickerConfig(
           maxAssets: maxFiles,
-          textDelegate: CustomAssetPickerTextDelegate(context: context)),
+          textDelegate: _pickerTextDelegate(context)),
     );
     return result ?? [];
   }
