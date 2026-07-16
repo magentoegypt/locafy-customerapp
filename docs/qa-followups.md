@@ -496,3 +496,73 @@ version; noted only so the option is on record.
 **Summary for backend:** (8a) populate subcategory category images; (8b) add a brand logo URL to
 `mstore/brands`. Both are data/response-shape changes with no app rework required — the landing page
 is already live and will pick them up automatically.
+
+---
+
+## 9. Review image attachments have no backend path — the camera button uploads into the void  🔴 Backend
+
+**Context:** ClickUp **86d3g53dk** item 10 asks: *"The Camera option should open the camera or image
+picker and allow the user to attach an image."*
+
+**App side is done and shipped** (`03109f8`): the camera button opens the asset picker, multi-select
+up to 5, thumbnails preview inline, images are compressed and base64-encoded by
+`ImageTools.compressAndConvertImagesForUploading` and put on the create-review payload as `images`.
+Verified on device.
+
+**The blocker:** there is nowhere to send them and nowhere to read them back. `MagentoService.createReview`
+deliberately **drops `data['images']`** before the POST rather than sending a field the route would
+reject. So the button looks like it works — attach, submit, success — and the image silently
+disappears. Nothing in the stack supports review images today:
+
+1. **Write (REST)** — the app posts to the route delivered in item 7,
+   `POST /{store}/rest/V1/products/{sku}/reviews`, body
+   `{"review":{"nickname","summary","text","ratings":[{"rating_id","value_id"}]}}`. No image field.
+2. **Write (GraphQL)** — `CreateProductReviewInput` introspects to exactly:
+   `nickname, ratings, sku, summary, text`.
+3. **Read (GraphQL)** — `ProductReview`, which is what the app reads, introspects to exactly:
+   `average_rating, created_at, nickname, product, ratings_breakdown, summary, text`.
+4. **No web behaviour to match** — the storefront `#review-form` has `nickname`, `title`, `detail`
+   and the 3 rating groups. `input[type=file]` count: **0**.
+5. **Magento core has no concept of review images** — `review`/`review_detail` carry no media
+   columns and there is no media path for them. This needs a custom module, not a config toggle.
+
+**Decision needed first — is this worth building?** The website doesn't do it, so shipping it makes
+the app *diverge* from web rather than match it, and it opens an abuse vector (customers uploading
+arbitrary images to public product pages). If the answer is no, say so and I'll remove the camera
+button (~5 min) and we reply to QA that review images aren't supported on this platform.
+
+**If yes, backend requirements:**
+
+*Storage*
+- Table e.g. `locafy_review_image` (`value_id`, `review_id` FK → `review.review_id`, `file`, `position`).
+- Files under `pub/media/review/…` via the standard media writer, with a resized thumbnail like catalog media.
+- Validation: allowed mime (jpg/png/webp), max file size, max count per review (**app caps at 5**).
+
+*Write* — either shape works, just tell me which and I'll wire it:
+- **(a) Extend the existing route** (least app work): accept `"images"` inside the `review` object on
+  `POST /V1/products/{sku}/reviews`. The app already produces base64 — currently a comma-separated
+  string; a JSON array of base64 strings, or multipart, is equally fine.
+- **(b) Separate upload endpoint**, e.g. `POST /V1/products/{sku}/reviews/{reviewId}/images`. Note
+  this needs the create route to **return the new `review_id`** so the app can chain the upload —
+  item 7's response shape (`{review_id, status, message}`) already has it, so this is viable.
+- Images must inherit the review's moderation state (pending until the review is approved).
+
+*Read*
+- Expose on `ProductReview` in GraphQL, e.g. `images: [ProductReviewImage] { url }`.
+- **App-side cost is ~2 lines**: `Review` already carries `List<String> images`, and the review list
+  already renders a horizontal thumbnail strip with a fullscreen gallery on tap
+  (`lib/screens/detail/widgets/review.dart`). Only `Review.fromMagentoJson` needs to map the new
+  field — `Review.fromJson` already parses an `images` list, so copy that.
+
+*Admin*
+- Surface the attached images in the review moderation grid/edit view so a human can see them before
+  approving. This is the main reason moderation must stay on.
+
+**Acceptance criteria**
+- A logged-in customer can submit a review with 1–5 images and get a success response.
+- After admin approval, the GraphQL `reviews` query the app already reads returns those image URLs.
+- Rejected/pending reviews do not expose their images publicly.
+
+**Interim risk:** the camera button is **live in the current build**. If QA retests before this
+lands, they will attach an image, submit successfully, and the image will never appear on the review.
+Worth telling them up front so it isn't re-filed as a new bug.
