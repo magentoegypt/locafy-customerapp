@@ -210,6 +210,7 @@ class MessageLookup extends MessageLookupByLibrary {
             MessageLookupByLibrary.simpleMessage("Booking is unavailable"),
         "bosnian": MessageLookupByLibrary.simpleMessage("Bosnian"),
         "brand": MessageLookupByLibrary.simpleMessage("Brand"),
+        "brands": MessageLookupByLibrary.simpleMessage("Brands"),
         "brazil": MessageLookupByLibrary.simpleMessage("Portuguese"),
         "burmese": MessageLookupByLibrary.simpleMessage("Burmese"),
         "buyNow": MessageLookupByLibrary.simpleMessage("Buy Now"),

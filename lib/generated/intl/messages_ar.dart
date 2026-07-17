@@ -209,6 +209,7 @@ class MessageLookup extends MessageLookupByLibrary {
             MessageLookupByLibrary.simpleMessage("الحجز غير متوفر"),
         "bosnian": MessageLookupByLibrary.simpleMessage("البوسنية"),
         "brand": MessageLookupByLibrary.simpleMessage("الماركة"),
+        "brands": MessageLookupByLibrary.simpleMessage("الماركات"),
         "brazil": MessageLookupByLibrary.simpleMessage("البرازيل"),
         "burmese": MessageLookupByLibrary.simpleMessage("البورمية"),
         "buyNow": MessageLookupByLibrary.simpleMessage("اشتري الآن"),

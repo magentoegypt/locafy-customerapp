@@ -854,10 +854,13 @@ class MagentoService extends BaseServices {
       );
     }).toList();
 
-    // 🔥 Create "Brands" node (5th item)
+    // 🔥 Create "Brands" node (5th item). This one is synthesized app-side
+    // rather than coming from the store view, so it needs translating with
+    // everything around it — a hard-coded label left "Brands" sitting in
+    // English amongst the Arabic categories.
     final brandsNode = Category(
       id: "-${parentCategory.id}", // unique fake id
-      name: "Brands",
+      name: S.current.brands,
       parent: parentCategory.id,
       subCategories: [],
       hasChildren: true,

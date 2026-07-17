@@ -4567,6 +4567,16 @@ class S {
     );
   }
 
+  /// `Brands`
+  String get brands {
+    return Intl.message(
+      'Brands',
+      name: 'brands',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Your review has been sent and is waiting for approval!`
   String get reviewPendingApproval {
     return Intl.message(
