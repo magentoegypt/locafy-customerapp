@@ -114,6 +114,19 @@ class AppModel with ChangeNotifier {
   }
 
   Future<bool> changeLanguage(String languageCode, BuildContext context) async {
+    /// Resolve everything that needs `context` BEFORE the awaits below.
+    ///
+    /// Setting `_langCode` and loading the config notifies listeners, which
+    /// rebuilds the app for the new locale and deactivates the element this
+    /// context belongs to. Any Provider lookup after that throws "Looking up a
+    /// deactivated widget's ancestor is unsafe" — and because the whole body
+    /// sits in a try that swallowed the error, the category refresh was simply
+    /// skipped. The UI language had already switched by then, so the previous
+    /// language's category names stayed on screen (86d3qecbf).
+    final categoryModel = Provider.of<CategoryModel>(context, listen: false);
+    final filterAttributeModel =
+        Provider.of<FilterAttributeModel>(context, listen: false);
+
     try {
       _langCode = languageCode;
       SettingsBox().languageCode = _langCode;
@@ -122,7 +135,6 @@ class AppModel with ChangeNotifier {
       await loadCurrency();
       eventBus.fire(const EventChangeLanguage());
 
-      final categoryModel = Provider.of<CategoryModel>(context, listen: false);
       categoryModel.refreshCategoryList();
       unawaited(categoryModel.getCategories(
         lang: _langCode,
@@ -130,11 +142,13 @@ class AppModel with ChangeNotifier {
         categoryLayout: categoryLayout,
         remapCategories: remapCategories,
       ));
-      unawaited(Provider.of<FilterAttributeModel>(context, listen: false)
-          .getFilterAttributes());
+      unawaited(filterAttributeModel.getFilterAttributes());
 
       return true;
     } catch (err) {
+      /// Never swallow this silently: a failure here leaves the app showing one
+      /// language's chrome over another language's data.
+      printLog('🔴 [changeLanguage] error: $err');
       return false;
     }
   }
