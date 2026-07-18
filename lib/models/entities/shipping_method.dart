@@ -47,8 +47,15 @@ class ShippingMethod {
   ShippingMethod.fromMagentoJson(Map parsedJson) {
     id = parsedJson['carrier_code'];
     methodId = parsedJson['method_code'];
-    title = parsedJson['carrier_title'] ?? parsedJson['method_title'];
-    description = parsedJson['method_title'];
+    // Use whichever of carrier_title / method_title actually has text. The old
+    // `carrier_title ?? method_title` kept carrier_title even when it was an
+    // empty string or a single space (as the tablerate/bestway method returns
+    // here), so method_title never got a chance and the label rendered blank.
+    // `?? ''` guards against non-string/null values from the payload.
+    final carrierTitle = '${parsedJson['carrier_title'] ?? ''}'.trim();
+    final methodTitle = '${parsedJson['method_title'] ?? ''}'.trim();
+    title = carrierTitle.isNotEmpty ? carrierTitle : methodTitle;
+    description = methodTitle;
     cost = parsedJson['amount'] != null
         ? double.parse('${parsedJson['amount']}')
         : 0.0;

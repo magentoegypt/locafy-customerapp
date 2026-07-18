@@ -152,7 +152,13 @@ class _ShippingMethodsState extends State<ShippingMethods> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Services().widget.renderShippingPaymentTitle(
-                                context, model.shippingMethods![i].title!),
+                                context,
+                                (model.shippingMethods![i].title
+                                            ?.trim()
+                                            .isNotEmpty ??
+                                        false)
+                                    ? model.shippingMethods![i].title!.trim()
+                                    : S.of(context).shipping),
                             const SizedBox(height: 5),
                             if (model.shippingMethods![i].cost! > 0.0 ||
                                 !isNotBlank(
