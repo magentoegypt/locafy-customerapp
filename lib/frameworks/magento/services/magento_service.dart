@@ -1509,14 +1509,19 @@ class MagentoService extends BaseServices {
   @override
   Future<List<ProductVariation>> getProductVariations(Product product, {String? lang = 'en'}) async {
     try {
-      final res = await httpGet(
+      // Kick off the children list and the attribute set together — both only
+      // need the SKU, so there's no reason to wait for one before the other.
+      final childrenFuture = httpGet(
           MagentoHelper.buildUrl(
               domain, 'configurable-products/${product.sku}/children')!,
           headers: {
             'Authorization': 'Bearer $accessToken',
             'content-type': 'application/json'
           });
-      List<ProductAttribute> attributes = await getConfigurableproductsAttributes(product.sku ?? "");
+      final attributesFuture =
+          getConfigurableproductsAttributes(product.sku ?? "");
+      final res = await childrenFuture;
+      final attributes = await attributesFuture;
       product.attributes = attributes;
 
       /// The store's configurable attribute codes vary per attribute set
@@ -1526,14 +1531,29 @@ class MagentoService extends BaseServices {
           attributes.map((a) => a.name).whereType<String>().toList();
       var list = <ProductVariation>[];
       if (res.statusCode == 200) {
-        for (var item in convert.jsonDecode(res.body)) {
-          var prod = ProductVariation.fromMagentoJson(item, product,
-              attributeCodes: attributeCodes);
-          Product? productStock = await getStockStatus(prod.sku);
+        final children = (convert.jsonDecode(res.body) as List)
+            .map((item) => ProductVariation.fromMagentoJson(item, product,
+                attributeCodes: attributeCodes))
+            .toList();
+
+        // Fetch every child's stock status in PARALLEL. This used to be one
+        // awaited call per child, so a configurable with N variants blocked on
+        // N sequential round trips before the variations (and therefore the
+        // selected variant + Add to Cart) were ready — until then the button
+        // silently did nothing, so it read as "slow / had to click more than
+        // once" (86d3ppam2 #2). One round trip's worth of latency now.
+        final stocks =
+            await Future.wait(children.map((c) => getStockStatus(c.sku)));
+
+        for (var i = 0; i < children.length; i++) {
+          final prod = children[i];
+          final productStock = stocks[i];
           prod.inStock = productStock?.inStock;
           prod.stockQuantity = productStock?.stockQuantity;
-          prod.configurable_product_options = product.configurable_product_options;
-          prod.configurable_product_links = product.configurable_product_links;
+          prod.configurable_product_options =
+              product.configurable_product_options;
+          prod.configurable_product_links =
+              product.configurable_product_links;
           list.add(prod);
         }
       }
