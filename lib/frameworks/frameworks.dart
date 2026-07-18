@@ -482,7 +482,12 @@ abstract class BaseFrameworks {
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
               child: Services().widget.renderShippingPaymentTitle(
                 context,
-                model.shippingMethod!.title.toString(),
+                // The backend often returns an empty shipping-method title, so
+                // the summary's shipping row showed a blank label next to its
+                // cost. Fall back to a "Shipping" label (86d3g53f8 #6).
+                (model.shippingMethod!.title?.trim().isNotEmpty ?? false)
+                    ? model.shippingMethod!.title!.trim()
+                    : S.of(context).shipping,
               ),
             ),
           ),

@@ -433,7 +433,7 @@ class ShippingAddressInfo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 SizedBox(
-                  width: 120,
+                  width: 160,
                   child: Text(
                     '${S.of(context).firstName} :',
                     style: TextStyle(
@@ -461,7 +461,7 @@ class ShippingAddressInfo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 SizedBox(
-                  width: 120,
+                  width: 160,
                   child: Text(
                     '${S.of(context).lastName} :',
                     style: TextStyle(
@@ -492,7 +492,7 @@ class ShippingAddressInfo extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
                   SizedBox(
-                    width: 120,
+                    width: 160,
                     child: Text(
                       '${S.of(context).email} :',
                       style: TextStyle(
@@ -520,7 +520,7 @@ class ShippingAddressInfo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 SizedBox(
-                  width: 120,
+                  width: 160,
                   child: Text(
                     '${S.of(context).streetName} :',
                     style: TextStyle(
@@ -552,7 +552,7 @@ class ShippingAddressInfo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 SizedBox(
-                  width: 120,
+                  width: 160,
                   child: Text(
                     '${S.of(context).city} :',
                     style: TextStyle(
@@ -580,7 +580,7 @@ class ShippingAddressInfo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 SizedBox(
-                  width: 120,
+                  width: 160,
                   child: Text(
                     '${S.of(context).zone} :',
                     style: TextStyle(
@@ -612,7 +612,7 @@ class ShippingAddressInfo extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: <Widget>[
                       SizedBox(
-                        width: 120,
+                        width: 160,
                         child: Text(
                           '${S.of(context).country} :',
                           style: TextStyle(
@@ -645,7 +645,7 @@ class ShippingAddressInfo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 SizedBox(
-                  width: 120,
+                  width: 160,
                   child: Text(
                     '${S.of(context).phoneNumber} :',
                     style: TextStyle(

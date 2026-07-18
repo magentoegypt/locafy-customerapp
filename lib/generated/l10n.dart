@@ -9000,7 +9000,7 @@ class S {
   /// `Please enter the number without 0`
   String get validMobileWithout0 {
     return Intl.message(
-      'Please enter the number without 0',
+      'Please enter a 10-digit phone number with no spaces and no leading 0.',
       name: 'validMobileWithout0',
       desc: '',
       args: [],
@@ -9010,7 +9010,7 @@ class S {
   /// `Please enter the valid number`
   String get validMobile {
     return Intl.message(
-      'Please enter the valid number',
+      'Please enter a 10-digit phone number with no spaces and no leading 0.',
       name: 'validMobile',
       desc: '',
       args: [],
