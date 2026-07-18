@@ -957,8 +957,11 @@ class MagentoService extends BaseServices {
           headers: {'Authorization': 'Bearer $accessToken'});
       var list = <Product>[];
       if (response.statusCode == 200) {
+        // Resolve brand labels so cards show the seller/brand name
+        // (product.vendor), matching the grid path. Cached — one cheap lookup.
+        final brandLabels = await getBrandLabels();
         for (var item in convert.jsonDecode(response.body)['items']) {
-          var product = parseProductFromJson(item);
+          var product = parseProductFromJson(item, brandLabels: brandLabels);
           list.add(product);
         }
       }
@@ -1013,8 +1016,11 @@ class MagentoService extends BaseServices {
       );
 
       if (response.statusCode == 200) {
+        // Resolve brand labels so cards show the seller/brand name
+        // (product.vendor), matching the grid path. Cached — one cheap lookup.
+        final brandLabels = await getBrandLabels();
         for (var item in convert.jsonDecode(response.body)['items']) {
-          var product = parseProductFromJson(item);
+          var product = parseProductFromJson(item, brandLabels: brandLabels);
           list.add(product);
         }
       }
@@ -1802,8 +1808,12 @@ class MagentoService extends BaseServices {
       if (response.statusCode == 200) {
         final body = convert.jsonDecode(response.body);
         if (!MagentoHelper.isEndLoadMore(body)) {
+          // Resolve brand labels so search-result cards show the seller/brand
+          // name (product.vendor), matching the grid path. Cached, so this is
+          // a single cheap lookup per search. See ClickUp 86d3g53dk.
+          final brandLabels = await getBrandLabels();
           for (var item in body['items']) {
-            var product = parseProductFromJson(item);
+            var product = parseProductFromJson(item, brandLabels: brandLabels);
             list.add(product);
           }
         }
@@ -2107,7 +2117,13 @@ class MagentoService extends BaseServices {
         headers: {'Authorization': 'Bearer $accessToken'});
     var products = convert.jsonDecode(response.body)['items'];
     if (products.isEmpty) return null;
-    return parseProductFromJson(products[0]);
+    // Resolve the brand label so the product page shows the seller/brand name
+    // (product.vendor). The single-product payload only carries the numeric
+    // `brand` option id and no extension_attributes.seller_name, so without this
+    // the detail page had no seller name — the grid path already does this via
+    // getBrandLabels() (cached, so this is effectively free). See ClickUp 86d3g53dk.
+    final brandLabels = await getBrandLabels();
+    return parseProductFromJson(products[0], brandLabels: brandLabels);
   }
 
   Future<bool> deleteItemsInCart(List<Map> items, String? token) async {
