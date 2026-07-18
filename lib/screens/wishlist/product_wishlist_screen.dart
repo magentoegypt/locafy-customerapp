@@ -37,16 +37,30 @@ class _WishListState extends State<ProductWishListScreen> with AppBarMixin {
       secondAppBar: AppBar(
         elevation: 0,
         automaticallyImplyLeading: false,
-        leading: Navigator.of(context).canPop()
-            ? IconButton(
-                icon: Icon(
-                  Icons.arrow_back_ios,
-                  color: Theme.of(context).colorScheme.secondary,
-                  size: 24,
-                ),
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        // Always show the back arrow. The previous canPop() guard hid it when
+        // the wishlist was opened as the bottom-nav tab root (nothing to pop),
+        // which is how QA reaches it — so no arrow ever appeared there
+        // (86d3pngec #1). Pop when there's a route to pop, otherwise return to
+        // the Home tab (the "main page").
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Theme.of(context).colorScheme.secondary,
+            size: 24,
+          ),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              // Switch the bottom-nav controller to the Home tab (index 0 —
+              // the main screen). NavigateTools.navigateHome() can't be used
+              // here: it routes by name, and since the home tab isn't
+              // registered under RouteList.home it falls through to pushing a
+              // standalone home route with no bottom bar.
+              MainTabControlDelegate.getInstance().tabAnimateTo(0);
+            }
+          },
+        ),
         backgroundColor: Theme.of(context).colorScheme.background,
         // title: Text(
         //   S.of(context).myWishList,
