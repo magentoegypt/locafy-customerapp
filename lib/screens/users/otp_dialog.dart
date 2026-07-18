@@ -110,24 +110,45 @@ class OtpDialog  {
                   ),
                 ),
               ),
-              Container(
-                margin: EdgeInsets.only(top: 10),
-                alignment: Alignment.topRight,
-                child: RichText(
-                  textAlign: TextAlign.center,
-                  text: TextSpan(
-                      text: S.of(context).didntReceiveCode,
-                      style: const TextStyle(fontSize: 15),
-                      children: [
-                        TextSpan(
-                            text: S.of(context).resend,
-                            recognizer: onTapRecognizer,
-                            style: TextStyle(
-                              color: Theme.of(context).primaryColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ))
-                      ]),
+              // Full-width so the "Didn't receive the code? RESEND" line
+              // centres in the dialog. It was pinned to the trailing edge
+              // (Alignment.topRight), which read as off to one side — right in
+              // English, left in Arabic. TextAlign.center is direction-agnostic
+              // so it centres in both views (86d3pkmkd #4).
+              //
+              // The prefix span also needs an explicit colour: RichText does
+              // not inherit DefaultTextStyle, so `TextStyle(fontSize: 15)` with
+              // no colour rendered the "Didn't receive the code?" invisible —
+              // only RESEND (which sets its own colour) showed, which made the
+              // centring look off because the invisible prefix still took up
+              // half the line.
+              SizedBox(
+                width: double.infinity,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(
+                        text: S.of(context).didntReceiveCode,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.color
+                              ?.withOpacity(0.7),
+                        ),
+                        children: [
+                          TextSpan(
+                              text: S.of(context).resend,
+                              recognizer: onTapRecognizer,
+                              style: TextStyle(
+                                color: Theme.of(context).primaryColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ))
+                        ]),
+                  ),
                 ),
               )
             ],

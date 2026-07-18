@@ -284,7 +284,7 @@
 	"phoneNumberVerification": "رمز تأكيد الرقم",
 	"enterSendedCode": "أدخل الرمز المرسل إليه",
 	"pleasefillUpAllCellsProperly": "*يرجى ملء جميع الخانات بشكل صحيح",
-	"didntReceiveCode": "لم استلم رمز التأكيد؟",
+	"didntReceiveCode": "لم استلم رمز التأكيد؟ ",
 	"resend": "أعد الإرسال",
 	"pleaseInputFillAllFields": "يرجى ملء جميع الخانات",
 	"pleaseUpdateAddress": "هذا العنوان غير مكتمل. يرجى تعديله واختيار المدينة والمنطقة مرة أخرى.",

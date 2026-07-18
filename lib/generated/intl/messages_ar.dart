@@ -390,7 +390,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "description": MessageLookupByLibrary.simpleMessage("تفاصيل المنتج"),
         "details": MessageLookupByLibrary.simpleMessage("التفاصيل"),
         "didntReceiveCode":
-            MessageLookupByLibrary.simpleMessage("لم استلم رمز التأكيد؟"),
+            MessageLookupByLibrary.simpleMessage("لم استلم رمز التأكيد؟ "),
         "direction": MessageLookupByLibrary.simpleMessage("اتجاه"),
         "disablePurchase": MessageLookupByLibrary.simpleMessage("تعطيل الشراء"),
         "discount": MessageLookupByLibrary.simpleMessage("خصم"),
