@@ -22,6 +22,10 @@ class ProductFlatView extends StatefulWidget {
   final Widget builder;
   final Widget? bottomSheet;
   final Widget? titleFilter;
+
+  /// Optional "Filter" trigger shown inline to the right of the search box
+  /// (the active-filter chips stay in [titleFilter]'s sticky row below).
+  final Widget? filterButton;
   final Function? onSort;
   final Function onFilter;
   final Function onSearch;
@@ -36,6 +40,7 @@ class ProductFlatView extends StatefulWidget {
     required this.onSearch,
     this.bottomSheet,
     this.titleFilter,
+    this.filterButton,
     this.onSort,
     required this.onFilter,
     this.enableSearchHistory = false,
@@ -157,25 +162,9 @@ class _ProductFlatViewState extends State<ProductFlatView> with ProductsMixin {
   }
 
   Widget _getStickyWidget() {
-    if (widget.titleFilter == null) return const SizedBox();
-
-    return Container(
-      alignment: Alignment.center,
-      height: 44,
-      margin: const EdgeInsets.only(bottom: 5),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.background,
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            offset: Offset(0, 1),
-            blurRadius: 2,
-          )
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: widget.titleFilter,
-    );
+    // The chip bar (titleFilter) now carries its own styling and self-collapses
+    // when no filter is applied, so this just hosts it.
+    return widget.titleFilter ?? const SizedBox();
   }
 
   @override
@@ -322,34 +311,46 @@ class _ProductFlatViewState extends State<ProductFlatView> with ProductsMixin {
           // ),
           // const SizedBox(height: 10),
           Padding(
-            padding: EdgeInsets.only(
-                left: Navigator.of(context).canPop() ? 0 : 15),
-            child: CupertinoSearchTextField(
-              onChanged: onSearch,
-              onSubmitted: onSearch,
-              placeholder: S.of(context).searchForItems,
-              style: Theme.of(context).textTheme.bodySmall,
-              prefixIcon: Container(
-                margin: getMargin(
-                  top: 8,
-                  right: 12,
-                  bottom: 8,
-                ),
-                child: CustomImageView(
-                  svgPath: ImageConstant.imgSearch,
-                ),
-              ),
-              decoration: BoxDecoration(
-                color: ColorConstant.whiteA700,
-                boxShadow: [
-                  BoxShadow(
-                    color: ColorConstant.blueGray50019,
-                    spreadRadius: 2,
-                    blurRadius: getHorizontalSize(2),
-                    offset: const Offset(1, 1),
+            padding: EdgeInsetsDirectional.only(
+                start: Navigator.of(context).canPop() ? 0 : 15,
+                end: widget.filterButton != null ? 10 : 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: CupertinoSearchTextField(
+                    onChanged: onSearch,
+                    onSubmitted: onSearch,
+                    placeholder: S.of(context).searchForItems,
+                    style: Theme.of(context).textTheme.bodySmall,
+                    prefixIcon: Container(
+                      margin: getMargin(
+                        top: 8,
+                        right: 12,
+                        bottom: 8,
+                      ),
+                      child: CustomImageView(
+                        svgPath: ImageConstant.imgSearch,
+                      ),
+                    ),
+                    decoration: BoxDecoration(
+                      color: ColorConstant.whiteA700,
+                      boxShadow: [
+                        BoxShadow(
+                          color: ColorConstant.blueGray50019,
+                          spreadRadius: 2,
+                          blurRadius: getHorizontalSize(2),
+                          offset: const Offset(1, 1),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+                if (widget.filterButton != null)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(start: 6),
+                    child: widget.filterButton,
+                  ),
+              ],
             ),
           ),
           Expanded(

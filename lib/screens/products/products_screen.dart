@@ -283,9 +283,12 @@ class ProductsScreenState extends State<ProductsScreen>
                                 ratioProductImage: ratioProductImage,
                                 productListItemHeight: productListItemHeight,
                                 width: constraint.maxWidth,
+                                // The "Filter" trigger now sits beside the
+                                // search box (see filterButton below); this
+                                // header keeps only the active-filter chips.
                                 appbar: Align(
                                   alignment: Alignment.centerRight,
-                                  child: renderFilters(context),
+                                  child: renderActiveFilters(context),
                                 ),
                                 header: [
                                   // The website's category page lists the
@@ -351,8 +354,12 @@ class ProductsScreenState extends State<ProductsScreen>
                                 isEnd: model.isEnd,
                                 onLoadMore: onLoadMore,
                                 width: constraint.maxWidth),
-                        titleFilter:
-                            layout.isListView ? null : renderFilters(context),
+                        titleFilter: layout.isListView
+                            ? null
+                            : renderActiveFilters(context),
+                        // The Filter trigger sits beside the search box for both
+                        // list and grid layouts.
+                        filterButton: renderFilterButton(context),
                         onFilter: onFilter,
                         onSearch: (String searchText) => {
                           onFilter(

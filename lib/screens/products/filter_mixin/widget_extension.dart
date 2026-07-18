@@ -18,9 +18,60 @@ extension ProductsFilterMixinWidgetExtension on ProductsFilterMixin {
               ),
             ),
             const SizedBox(width: 5),
-            CupertinoButton(
+            renderFilterButton(context),
+            const SizedBox(width: 5),
+          ],
+        )
+    );
+  }
+
+  /// The active layered-navigation filter chips (sort / attribute / tag /
+  /// price / selected options), shown as a sticky bar under the search box.
+  /// Collapses to nothing when no filter is applied so the PLP doesn't show an
+  /// empty toolbar row. Chips stay LTR (brand names, prices) even in Arabic.
+  Widget renderActiveFilters(BuildContext context) {
+    return Consumer<CategoryFilterModel>(
+      builder: (context, filterModel, _) {
+        final hasSync = filterSortBy.displaySpecial != null ||
+            filterSortBy.displayOrderBy != null ||
+            getAttributeTerm(showName: true).isNotEmpty ||
+            tagName.isNotEmpty ||
+            (minPrice != null && maxPrice != null && maxPrice != 0);
+        if (!hasSync && !filterModel.hasSelection) {
+          return const SizedBox.shrink();
+        }
+        return Container(
+          alignment: Alignment.center,
+          height: 44,
+          margin: const EdgeInsets.only(bottom: 5),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.background,
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black12,
+                offset: Offset(0, 1),
+                blurRadius: 2,
+              )
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: _renderFilterTitle(context),
+          ),
+        );
+      },
+    );
+  }
+
+  /// The "Filter" trigger that opens the filter bottom sheet. Extracted so the
+  /// PLP can place it beside the search box while the active-filter chips stay
+  /// in their own row ([renderActiveFilters]).
+  Widget renderFilterButton(BuildContext context) {
+    return CupertinoButton(
               padding: EdgeInsets.zero,
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(S.of(context).filter,
                       style: Theme.of(context).textTheme.bodySmall),
@@ -85,11 +136,7 @@ extension ProductsFilterMixinWidgetExtension on ProductsFilterMixin {
                   ],
                 ),
               ),
-            ),
-            const SizedBox(width: 5),
-          ],
-        )
-    );
+            );
   }
 
   Widget _renderFilterTitle(BuildContext context) {
