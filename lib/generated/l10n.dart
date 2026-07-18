@@ -8047,6 +8047,26 @@ class S {
     );
   }
 
+  /// `Name: A to Z`
+  String get nameAToZ {
+    return Intl.message(
+      'Name: A to Z',
+      name: 'nameAToZ',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Name: Z to A`
+  String get nameZToA {
+    return Intl.message(
+      'Name: Z to A',
+      name: 'nameZToA',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Loading link...`
   String get loadingLink {
     return Intl.message(

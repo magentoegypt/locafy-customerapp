@@ -796,6 +796,8 @@
 	"dateOldest": "Date: Oldest",
 	"priceLowToHigh": "Price: Low to High",
 	"priceHighToLow": "Price: High to Low",
+	"nameAToZ": "Name: A to Z",
+	"nameZToA": "Name: Z to A",
 	"loadingLink": "Loading link...",
 	"canNotLoadThisLink": "Can not load this link",
 	"imageNetwork": "Image Network",

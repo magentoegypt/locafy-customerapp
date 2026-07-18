@@ -906,6 +906,8 @@ class MessageLookup extends MessageLookupByLibrary {
         "prev": MessageLookupByLibrary.simpleMessage("السابق"),
         "priceHighToLow": MessageLookupByLibrary.simpleMessage("السعر: تنازلي"),
         "priceLowToHigh": MessageLookupByLibrary.simpleMessage("السعر: تصاعدي"),
+        "nameAToZ": MessageLookupByLibrary.simpleMessage("الاسم: من أ إلى ي"),
+        "nameZToA": MessageLookupByLibrary.simpleMessage("الاسم: من ي إلى أ"),
         "prices": MessageLookupByLibrary.simpleMessage("الأسعار"),
         "printReceipt": MessageLookupByLibrary.simpleMessage("اطبع الايصال"),
         "printer": MessageLookupByLibrary.simpleMessage("طابعة"),

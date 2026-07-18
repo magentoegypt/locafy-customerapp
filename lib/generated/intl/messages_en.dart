@@ -918,6 +918,8 @@ class MessageLookup extends MessageLookupByLibrary {
             MessageLookupByLibrary.simpleMessage("Price: High to Low"),
         "priceLowToHigh":
             MessageLookupByLibrary.simpleMessage("Price: Low to High"),
+        "nameAToZ": MessageLookupByLibrary.simpleMessage("Name: A to Z"),
+        "nameZToA": MessageLookupByLibrary.simpleMessage("Name: Z to A"),
         "prices": MessageLookupByLibrary.simpleMessage("Menus"),
         "printReceipt": MessageLookupByLibrary.simpleMessage("Print Receipt"),
         "printer": MessageLookupByLibrary.simpleMessage("Printer"),

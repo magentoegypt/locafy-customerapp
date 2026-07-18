@@ -1038,6 +1038,36 @@ abstract class BaseFrameworks {
         ],
         Column(
           children: [
+            if (supportedSortByOptions.contains(OrderByType.title)) ...[
+              RadioListTile<String>(
+                title: Text(S.of(context).nameAToZ),
+                value: 'title-asc',
+                groupValue: selectedValue,
+                controlAffinity: ListTileControlAffinity.trailing,
+                onChanged: (selectedItem) {
+                  final filterData = selectedItem?.split('-');
+                  final orderBy = filterData?[0];
+                  final order = filterData?[1];
+                  filterSortBy =
+                      filterSortBy?.applyOrderBy(orderBy).applyOrder(order);
+                  onFilterChanged(filterSortBy);
+                },
+              ),
+              RadioListTile<String>(
+                title: Text(S.of(context).nameZToA),
+                value: 'title-desc',
+                groupValue: selectedValue,
+                controlAffinity: ListTileControlAffinity.trailing,
+                onChanged: (selectedItem) {
+                  final filterData = selectedItem?.split('-');
+                  final orderBy = filterData?[0];
+                  final order = filterData?[1];
+                  filterSortBy =
+                      filterSortBy?.applyOrderBy(orderBy).applyOrder(order);
+                  onFilterChanged(filterSortBy);
+                },
+              ),
+            ],
             if (supportedSortByOptions.contains(OrderByType.price)) ...[
               RadioListTile<String>(
                 title: Text(S.of(context).priceLowToHigh),

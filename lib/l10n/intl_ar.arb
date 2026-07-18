@@ -794,6 +794,8 @@
 	"dateOldest": "التاريخ: الأقدم",
 	"priceHighToLow": "السعر: تنازلي",
 	"priceLowToHigh": "السعر: تصاعدي",
+	"nameAToZ": "الاسم: من أ إلى ي",
+	"nameZToA": "الاسم: من ي إلى أ",
 	"canNotLoadThisLink": "لا يمكن تحميل هذا الرابط",
 	"failedToLoadImage": "فشل تحميل الصورة",
 	"imageNetwork": "الشبكة متعددة الصور",
