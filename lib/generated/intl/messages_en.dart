@@ -140,6 +140,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "albanian": MessageLookupByLibrary.simpleMessage("Albanian"),
         "all": MessageLookupByLibrary.simpleMessage("All"),
         "allBrands": MessageLookupByLibrary.simpleMessage("All Brands"),
+        "searchABrand": MessageLookupByLibrary.simpleMessage("Search a brand"),
         "allDeliveryOrders": MessageLookupByLibrary.simpleMessage("All Orders"),
         "allOrders": MessageLookupByLibrary.simpleMessage("Latest Sales"),
         "allProducts": MessageLookupByLibrary.simpleMessage("All Products"),

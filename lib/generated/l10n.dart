@@ -7307,6 +7307,16 @@ class S {
     );
   }
 
+  /// `Search a brand`
+  String get searchABrand {
+    return Intl.message(
+      'Search a brand',
+      name: 'searchABrand',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Kannada`
   String get kannada {
     return Intl.message(
