@@ -12,6 +12,7 @@ import '../../common/constants.dart';
 import '../../generated/l10n.dart';
 import '../../models/index.dart'
     show BackDropArguments, Category, CategoryModel, CartModel, Product;
+import '../../menu/maintab_delegate.dart';
 import '../../modules/dynamic_layout/tabbar/tabbar_icon.dart';
 import '../../routes/flux_navigate.dart';
 import '../../services/services.dart';
@@ -160,23 +161,33 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  (widget.isNavigation || widget.selectedId.isNotEmpty) ? IconButton(
+                  // Always show the back arrow. It used to hide unless the
+                  // screen was pushed (isNavigation) or drilled into a
+                  // subcategory, so reaching Search via the bottom-nav tab —
+                  // its own tab root — showed no arrow at all (86d3pngh1 #1).
+                  IconButton(
                     icon: Icon(
                       Icons.arrow_back_ios,
                       color: Theme.of(context).colorScheme.secondary,
                       size: 24,
                     ),
                     onPressed: () {
-                      if(widget.selectedId.isNotEmpty){
+                      if (widget.selectedId.isNotEmpty) {
+                        // Drilled into a subcategory — step back within the
+                        // screen to the category list.
                         setState(() {
                           widget.selectedId = "";
                           widget.selectedCategoryName = "";
                         });
-                      }else {
+                      } else if (Navigator.of(context).canPop()) {
                         Navigator.pop(context);
+                      } else {
+                        // Opened as the bottom-nav tab root — switch to the
+                        // Home tab (the main screen).
+                        MainTabControlDelegate.getInstance().tabAnimateTo(0);
                       }
                     },
-                  ):SizedBox(width: 25,),
+                  ),
                   widget.selectedId.isNotEmpty &&
                           widget.selectedCategoryName.isNotEmpty
                       ? AppbarTitle(text: widget.selectedCategoryName)
