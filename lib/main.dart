@@ -116,7 +116,15 @@ void main() {
       }
     } catch (e) {
       printLog(e);
-      printLog('🔴 Firebase init issue');
+      // Loud on purpose. A failure here is not cosmetic: isEnabled stays false,
+      // so DependencyInjection below binds the no-op NotificationServiceImpl
+      // and push notifications stop working app-wide while the settings toggle
+      // still reads ON. That silent downgrade is what made 86d3fh4g7 #1 so hard
+      // to diagnose — the symptom surfaced in Settings, three layers from the
+      // cause. Keep the app running (Firebase is not required to shop), but
+      // make the consequence explicit in the log.
+      printLog('🔴 Firebase init failed — push notifications will be DISABLED '
+          '(no-op notification service). Cause: $e');
     }
 
     await DependencyInjection.inject();
