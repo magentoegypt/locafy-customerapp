@@ -128,10 +128,25 @@ class ProductsScreenState extends State<ProductsScreen>
         // before onRefresh: load() synchronously clears any selection held
         // from a previously-browsed category, so getProductList never applies
         // a stale filter to this category's list.
-        categoryFilterModel.load(categoryId, appModel.langCode);
+        loadCategoryFilters();
         onRefresh();
       }
     });
+  }
+
+  /// (Re)load the layered-navigation filters for the current category. L2/L3
+  /// (main category and subcategory) get the website's trimmed list — Brand
+  /// and Colour, alongside the category tree and price slider already in the
+  /// panel. L4 and deeper keep every aggregation. See ClickUp 86d3g3mea item 3.
+  void loadCategoryFilters() {
+    final categories =
+        Provider.of<CategoryModel>(context, listen: false).categoryList;
+    categoryFilterModel.load(
+      categoryId,
+      appModel.langCode,
+      webParityOnly: CategoryFilterModel.webParityFor(
+          categories, categoryId == null ? null : '$categoryId'),
+    );
   }
 
   @override
@@ -220,6 +235,13 @@ class ProductsScreenState extends State<ProductsScreen>
           newCategoryId: categoryId,
           onTap: (categoryId, categoryName) {
             include = null;
+            // Switching subcategory from the tab strip changes the category in
+            // place without re-routing, so the panel has to be reloaded here
+            // too — otherwise it keeps the previous category's options and
+            // (via the model's own category guard) its selection, which would
+            // then be applied to the new category's product query.
+            this.categoryId = categoryId;
+            loadCategoryFilters();
             onFilter(categoryId: categoryId);
           },
         ),
@@ -272,7 +294,9 @@ class ProductsScreenState extends State<ProductsScreen>
                         productCount:
                             '${model.totalCount ?? model.productsList?.length ?? 0} ${S.of(context).items}',
                         builder: layout.isListView
-                            ? ProductList(
+                            ? Consumer<CategoryFilterModel>(
+                                builder: (context, filterModel, _) =>
+                                    ProductList(
                                 products: model.productsList,
                                 onRefresh: onRefresh,
                                 onLoadMore: onLoadMore,
@@ -286,10 +310,19 @@ class ProductsScreenState extends State<ProductsScreen>
                                 // The "Filter" trigger now sits beside the
                                 // search box (see filterButton below); this
                                 // header keeps only the active-filter chips.
-                                appbar: Align(
-                                  alignment: Alignment.centerRight,
-                                  child: renderActiveFilters(context),
-                                ),
+                                //
+                                // Null when nothing is filtered: ProductList
+                                // turns a non-null appbar into a *pinned*
+                                // SliverAppBar with a fixed 44px toolbarHeight,
+                                // so passing a widget whose child collapses to
+                                // SizedBox.shrink still left an empty band
+                                // between the search box and the products.
+                                appbar: hasActiveFilters(filterModel)
+                                    ? Align(
+                                        alignment: Alignment.centerRight,
+                                        child: renderActiveFilters(context),
+                                      )
+                                    : null,
                                 header: [
                                   // The website's category page lists the
                                   // category's OWN child categories (Boys ->
@@ -308,6 +341,14 @@ class ProductsScreenState extends State<ProductsScreen>
                                     newCategoryId: categoryId,
                                     onTap: (categoryId, categoryName) {
                                       include = null;
+                                      // Same in-place category switch as the
+                                      // backdrop layout: reload the panel for
+                                      // the new category before onFilter fires
+                                      // getProductList, or the previous
+                                      // category's selection is applied to it
+                                      // (86d3g3mea item 3).
+                                      this.categoryId = categoryId;
+                                      loadCategoryFilters();
                                       onFilter(categoryId: categoryId);
                                     },
                                   ),
@@ -347,7 +388,7 @@ class ProductsScreenState extends State<ProductsScreen>
                                       ),
                                     ),
                                 ],
-                              )
+                              ))
                             : AsymmetricView(
                                 products: model.productsList,
                                 isFetching: model.isFetching,

@@ -1296,19 +1296,13 @@ class SettingScreenState extends State<SettingScreen>
                         ),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 0.0 //isTitle ? 0.0 : itemPadding,
-                      ),
-                      child: _SettingItem(
-                        icon: SettingScreenItemIcon(icon: CupertinoIcons.info),
-                        title: S.of(context).contactUs,
-                        onTap: (){
-                          Tools.launchURL("${serverConfig['url']}/contact");
-                        },
-                      ),
-                    ),
-
+                    // The top-level "Contact us" / "تواصل معنا" tile was removed
+                    // (86d3fh4g7 #6). It was hand-placed here rather than driven
+                    // by [sections], which is why deleting the "for sellers"
+                    // Section left it on screen and the fix looked like it had
+                    // failed. Contact us is still reachable under Customer
+                    // Service. (It also launched an unlocalised "/contact" with
+                    // no store code, unlike every sections entry.)
                     Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 30,
@@ -1511,17 +1505,25 @@ class SettingScreenState extends State<SettingScreen>
             .startsWith('ar');
     if (!isArabic || !url.contains('/eg-en/')) return url;
 
-    // CMS pages that do not have an Arabic version yet -> keep English.
-    const keepEnglish = ['faqs-english', 'privacy-policy-en'];
+    // CMS pages with no Arabic version -> keep the English URL. Empty now that
+    // all four support pages exist in Arabic, but keep the escape hatch: the
+    // generic /eg-en/ -> /eg-ar/ rewrite below would otherwise send a new
+    // English-only page to the store's no-route handler, which 302s to a
+    // catalog-search results page rather than showing a 404.
+    const keepEnglish = <String>[];
     for (final slug in keepEnglish) {
       if (url.contains(slug)) return url;
     }
 
     var localized = url.replaceFirst('/eg-en/', '/eg-ar/');
-    // CMS pages whose Arabic slug differs from the English one.
+    // CMS pages whose Arabic slug differs from the English one. All verified
+    // live against the eg-ar store view and matching the website's Arabic
+    // footer links (86d3fh4g7 #4).
     const slugMap = {
       'delivery-returns-en': 'delivery-returns-ar',
       'terms-conditions-en': 'terms-conditions-ar',
+      'faqs-english': 'faqs-ar',
+      'privacy-policy-en': 'privacy-policy-ar',
     };
     slugMap.forEach((en, ar) {
       localized = localized.replaceFirst(en, ar);

@@ -15,6 +15,7 @@ import '../../models/index.dart'
         AppModel,
         BlogModel,
         CategoryFilterModel,
+        CategoryModel,
         FilterAttributeModel,
         ProductModel;
 import '../../modules/dynamic_layout/helper/helper.dart';
@@ -134,9 +135,20 @@ class _BackdropMenuState extends State<BackdropMenu> {
     // Load the web-parity attribute filters (Brand/Colour/Size/Gender/…) for
     // the category this sheet was opened on. load() refreshes counts for the
     // current category and resets a stale selection if the category changed.
+    //
+    // The parity flag has to be recomputed here, not left to default: this
+    // load runs *after* the one in ProductsScreen.initState, so omitting it
+    // silently replaced the trimmed L2/L3 list with the full aggregation set
+    // the moment the sheet was opened (86d3g3mea item 3).
     final lang = Provider.of<AppModel>(context, listen: false).langCode;
-    Provider.of<CategoryFilterModel>(context, listen: false)
-        .load(widget.categoryId, lang);
+    final categories =
+        Provider.of<CategoryModel>(context, listen: false).categoryList;
+    Provider.of<CategoryFilterModel>(context, listen: false).load(
+      widget.categoryId,
+      lang,
+      webParityOnly:
+          CategoryFilterModel.webParityFor(categories, widget.categoryId),
+    );
   }
 
   void _onFilter({
@@ -232,7 +244,9 @@ class _BackdropMenuState extends State<BackdropMenu> {
         bottom: 10,
       ),
       title: Text(
-        S.of(context).byPrice,
+        // "Price" / "السعر" — matches the website's filter heading. Not
+        // `byPrice`, which is also the sort-by chip label ("By Price").
+        S.of(context).filterPrice,
         style: Theme.of(context).textTheme.titleLarge!.copyWith(
               fontWeight: FontWeight.w700,
             ),
@@ -571,11 +585,19 @@ class _BackdropMenuState extends State<BackdropMenu> {
           if (ServerConfig().isListingType)
             BackDropListingMenu(onFilter: _onFilter),
 
-          if (!ServerConfig().isListingType &&
-              ServerConfig().type != ConfigType.shopify &&
-              widget.showPrice) ...[
-            renderPriceSlider(),
-          ],
+          // Order below mirrors the website's layered navigation:
+          // Category → attributes → Price. Verified against
+          // locafy.market/eg-en/kidswear/boys.html (Category, Brand, Colour,
+          // Price) and .../boys/shoes.html (attributes then Price — a leaf
+          // category has no Category block). Price used to sit directly under
+          // Sort by, and Category at the very bottom. See ClickUp 86d3g3mea.
+          if (widget.showCategory)
+            CategoryMenu(
+              onFilter: (category) => _onFilter(
+                categoryId: category.id,
+                categoryName: category.name,
+              ),
+            ),
 
           // Web-parity attribute filters (Brand, Colour, Size, Gender, …),
           // driven by GraphQL aggregations. Replaces the old no-op
@@ -585,20 +607,18 @@ class _BackdropMenuState extends State<BackdropMenu> {
               ServerConfig().type != ConfigType.shopify)
             renderCategoryAttributeFilters(),
 
+          if (!ServerConfig().isListingType &&
+              ServerConfig().type != ConfigType.shopify &&
+              widget.showPrice) ...[
+            renderPriceSlider(),
+          ],
+
           /// filter by tags
           widget.isUseBlog
               ? const SizedBox()
               : BackDropTagMenu(
                   onChanged: (tagId) => _onFilter(tagId: tagId),
                 ),
-
-          if (widget.showCategory)
-            CategoryMenu(
-              onFilter: (category) => _onFilter(
-                categoryId: category.id,
-                categoryName: category.name,
-              ),
-            ),
 
           /// render Apply button
           if (!ServerConfig().isListingType &&

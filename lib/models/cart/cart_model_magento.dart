@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../common/config.dart';
 import '../../common/tools.dart';
+import '../../data/boxes.dart';
 import '../../generated/l10n.dart';
 import '../../services/services.dart';
 import '../entities/product.dart';
@@ -238,6 +239,17 @@ class CartModelMagento
     taxes = [];
     taxesTotal = 0.0;
     notifyListeners();
+  }
+
+  @override
+  void clearAfterOrder() {
+    clearCart(false);
+    // Guests only: a signed-in customer's address belongs to their account and
+    // is re-fetched anyway, so keeping the pre-fill is a convenience. For a
+    // guest it's the previous order's address (86d3g53f8 #8).
+    if (!UserBox().isLoggedIn) {
+      clearSavedAddress();
+    }
   }
 
   /// Re-fetch the cart from the server so items added, removed or updated on

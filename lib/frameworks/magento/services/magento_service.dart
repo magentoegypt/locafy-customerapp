@@ -1084,12 +1084,24 @@ class MagentoService extends BaseServices {
     try {
       var endPoint = '?';
       if (categoryId != null) {
+        // The synthesized "Brands" menu node has no catalog category of its
+        // own: attachBrandsAtTopLevel gives it the id "-<parentCategoryId>".
+        // Querying that literally sent category_id=-192, which matches nothing,
+        // so tapping Brands opened a "No Product" grid even though its brand
+        // strip rendered fine. Resolve it back to the parent category and show
+        // that category's products; the brand strip then narrows by brand.
+        // (86d3qecbf / brands submenu blank.)
+        var resolvedCategoryId = '$categoryId';
+        if (resolvedCategoryId.startsWith('-') &&
+            int.tryParse(resolvedCategoryId.substring(1)) != null) {
+          resolvedCategoryId = resolvedCategoryId.substring(1);
+        }
         if(brandIds.contains(categoryId)){
           endPoint +=
           'searchCriteria[filter_groups][0][filters][0][field]=brand&searchCriteria[filter_groups][0][filters][0][value]=$categoryId&searchCriteria[filter_groups][0][filters][0][condition_type]=eq';
         }else{
           endPoint +=
-          'searchCriteria[filter_groups][0][filters][0][field]=category_id&searchCriteria[filter_groups][0][filters][0][value]=$categoryId&searchCriteria[filter_groups][0][filters][0][condition_type]=eq';
+          'searchCriteria[filter_groups][0][filters][0][field]=category_id&searchCriteria[filter_groups][0][filters][0][value]=$resolvedCategoryId&searchCriteria[filter_groups][0][filters][0][condition_type]=eq';
         }
 
       }
@@ -1208,9 +1220,18 @@ class MagentoService extends BaseServices {
   /// applied back through REST `fetchProductsByCategory` so the product list,
   /// prices and paging stay on the existing REST path. See docs/qa-followups.md
   /// item 3.
+  /// [webParityOnly] restricts the panel to the attributes the website
+  /// actually exposes on a subcategory page — Brand and Colour (the web's
+  /// other two, Category and Price, are already rendered by the category tree
+  /// and the price slider). Applied for Magento L2/L3 (main category and
+  /// subcategory) so the app's filter list matches locafy.market, e.g.
+  /// /eg-ar/kidswear/boys.html, which shows exactly
+  /// فئة / الماركة / الألوان / السعر. L4 and deeper keep the full aggregation
+  /// set. See ClickUp 86d3g3mea item 3.
   Future<List<CategoryFilterAttribute>> fetchCategoryFilters({
     required String categoryId,
     String? lang,
+    bool webParityOnly = false,
   }) async {
     try {
       final langCode = (lang ?? SettingsBox().languageCode ?? 'en').toLowerCase();
@@ -1237,7 +1258,18 @@ class MagentoService extends BaseServices {
 
       // `category_id` and `price` are already covered by the category tree and
       // the price slider in the panel — don't duplicate them as chips.
-      const skip = {'category_id', 'price'};
+      //
+      // The category aggregation comes back as `category_uid`, NOT
+      // `category_id`, so it used to slip past this set and render a
+      // "Category" group whose option values are base64 ids (`Mjcw` = "270").
+      // Those were then sent to REST as
+      // `filter_groups[n][filters][0][field]=category_uid` — a field REST
+      // doesn't have, and it doesn't decode base64 either — so every tap in
+      // that group returned an empty list.
+      const skip = {'category_id', 'category_uid', 'price'};
+
+      // The attribute codes the website's layered navigation exposes.
+      const webParityCodes = {'brand', 'all_color'};
 
       // Merge attributes that share a display label into one group (e.g. the
       // several category-specific `*_producttype` codes all show as "Product
@@ -1248,6 +1280,7 @@ class MagentoService extends BaseServices {
       for (final agg in aggs) {
         final code = '${agg['attribute_code'] ?? ''}'.trim();
         if (code.isEmpty || skip.contains(code)) continue;
+        if (webParityOnly && !webParityCodes.contains(code)) continue;
         final label = '${agg['label'] ?? code}'.trim();
         if (label.isEmpty) continue;
         final options = agg['options'];
@@ -1726,6 +1759,13 @@ class MagentoService extends BaseServices {
       'res.statusCode: ${res.statusCode}'.log();
 
       if (res.statusCode == 200) {
+        // The quote is consumed by the order. Holding on to the id meant the
+        // next guest checkout kept posting to guest-carts/<spent-id>/… until
+        // something happened to mint a new quote, which surfaced as errors and
+        // a checkout that never finished loading (86d3g53f8 #8).
+        if (isGuest) {
+          guestQuoteId = null;
+        }
 
         var order = await getSingleOrder(user: user, entityId: body.toString());
       //  order.id = body.toString();

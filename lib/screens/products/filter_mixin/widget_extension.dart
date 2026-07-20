@@ -29,15 +29,26 @@ extension ProductsFilterMixinWidgetExtension on ProductsFilterMixin {
   /// price / selected options), shown as a sticky bar under the search box.
   /// Collapses to nothing when no filter is applied so the PLP doesn't show an
   /// empty toolbar row. Chips stay LTR (brand names, prices) even in Arabic.
+  /// Whether any filter is currently applied — the exact condition
+  /// [renderActiveFilters] uses to decide whether to draw the chip bar.
+  ///
+  /// Exposed because the list layout hands its chip bar to `ProductList` as a
+  /// *pinned* `SliverAppBar`, which reserves its 44px whether or not the child
+  /// draws anything. Callers must skip the slot entirely when this is false,
+  /// otherwise an empty bar sits under the search box.
+  bool hasActiveFilters(CategoryFilterModel filterModel) {
+    final hasSync = filterSortBy.displaySpecial != null ||
+        filterSortBy.displayOrderBy != null ||
+        getAttributeTerm(showName: true).isNotEmpty ||
+        tagName.isNotEmpty ||
+        (minPrice != null && maxPrice != null && maxPrice != 0);
+    return hasSync || filterModel.hasSelection;
+  }
+
   Widget renderActiveFilters(BuildContext context) {
     return Consumer<CategoryFilterModel>(
       builder: (context, filterModel, _) {
-        final hasSync = filterSortBy.displaySpecial != null ||
-            filterSortBy.displayOrderBy != null ||
-            getAttributeTerm(showName: true).isNotEmpty ||
-            tagName.isNotEmpty ||
-            (minPrice != null && maxPrice != null && maxPrice != 0);
-        if (!hasSync && !filterModel.hasSelection) {
+        if (!hasActiveFilters(filterModel)) {
           return const SizedBox.shrink();
         }
         return Container(

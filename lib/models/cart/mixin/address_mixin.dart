@@ -88,6 +88,17 @@ mixin AddressMixin on CartMixin {
     address = null;
   }
 
+  /// Clears the shipping address from memory *and* from the encrypted box.
+  ///
+  /// [clearAddress] drops only the in-memory copy. That's enough on logout,
+  /// where the whole box is wiped separately, but not after a guest order: the
+  /// persisted copy would be read straight back by [getShippingAddress] and
+  /// pre-filled into the next checkout (86d3g53f8 #8).
+  void clearSavedAddress() {
+    address = null;
+    UserBox().shippingAddress = null;
+  }
+
   void setAddress(data) {
     address = data;
     saveShippingAddress(data);

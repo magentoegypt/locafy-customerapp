@@ -96,15 +96,24 @@ class _RelatedProductState extends State<RelatedProduct> {
                           padding: widget.padding ??
                               const EdgeInsets.symmetric(horizontal: 16),
                           scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              for (var item in snapshot.data!)
-                                ProductCard(
-                                  item: item,
-                                  width: constraint.maxWidth * 0.35,
-                                  config: ProductConfig.empty(),
-                                )
-                            ],
+                          // Cards carry a variable number of swatch/size rows,
+                          // so they have different natural heights. A bare Row
+                          // centres them, which staggered the cards vertically
+                          // (86d3r0k6x). IntrinsicHeight sizes the row to the
+                          // tallest card and `stretch` makes every card take
+                          // that height, so tops and bottoms line up.
+                          child: IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                for (var item in snapshot.data!)
+                                  ProductCard(
+                                    item: item,
+                                    width: constraint.maxWidth * 0.35,
+                                    config: ProductConfig.empty(),
+                                  )
+                              ],
+                            ),
                           ),
                         ),
                       ],

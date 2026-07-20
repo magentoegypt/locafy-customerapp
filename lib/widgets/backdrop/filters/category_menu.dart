@@ -173,7 +173,9 @@ class _CategoryTreeState extends State<CategoryMenu> {
             bottom: 5,
           ),
           title: Text(
-            S.of(context).byCategory,
+            // "Category" / "فئة" — matches the website's filter heading.
+            // Not `byCategory`, which the sidebar still uses.
+            S.of(context).filterCategory,
             style: Theme.of(context).textTheme.titleLarge!.copyWith(
                   fontWeight: FontWeight.w700,
                 ),

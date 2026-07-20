@@ -37,6 +37,18 @@ abstract class CartModel
 
   void clearCart(bool isFromCartScreen);
 
+  /// Full reset once an order has been placed.
+  ///
+  /// [clearCart] deliberately keeps the address — it also runs when the shopper
+  /// merely empties the basket and on every app start, and discarding their
+  /// details there would be hostile. But after an order completes a guest's
+  /// address has to go too, or the next guest checkout pre-fills the previous
+  /// order's address (86d3g53f8 #8). Signed-in customers keep theirs: it's tied
+  /// to their account and re-fetched anyway.
+  ///
+  /// Call this from order-completion paths instead of [clearCart].
+  void clearAfterOrder();
+
   /// Re-fetch the cart from the server so changes made on another platform
   /// (web / other app) are reflected without re-login. Overridden by
   /// frameworks that support a server cart (Magento); no-op by default.

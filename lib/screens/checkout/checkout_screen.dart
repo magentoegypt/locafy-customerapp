@@ -449,7 +449,10 @@ class _CheckoutState extends BaseScreen<Checkout> {
                 setState(() {
                   newOrder = order;
                 });
-                cartModel.clearCart(false);
+                // Not clearCart: a guest's saved address must be dropped too,
+                // or the next guest checkout pre-fills this order's address
+                // (86d3g53f8 #8).
+                cartModel.clearAfterOrder();
                 await Services()
                     .widget
                     .updateOrderAfterCheckout(context, order);

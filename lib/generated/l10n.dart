@@ -899,6 +899,36 @@ class S {
     );
   }
 
+  /// `Shipping`
+  String get shippingLabel {
+    return Intl.message(
+      'Shipping',
+      name: 'shippingLabel',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Price`
+  String get filterPrice {
+    return Intl.message(
+      'Price',
+      name: 'filterPrice',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Category`
+  String get filterCategory {
+    return Intl.message(
+      'Category',
+      name: 'filterCategory',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `No internet connection`
   String get noInternetConnection {
     return Intl.message(
@@ -8997,7 +9027,7 @@ class S {
     );
   }
 
-  /// `Please enter the number without 0`
+  /// `Please enter a 10-digit phone number with no spaces and no leading 0.`
   String get validMobileWithout0 {
     return Intl.message(
       'Please enter a 10-digit phone number with no spaces and no leading 0.',
@@ -9007,7 +9037,7 @@ class S {
     );
   }
 
-  /// `Please enter the valid number`
+  /// `Please enter a 10-digit phone number with no spaces and no leading 0.`
   String get validMobile {
     return Intl.message(
       'Please enter a 10-digit phone number with no spaces and no leading 0.',

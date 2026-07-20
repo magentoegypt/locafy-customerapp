@@ -217,6 +217,9 @@ class MessageLookup extends MessageLookupByLibrary {
         "buyNow": MessageLookupByLibrary.simpleMessage("Buy Now"),
         "byCategory": MessageLookupByLibrary.simpleMessage("By Category"),
         "byPrice": MessageLookupByLibrary.simpleMessage("By Price"),
+        "filterCategory": MessageLookupByLibrary.simpleMessage("Category"),
+        "filterPrice": MessageLookupByLibrary.simpleMessage("Price"),
+        "shippingLabel": MessageLookupByLibrary.simpleMessage("Shipping"),
         "bySignup": MessageLookupByLibrary.simpleMessage(
             "By signing up, you agree to our "),
         "byTag": MessageLookupByLibrary.simpleMessage("By Tag"),

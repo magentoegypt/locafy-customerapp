@@ -485,9 +485,13 @@ abstract class BaseFrameworks {
                 // The backend often returns an empty shipping-method title, so
                 // the summary's shipping row showed a blank label next to its
                 // cost. Fall back to a "Shipping" label (86d3g53f8 #6).
+                // `shippingLabel`, not `shipping`: the latter is Arabic
+                // "طريقة الشحن" ("shipping method"), which reads correctly as a
+                // checkout step heading but not as this row's label — QA asked
+                // for "الشحن" here specifically.
                 (model.shippingMethod!.title?.trim().isNotEmpty ?? false)
                     ? model.shippingMethod!.title!.trim()
-                    : S.of(context).shipping,
+                    : S.of(context).shippingLabel,
               ),
             ),
           ),

@@ -157,8 +157,11 @@ class _ShippingMethodsState extends State<ShippingMethods> {
                                             ?.trim()
                                             .isNotEmpty ??
                                         false)
+                                    // See frameworks.dart: `shippingLabel`
+                                    // ("الشحن"), not `shipping`
+                                    // ("طريقة الشحن").
                                     ? model.shippingMethods![i].title!.trim()
-                                    : S.of(context).shipping),
+                                    : S.of(context).shippingLabel),
                             const SizedBox(height: 5),
                             if (model.shippingMethods![i].cost! > 0.0 ||
                                 !isNotBlank(

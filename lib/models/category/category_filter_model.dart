@@ -1,7 +1,10 @@
-import 'package:flutter/foundation.dart';
+// `Category` here is the app's catalog entity — hide Flutter's unrelated
+// `Category` annotation so the entity import wins.
+import 'package:flutter/foundation.dart' hide Category;
 
 import '../../frameworks/magento/services/magento_service.dart';
 import '../../services/index.dart';
+import '../entities/category.dart';
 import '../entities/category_filter.dart';
 
 /// Web-parity layered-navigation filters for the product-listing (category)
@@ -29,6 +32,38 @@ class CategoryFilterModel extends ChangeNotifier {
 
   bool get hasSelection => _selected.values.any((s) => s.isNotEmpty);
 
+  /// Magento level of [id] within [categories], using the numbering from the
+  /// admin and the ticket: **L2** = main category (Kidswear, 192), **L3** =
+  /// subcategory (Boys, 270), **L4** = sub-subcategory (Shoes, 286). Returns 0
+  /// when the id isn't in the tree (brand pages, search results).
+  ///
+  /// `MagentoService.getCategories` stores main categories with `parent == '0'`
+  /// and never adds Magento's two root levels to the app's tree, so a top-level
+  /// category walks to depth 1 — hence the `+ 1` to land back on Magento's
+  /// numbering.
+  static int levelOf(Map<String?, Category> categories, String? id) {
+    if (id == null) return 0;
+    var depth = 0;
+    var current = categories[id];
+    // Bounded so a malformed parent cycle can't spin here.
+    while (current != null && depth < 10) {
+      depth++;
+      final parent = current.parent;
+      if (parent == null || parent == '0') break;
+      current = categories[parent];
+    }
+    return depth == 0 ? 0 : depth + 1;
+  }
+
+  /// Whether [id] should show the website's trimmed filter list. Must be used
+  /// by *every* caller of [load] — the sheet reloads filters when it opens, so
+  /// a caller that omits it silently overwrites the trimmed set with the full
+  /// one. See ClickUp 86d3g3mea item 3.
+  static bool webParityFor(Map<String?, Category> categories, String? id) {
+    final level = levelOf(categories, id);
+    return level == 2 || level == 3;
+  }
+
   int get selectedCount =>
       _selected.values.fold(0, (sum, s) => sum + s.length);
 
@@ -55,7 +90,15 @@ class CategoryFilterModel extends ChangeNotifier {
   /// any prior selection is cleared synchronously (filters are
   /// category-scoped) so a stale selection can never leak onto a new
   /// category's product query. Safe to call without awaiting.
-  Future<void> load(String? categoryId, String lang) async {
+  ///
+  /// [webParityOnly] trims the panel to the attributes the website shows on a
+  /// subcategory page (Brand, Colour) — passed for level 2/3 categories. See
+  /// [MagentoService.fetchCategoryFilters].
+  Future<void> load(
+    String? categoryId,
+    String lang, {
+    bool webParityOnly = false,
+  }) async {
     final api = Services().api;
     if (api is! MagentoService || categoryId == null) {
       _selected.clear();
@@ -74,8 +117,11 @@ class CategoryFilterModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result =
-          await api.fetchCategoryFilters(categoryId: categoryId, lang: lang);
+      final result = await api.fetchCategoryFilters(
+        categoryId: categoryId,
+        lang: lang,
+        webParityOnly: webParityOnly,
+      );
       // Guard against a stale response arriving after the shopper moved on.
       if (categoryId == _categoryId) {
         _attributes = result;

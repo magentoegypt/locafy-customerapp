@@ -33,8 +33,9 @@ class _OrderedSuccessState extends BaseScreen<OrderedSuccess> {
 
   Future<bool> _backToShop() async {
     // Local reset only: the order already consumed the server quote, so there
-    // are no server items to delete.
-    Provider.of<CartModel>(context, listen: false).clearCart(false);
+    // are no server items to delete. clearAfterOrder also drops a guest's
+    // saved address (86d3g53f8 #8).
+    Provider.of<CartModel>(context, listen: false).clearAfterOrder();
     // Forget the tab that was active when checkout started (usually the cart)
     // so the dashboard opens on the default home tab.
     MainTabControlDelegate.getInstance().index = null;

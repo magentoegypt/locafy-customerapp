@@ -216,6 +216,9 @@ class MessageLookup extends MessageLookupByLibrary {
         "buyNow": MessageLookupByLibrary.simpleMessage("اشتري الآن"),
         "byCategory": MessageLookupByLibrary.simpleMessage("حسب التصنيف"),
         "byPrice": MessageLookupByLibrary.simpleMessage("حسب السعر"),
+        "filterCategory": MessageLookupByLibrary.simpleMessage("فئة"),
+        "filterPrice": MessageLookupByLibrary.simpleMessage("السعر"),
+        "shippingLabel": MessageLookupByLibrary.simpleMessage("الشحن"),
         "bySignup":
             MessageLookupByLibrary.simpleMessage("بالتسجيل ، فإنك توافق على "),
         "byTag": MessageLookupByLibrary.simpleMessage("بواسطة الوسم"),
