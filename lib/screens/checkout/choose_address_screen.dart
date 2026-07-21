@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:country_pickers/country_pickers.dart';
 import 'package:flutter/material.dart';
 import 'package:magentoegypt/screens/checkout/widgets/shipping_address.dart';
 import 'package:provider/provider.dart';
@@ -100,89 +101,62 @@ class _StateChooseAddress extends BaseScreen<ChooseAddressScreen> {
     getDataFromLocal();
   }
 
+  /// Mirrors ShippingAddress.convertToCard: every row is guarded, so a null or
+  /// empty field disappears instead of printing the literal text "null".
   Widget convertToCard(BuildContext context, Address address) {
     final s = S.of(context);
+
+    Widget row(String label, String? value) {
+      if (value == null || value.isEmpty || value == 'null') {
+        return const SizedBox();
+      }
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 4.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              '$label:  ',
+              style: TextStyle(color: Theme.of(context).primaryColor),
+            ),
+            Flexible(
+              child: Column(
+                children: <Widget>[Text(value)],
+              ),
+            )
+          ],
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         const SizedBox(height: 10.0),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              '${s.streetName}:  ',
-              style: TextStyle(color: Theme.of(context).primaryColor),
-            ),
-            Flexible(
-              child: Column(
-                children: <Widget>[Text(address.street.toString())],
-              ),
-            )
-          ],
-        ),
-        const SizedBox(height: 4.0),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              '${s.city}:  ',
-              style: TextStyle(color: Theme.of(context).primaryColor),
-            ),
-            Flexible(
-              child: Column(
-                children: <Widget>[Text(address.city.toString())],
-              ),
-            )
-          ],
-        ),
-        const SizedBox(height: 4.0),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              '${s.stateProvince}:  ',
-              style: TextStyle(color: Theme.of(context).primaryColor),
-            ),
-            Flexible(
-              child: Column(
-                children: <Widget>[Text(address.state.toString())],
-              ),
-            )
-          ],
-        ),
-        const SizedBox(height: 4.0),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              '${s.country}:  ',
-              style: TextStyle(color: Theme.of(context).primaryColor),
-            ),
-            Flexible(
-              child: Column(
-                children: <Widget>[Text(address.country.toString())],
-              ),
-            )
-          ],
-        ),
-        const SizedBox(height: 4.0),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              '${s.zipCode}:  ',
-              style: TextStyle(color: Theme.of(context).primaryColor),
-            ),
-            Flexible(
-              child: Column(
-                children: <Widget>[Text(address.zipCode.toString())],
-              ),
-            )
-          ],
-        ),
-        const SizedBox(height: 10.0),
+        row(s.streetName, address.street),
+        // City = governorate (Magento region, held in address.state) and
+        // Zone = district (Magento city, held in address.city). These two were
+        // swapped here, so the labels contradicted the form, the order summary
+        // and the website.
+        row(s.city, address.state),
+        row(s.zone, address.city),
+        // The country is stored as the ISO-2 code ("EG"); render the name.
+        row(s.country, _countryName(address.country)),
+        // No zip-code row: checkout does not collect a postcode (it is
+        // configured invisible), so it was only ever rendering "null".
+        const SizedBox(height: 6.0),
       ],
     );
+  }
+
+  /// ISO-2 code -> display name, falling back to whatever we were given.
+  String? _countryName(String? code) {
+    if (code == null || code.isEmpty) return null;
+    try {
+      return CountryPickerUtils.getCountryByIsoCode(code).name;
+    } catch (_) {
+      return code;
+    }
   }
 
   Widget _renderBillingAddress() {
@@ -331,8 +305,17 @@ class _StateChooseAddress extends BaseScreen<ChooseAddressScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: <Widget>[
-            _renderBillingAddress(),
-            _renderShippingAddress(),
+            // Only in the checkout picker. On Magento, User.billing and
+            // User.shipping are both built from the SAME default address
+            // (user.dart:191-199), so these two cards render identical content
+            // under two different headings — and the saved-address list below
+            // shows that same address a third time. In the address book that is
+            // pure duplication; in checkout they stay, as the quick way to pick
+            // the default without scrolling.
+            if (!widget.isFromAddrssHistory) ...[
+              _renderBillingAddress(),
+              _renderShippingAddress(),
+            ],
             Column(
               children: [
                 if (listAddress.isEmpty && !isLoading)

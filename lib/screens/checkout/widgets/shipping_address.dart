@@ -216,11 +216,12 @@ class _ShippingAddressState extends State<ShippingAddress> {
 
             cities = await Services().widget.loadCitiesWithCountry(country);
             // The city list holds the governorates (Magento regions); the
-            // current selection lives in address.state.
-            var city = cities?.firstWhereOrNull(
-                  (element) => element.name == address?.state,
-            );
-            city ??= cities?.firstOrNull;
+            // current selection lives in address.state. Same rule as
+            // loadCountry(): never guess a governorate the shopper did not pick.
+            var city = _resolveGovernorate(cities, address?.state);
+            if (city == null && (address?.state?.trim().isEmpty ?? true)) {
+              city = cities?.firstOrNull;
+            }
 
             /// Load zipCode
             if (city != null) {
@@ -260,18 +261,48 @@ class _ShippingAddressState extends State<ShippingAddress> {
     // Load the governorate (region) and district lists so the add/edit
     // address form shows the same dropdowns as the checkout address step.
     cities = await Services().widget.loadCitiesWithCountry(country);
-    var city = cities?.firstWhereOrNull(
-      (element) => element.name == address?.state,
-    );
-    city ??= cities?.firstOrNull;
+    // Only fall back to the first governorate when the address has none yet
+    // (a brand-new address). If it HAS one that we cannot resolve, leave the
+    // dropdown unselected so the shopper re-picks it — the old
+    // `city ??= cities?.firstOrNull` silently selected Aswan and then loaded
+    // Aswan's districts, so the Zone dropdown could not contain the saved
+    // value either.
+    var city = _resolveGovernorate(cities, address?.state);
+    if (city == null && (address?.state?.trim().isEmpty ?? true)) {
+      city = cities?.firstOrNull;
+    }
     if (city != null) {
       final zonesList = await Services().widget.loadZones(city);
       if (zonesList != null) {
         zones = zonesList;
       }
+    } else {
+      zones = [];
     }
     refresh();
   }
+
+  /// Resolve the saved governorate against the dropdown's list.
+  ///
+  /// The two sides come from DIFFERENT backing tables: the dropdown is fed by
+  /// the City/Region Manager extension (`states_name`), while `address.state`
+  /// is Magento core's `region.region`. Both are fetched over eg-en, so this is
+  /// not a language problem — the same governorate is simply spelled
+  /// differently in the two tables ("البحيرة" vs "Al Beheira"), and a strict
+  /// == comparison never matches for an address created outside the app.
+  ///
+  /// Match forgivingly, but NEVER guess: returning the wrong governorate is
+  /// worse than returning none, because the form would then silently re-save
+  /// the address under a governorate the shopper never chose.
+  City? _resolveGovernorate(List<City>? list, String? savedState) {
+    if (list == null || list.isEmpty) return null;
+    final saved = savedState?.trim().toLowerCase() ?? '';
+    if (saved.isEmpty) return null;
+    return list.firstWhereOrNull(
+          (o) => (o.name ?? '').trim().toLowerCase() == saved,
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {

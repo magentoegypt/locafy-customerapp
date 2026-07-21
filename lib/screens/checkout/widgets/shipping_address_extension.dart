@@ -228,8 +228,13 @@ extension on _ShippingAddressState {
     // *regions* — the selection is kept in address.state so the order payload
     // sends it as `region` and the summary shows its name (was showing the
     // dead "SG" default).
-    City? firstCity = cities!.firstWhereOrNull(
-        (o) => o.name.toString() == address!.state.toString());
+    // Trim/case-insensitive: the saved value and the list come from different
+    // backing tables and differ in spacing/casing more often than not.
+    final savedState = address!.state?.trim().toLowerCase() ?? '';
+    City? firstCity = savedState.isEmpty
+        ? null
+        : cities!.firstWhereOrNull(
+            (o) => (o.name ?? '').trim().toLowerCase() == savedState);
 
     if (firstCity != null) {
       value = firstCity.id;
@@ -286,8 +291,11 @@ extension on _ShippingAddressState {
 
     // The zones are the store's Magento *cities* (districts) — the selection
     // is kept in address.city, matching what the website saves on the order.
-    City? firstCity = zones!
-        .firstWhereOrNull((o) => o.name.toString() == address!.city.toString());
+    final savedZone = address!.city?.trim().toLowerCase() ?? '';
+    City? firstCity = savedZone.isEmpty
+        ? null
+        : zones!.firstWhereOrNull(
+            (o) => (o.name ?? '').trim().toLowerCase() == savedZone);
 
     if (firstCity != null) {
       value = firstCity.id;
