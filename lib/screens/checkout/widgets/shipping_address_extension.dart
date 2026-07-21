@@ -589,7 +589,32 @@ extension on _ShippingAddressState {
                   if (_formKey.currentState!.validate()) {
                     if (!checkToSave()) return;
                     _formKey.currentState!.save();
-                    await Services().api.saveUserInfo(address!,false);
+                    // saveUserInfo rethrows, and this handler is async with no
+                    // catch — so a rejected save became an unhandled async
+                    // error: no message, and the Navigator.pop below never ran.
+                    // The screen simply sat there, which QA reported as
+                    // "nothing appears and it doesn't save" (86d3rrpqr).
+                    //
+                    // Worth surfacing because the save is fragile by design: it
+                    // PUTs the customer's WHOLE address book to customers/me and
+                    // the write is atomic, so one address the backend dislikes
+                    // blocks every later save. That is not hypothetical — the
+                    // city validator used to reject digits and punctuation
+                    // (rejecting real cities like "6 أكتوبر" and "New Cairo 5"),
+                    // fixed backend-side in 86d3ru7vg. Whatever the next such
+                    // rejection is, the shopper should see it rather than tap
+                    // into silence.
+                    try {
+                      await Services().api.saveUserInfo(address!, false);
+                    } catch (e) {
+                      // saveUserInfo already wraps the backend's message via
+                      // MagentoHelper.getErrorMessage, so the Exception text is
+                      // the human-readable reason — just strip Dart's prefix.
+                      _showMessage(
+                        e.toString().replaceFirst(RegExp(r'^Exception:\s*'), ''),
+                      );
+                      return;
+                    }
                     if(widget.isFromAddrssHistory){
                       Navigator.pop(context);
                     }else {

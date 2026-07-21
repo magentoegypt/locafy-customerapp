@@ -1548,13 +1548,16 @@ class SettingScreenState extends State<SettingScreen>
         MainTabControlDelegate.getInstance().tabAnimateTo(2);
         break;
       case 'addressBook':
+        // ChooseAddressScreen, not ShippingAddress: the latter is the *add a
+        // new address* form, so "Address Book" opened an empty form and the
+        // shopper's saved addresses were nowhere to be seen — reported as "no
+        // old addresses show up" (86d3rrpqr). ChooseAddressScreen lists the
+        // saved addresses and offers a "+" to add one, and is what the other
+        // entry point to this screen in this same file already uses.
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ShippingAddress(
-              isFromAddrssHistory: true,
-              isFromCheckout: false,
-            ),
+            builder: (context) => ChooseAddressScreen(updateAddress, true),
           ),
         );
         break;

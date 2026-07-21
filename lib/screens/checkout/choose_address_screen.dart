@@ -34,6 +34,12 @@ class _StateChooseAddress extends BaseScreen<ChooseAddressScreen> {
     final loggedIn = Provider.of<UserModel>(context, listen: false).loggedIn;
     if (loggedIn) {
       getUserInfo().then((_) async {
+        // Re-read the box: the call above went to customers/me and refreshed
+        // UserBox().addresses via MagentoService.saveDataToLocal(). Without
+        // this, listAddress keeps whatever the *first* getDataFromLocal() read
+        // — empty on a fresh login — so the address book stayed blank even
+        // though the account had saved addresses (86d3rrpqr).
+        getDataFromLocal();
         await getDataFromNetwork();
         if (mounted) {
           setState(() {
