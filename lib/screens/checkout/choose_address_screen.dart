@@ -396,8 +396,28 @@ class _StateChooseAddress extends BaseScreen<ChooseAddressScreen> {
                                 ),
                                 GestureDetector(
                                   onTap: () async {
-                                    await Services().api.saveUserInfo(listAddress[index]!, true);
-                                    getDataFromLocal();
+                                    // saveUserInfo throws on any API failure —
+                                    // an expired customer token surfaces as
+                                    // "The consumer isn't authorized to access
+                                    // self". Uncaught, that was an unhandled
+                                    // exception and the row just stayed put
+                                    // with no explanation.
+                                    try {
+                                      await Services()
+                                          .api
+                                          .saveUserInfo(listAddress[index]!, true);
+                                      getDataFromLocal();
+                                    } catch (e) {
+                                      if (!mounted) return;
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(e
+                                              .toString()
+                                              .replaceFirst(
+                                                  RegExp(r'^Exception:\s*'), '')),
+                                        ),
+                                      );
+                                    }
                                    // removeData(index);
                                   },
                                   child: Icon(

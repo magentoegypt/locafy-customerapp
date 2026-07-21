@@ -497,6 +497,16 @@ class Addresses {
   String? firstname;
   String? lastname;
 
+  /// Whether this is the customer's default billing / shipping address.
+  ///
+  /// These have to be carried explicitly: saveUserInfo re-sends the customer's
+  /// WHOLE address book on every add, edit and delete, so any flag missing from
+  /// the payload is cleared by Magento. They were not modelled at all, which
+  /// silently wiped the shopper's default address whenever they touched the
+  /// address book — and with it, the checkout pre-fill.
+  bool? defaultBilling;
+  bool? defaultShipping;
+
   Addresses(
       {this.id,
         this.customerId,
@@ -508,7 +518,9 @@ class Addresses {
         this.postcode,
         this.city,
         this.firstname,
-        this.lastname});
+        this.lastname,
+        this.defaultBilling,
+        this.defaultShipping});
 
   Addresses.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -523,12 +535,19 @@ class Addresses {
     city = json['city'];
     firstname = json['firstname'];
     lastname = json['lastname'];
+    // `== true`: Magento omits these keys entirely on non-default addresses,
+    // so absence must read as false rather than null.
+    defaultBilling = json['default_billing'] == true;
+    defaultShipping = json['default_shipping'] == true;
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = new Map<String, dynamic>();
     data['id'] = this.id;
     data['customer_id'] = this.customerId;
+    // Emitted only when true, mirroring how Magento itself represents them.
+    if (this.defaultBilling == true) data['default_billing'] = true;
+    if (this.defaultShipping == true) data['default_shipping'] = true;
     if (this.region != null) {
       data['region'] = this.region!.toJson();
     }

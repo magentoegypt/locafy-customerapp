@@ -1979,6 +1979,21 @@ class MagentoService extends BaseServices {
       params['email'] = UserBox().userInfo?.email;
       params['firstname'] = UserBox().userInfo?.firstName;
       params['lastname'] = UserBox().userInfo?.lastName;
+      // This PUT replaces the customer's ENTIRE address book, so any field left
+      // out of the payload is cleared server-side. default_billing /
+      // default_shipping were never modelled, so every add, edit and delete
+      // silently wiped the shopper's default address — and with it the
+      // checkout pre-fill. Carry them across, matched by address id, from the
+      // last server copy we hold.
+      final priorAddresses = UserBox().userInfo?.addresses ?? const <Addresses>[];
+      Addresses? priorFor(int? id) {
+        if (id == null) return null;
+        for (final a in priorAddresses) {
+          if (a.id == id) return a;
+        }
+        return null;
+      }
+
       List<Addresses> addressArr = [];
       UserBox().addresses?.forEach((element){
         Addresses addresses = Addresses();
@@ -2008,6 +2023,11 @@ class MagentoService extends BaseServices {
           addresses.region?.region = element.state;
           addresses.countryId = element.countryId;
         }
+        // Restore the default flags for whichever address this is — otherwise
+        // re-sending the book clears them.
+        final prior = priorFor(addresses.id);
+        addresses.defaultBilling = prior?.defaultBilling ?? false;
+        addresses.defaultShipping = prior?.defaultShipping ?? false;
         if(element.id == address?.id && isDelete) {
 
         }else{
@@ -2069,6 +2089,18 @@ class MagentoService extends BaseServices {
       });
     }
     UserBox().addresses = listAddress;
+
+    // Keep the stored user's raw address list in step too. The local Address
+    // entity has no notion of default billing/shipping, so saveUserInfo reads
+    // those flags from userInfo.addresses — refreshing them here means an
+    // install that logged in before the flags existed self-heals on the next
+    // user refresh, instead of waiting for a re-login. Only the address list is
+    // replaced; every other stored field (cookie, isSocial, …) is preserved.
+    final stored = UserBox().userInfo;
+    if (stored != null && user.addresses != null) {
+      stored.addresses = user.addresses;
+      UserBox().userInfo = stored;
+    }
   }
 
   @override
