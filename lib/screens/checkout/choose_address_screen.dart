@@ -71,10 +71,14 @@ class _StateChooseAddress extends BaseScreen<ChooseAddressScreen> {
 
   Future<void> getDataFromNetwork() async {
     try {
-      var result = await Services().api.getCustomerInfo(user!.id)!;
+      // No `!`: getCustomerInfo returns a null Future on frameworks that don't
+      // implement it (Magento included), so force-unwrapping threw here too.
+      // See address_mixin.getShippingAddress (86d3r3gpd).
+      var result = await Services().api.getCustomerInfo(user!.id);
 
-      if (result['billing'] != null) {
-        listAddress.add(result['billing']);
+      final billing = result?['billing'];
+      if (billing != null) {
+        listAddress.add(billing);
       }
     } catch (err) {
       printLog(err);

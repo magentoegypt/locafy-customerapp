@@ -126,28 +126,23 @@ class OtpDialog  {
                 width: double.infinity,
                 child: Padding(
                   padding: const EdgeInsets.only(top: 10),
+                  // Resend on its own, centred. The "Didn't receive the code?"
+                  // / "لم استلم رمز التأكيد؟" lead-in was dropped at QA's
+                  // request (86d3pkmkd #4): with it, the tappable RESEND sat
+                  // off to one side of the sentence rather than centred in the
+                  // dialog. The strings are trimmed because both carry padding
+                  // that only made sense when they were joined.
                   child: RichText(
                     textAlign: TextAlign.center,
                     text: TextSpan(
-                        text: S.of(context).didntReceiveCode,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.color
-                              ?.withOpacity(0.7),
-                        ),
-                        children: [
-                          TextSpan(
-                              text: S.of(context).resend,
-                              recognizer: onTapRecognizer,
-                              style: TextStyle(
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ))
-                        ]),
+                      text: S.of(context).resend.trim(),
+                      recognizer: onTapRecognizer,
+                      style: TextStyle(
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
                 ),
               )

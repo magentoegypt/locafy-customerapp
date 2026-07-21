@@ -249,7 +249,22 @@ class MagentoService extends BaseServices {
       }
     }
     product.categoryId = categoryIds!.isNotEmpty ? '${categoryIds[0]}' : '0';
-    product.permalink = '';
+    // Shareable storefront link, built from the product's url_key.
+    //
+    // This was hardcoded to '', so every share entry point took its "url is
+    // empty" branch and showed "Failed to generate link" — sharing could never
+    // work for any Magento product, on any screen (86d3pq0t0). Nothing was
+    // wrong with link *generation*; there was simply never a link.
+    //
+    // The short form is safe to share: Magento 301s /<store>/<url_key>.html to
+    // the canonical category path (verified against the live storefront).
+    final urlKey = MagentoHelper.getCustomAttribute(
+        productJson['custom_attributes'], 'url_key');
+    final trimmedUrlKey = urlKey?.trim() ?? '';
+    product.permalink = trimmedUrlKey.isNotEmpty
+        ? MagentoHelper.storefrontUrl(
+            domain, '$trimmedUrlKey.html', SettingsBox().languageCode)
+        : '';
 
     var attrs = <ProductAttribute>[];
     final options = productJson['extension_attributes'] != null &&

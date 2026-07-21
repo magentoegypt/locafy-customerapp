@@ -38,9 +38,20 @@ mixin AddressMixin on CartMixin {
           }
 
           if (user.billing == null) {
-            final info = await Services().api.getCustomerInfo(user.id)!;
-            if (info['billing'] != null) {
-              return info['billing'];
+            // No `!` here. BaseServices.getCustomerInfo returns a *null Future*
+            // and Magento never overrides it, so force-unwrapping threw
+            // "Null check operator used on a null value". The throw was caught
+            // by this method's own catch, which returned null — so a logged-in
+            // shopper reached checkout with a null address and the screen span
+            // forever waiting for shipping methods (86d3r3gpd).
+            //
+            // Nothing is lost by tolerating its absence: customers/me already
+            // returns the address book, and getUserInfo above parses the
+            // default address into `billing`.
+            final info = await Services().api.getCustomerInfo(user.id);
+            final billing = info?['billing'];
+            if (billing != null) {
+              return billing;
             }
           }
 

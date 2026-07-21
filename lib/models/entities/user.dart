@@ -181,8 +181,17 @@ class User {
       if (telephone != null) {
         phoneNumber = telephone["value"];
       }
+      // `== true`, not a bare truthiness check: Magento OMITS default_billing
+      // and default_shipping from any address that isn't the default, so those
+      // keys are null rather than false. `null || null` threw a TypeError,
+      // which the catch below swallowed — leaving `billing` null and, further
+      // down the chain, checkout with no address at all. Order-dependent too:
+      // it only threw when a non-default address came first in the list
+      // (86d3r3gpd).
       final address = (json['addresses'] as List?)?.firstWhere(
-          (item) => item['default_billing'] || item['default_shipping'],
+          (item) =>
+              item['default_billing'] == true ||
+              item['default_shipping'] == true,
           orElse: () => null);
       if (address != null) {
         billing = Billing.fromMagentoJson(address);

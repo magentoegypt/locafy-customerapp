@@ -77,6 +77,16 @@ class MagentoHelper {
     return '$domain/${_storeViewCode(locale)}/rest/V1/$endpoint'.toUri();
   }
 
+  /// Public storefront URL (no /rest/V1) on the store view matching [locale] —
+  /// e.g. `https://…/eg-ar/<url_key>.html`. Used for shareable product links,
+  /// which must open the website rather than the API.
+  ///
+  /// Unlike [buildWithoutRestUrl], which is pinned to eg-en, this honours the
+  /// app language so a link shared from the Arabic app opens the Arabic page.
+  static String storefrontUrl(String? domain, String path, [String? locale]) {
+    return '$domain/${_storeViewCode(locale)}/$path';
+  }
+
   /// Store-view path segment for a REST call. Content endpoints pass the
   /// current app language so the API returns localized (e.g. Arabic) text;
   /// calls that pass no locale (customer / cart / checkout) stay on the
