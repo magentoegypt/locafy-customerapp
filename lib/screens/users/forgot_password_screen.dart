@@ -3,11 +3,9 @@ import 'dart:async';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:inspireui/extensions.dart';
 import 'package:magentoegypt/core/colors.dart';
 import 'package:magentoegypt/screens/users/reset_password_screen.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../common/tools/flash.dart';
 import '../../generated/l10n.dart';
@@ -15,6 +13,7 @@ import '../../models/app_model.dart';
 import '../../services/index.dart';
 import '../../widgets/common/ToggleButton.dart';
 import '../../widgets/common/flux_image.dart';
+import '../../widgets/common/webview.dart';
 import 'otp_dialog.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -74,7 +73,26 @@ class _ForgotPasswordState extends State<ForgotPasswordScreen> {
                 isSubmitting = false;
               });
               if ((response ?? "").startsWith("http")){
-                launchUrl((response ?? "").toUri()!);
+                // In-app WebView, not launchUrl(). That URL carries a
+                // single-use password-reset token — a full account-takeover
+                // credential until it is consumed — and launchUrl with no
+                // LaunchMode resolves to platformDefault, i.e. Chrome Custom
+                // Tabs / SFSafariViewController. The token would land in the
+                // system browser's history and be synced to the shopper's
+                // Google/Apple account. Keeping it in the app's own WebView
+                // keeps it in the app's storage, and matches how
+                // login_screen.dart already opens the same reset URL.
+                if (!mounted) return;
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (context) => WebView(
+                      url: response,
+                      title: S.of(context).resetPassword,
+                    ),
+                    fullscreenDialog: true,
+                  ),
+                );
               }else{
                 unawaited(
                   FlashHelper.errorMessage(context, message: response ?? ""),
