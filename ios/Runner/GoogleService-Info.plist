@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyBcEIIjBP2ZgLDvdJ1D1IG1fCqoQe8j9yY</string>
+	<string>AIzaSyBQz45QLnbb0dzrgA9MZqDzot_7Bb2CkD4</string>
 	<key>GCM_SENDER_ID</key>
-	<string>19385734930</string>
+	<string>692482194375</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.magentoegypt.ajstore</string>
 	<key>PROJECT_ID</key>
-	<string>headless-31464</string>
+	<string>magento-app-store</string>
 	<key>STORAGE_BUCKET</key>
-	<string>headless-31464.firebasestorage.app</string>
+	<string>magento-app-store.appspot.com</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:19385734930:ios:1ec8c9f864d270325cc5cb</string>
+	<string>1:692482194375:ios:6f84e98b62a0956cd6f7e2</string>
 </dict>
 </plist>
