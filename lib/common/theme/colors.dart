@@ -263,7 +263,8 @@ const kOrderStatusColor = {
   'completed': '#1abc9c',
   'failed': '#e74c3c',
   'pendding': '#f39c12',
-  'on-hold': '#2c3e50'
+  'on-hold': '#2c3e50',
+  'shipping': '#3498db'
 };
 
 /// Color for Product Detail

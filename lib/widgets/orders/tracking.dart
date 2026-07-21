@@ -9,6 +9,7 @@ enum StatusOrder {
   failed,
   cancelled,
   processing,
+  shipping,
   completed,
   refunded
 }
@@ -31,10 +32,14 @@ class TimelineTracking extends StatefulWidget {
 }
 
 class _TimelineTrackingState extends State<TimelineTracking> {
+  // Shipping sits between Processing and Completed: an order that has left the
+  // warehouse but is not yet finalised used to have no step to land on, so it
+  // rendered as "unknown" (86d3rrauf #5).
   var statusOrderSuccessNotFail = [
     StatusOrder.pendding,
     StatusOrder.onHold,
     StatusOrder.processing,
+    StatusOrder.shipping,
     StatusOrder.completed
   ];
 
@@ -42,6 +47,7 @@ class _TimelineTrackingState extends State<TimelineTracking> {
     StatusOrder.pendding,
     StatusOrder.failed,
     StatusOrder.processing,
+    StatusOrder.shipping,
     StatusOrder.completed
   ];
 
@@ -49,6 +55,7 @@ class _TimelineTrackingState extends State<TimelineTracking> {
     StatusOrder.pendding,
     StatusOrder.onHold,
     StatusOrder.processing,
+    StatusOrder.shipping,
     StatusOrder.completed,
     StatusOrder.refunded
   ];
@@ -239,6 +246,15 @@ class _TimelineTrackingState extends State<TimelineTracking> {
         flowHandleStatus = statusOrderSuccessRefunded;
         break;
 
+      // Anything that means "on its way" lands on the Shipping step.
+      case 'shipped':
+      case 'delivered':
+      case 'outForDelivery':
+      case 'driverAssigned':
+        statusOrder = StatusOrder.shipping;
+        flowHandleStatus = statusOrderSuccessNotFail;
+        break;
+
       case 'completed': //Thể hiện timeline : Pendding(active) -> On-Hold(active) -> Processing(active) -> Completed(active)
         statusOrder = StatusOrder.completed;
         flowHandleStatus = statusOrderSuccessNotFail;
@@ -287,6 +303,8 @@ class _TimelineTrackingState extends State<TimelineTracking> {
         return HexColor(kOrderStatusColor['refunded']!);
       case StatusOrder.processing:
         return HexColor(kOrderStatusColor['processing']!);
+      case StatusOrder.shipping:
+        return HexColor(kOrderStatusColor['shipping']!);
       default:
         return Colors.white;
     }
@@ -302,6 +320,8 @@ class _TimelineTrackingState extends State<TimelineTracking> {
         return S.of(context).orderStatusFailed;
       case StatusOrder.processing:
         return S.of(context).orderStatusProcessing;
+      case StatusOrder.shipping:
+        return S.of(context).orderStatusShipped;
       case StatusOrder.completed:
         return S.of(context).orderStatusCompleted;
       case StatusOrder.cancelled:

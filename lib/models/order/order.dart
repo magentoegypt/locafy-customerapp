@@ -163,6 +163,14 @@ class Order {
         return OrderStatus.refunded;
       case 'void':
         return OrderStatus.voided;
+      // Merchant-defined statuses on this store that mean "on its way". These
+      // must be matched BEFORE the state fallback below: their state is
+      // `complete`, so the fallback would collapse them into Completed and the
+      // shopper would never see the shipping step (86d3rrauf #5).
+      case 'delivered_to_be_invioced': // sic — the store's own spelling
+      case 'delivered_to_be_invoiced':
+      case 'shipped':
+        return OrderStatus.shipped;
       default:
         final matched = OrderStatus.values.firstWhere(
           (element) => describeEnum(element) == newStatus,

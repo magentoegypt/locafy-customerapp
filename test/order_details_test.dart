@@ -59,11 +59,9 @@ void main() {
     final order = Order();
 
     test('resolves a merchant-defined status through its state', () {
-      // The exact status on order 7000003366, which QA saw as "Unknown".
-      expect(
-        order.parseOrderStatus('Delivered_to_be_invioced', state: 'complete'),
-        OrderStatus.completed,
-      );
+      // Statuses with no explicit case fall back to their state. (The store's
+      // Delivered_to_be_invioced is NOT one of these — it has an explicit case
+      // so it can light up the Shipping step; see the shipping test below.)
       expect(
         order.parseOrderStatus('order_confirmed_cod', state: 'new'),
         OrderStatus.pending,
@@ -95,6 +93,21 @@ void main() {
           OrderStatus.onHold);
       expect(order.parseOrderStatus('pending', state: 'new'),
           OrderStatus.pending);
+    });
+
+    test("a shipping-stage status reaches the timeline's Shipping step", () {
+      // QA re-opened #5: the order is "in shipping" but showed no such step.
+      // This store spells that stage Delivered_to_be_invioced (its own typo)
+      // and files it under state `complete`, so it must be matched explicitly —
+      // the state fallback would otherwise collapse it into Completed and the
+      // shipping step would never light up.
+      expect(
+        order.parseOrderStatus('Delivered_to_be_invioced', state: 'complete'),
+        OrderStatus.shipped,
+      );
+      // TimelineTracking switches on OrderStatus.content, so the enum name is
+      // the contract between the parser and the Shipping step.
+      expect(OrderStatus.shipped.content, 'shipped');
     });
 
     test('other backends calling without a state are unaffected', () {
