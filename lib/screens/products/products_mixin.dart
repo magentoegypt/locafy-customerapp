@@ -32,7 +32,11 @@ mixin ProductsMixin {
     // }
 
     if (url != null && url.toString().isNotEmpty) {
-      Services().firebase.shareDynamicLinkProduct(itemUrl: url);
+      // context anchors the popover on iPad.
+      Services().firebase.shareDynamicLinkProduct(
+            itemUrl: url,
+            context: context,
+          );
     } else {
       unawaited(
         FlashHelper.errorMessage(

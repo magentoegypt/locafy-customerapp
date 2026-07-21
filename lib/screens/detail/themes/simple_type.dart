@@ -367,8 +367,10 @@ class _SimpleLayoutState extends State<SimpleLayout>
                                       duration: const Duration(seconds: 1),
                                     ),
                                   );
+                                  // context anchors the popover on iPad.
                                   Services().firebase.shareDynamicLinkProduct(
                                     itemUrl: url,
+                                    context: context,
                                   );
                                 } else {
                                   unawaited(

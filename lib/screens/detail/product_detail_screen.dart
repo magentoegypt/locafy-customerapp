@@ -91,8 +91,11 @@ class ProductDetailScreen extends StatefulWidget {
                         duration: const Duration(seconds: 1),
                       ),
                     );
+                    // context anchors the popover on iPad; without it
+                    // share_plus presents nothing at all.
                     Services().firebase.shareDynamicLinkProduct(
                           itemUrl: url,
+                          context: context,
                         );
                   } else {
                     unawaited(
