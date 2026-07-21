@@ -92,14 +92,15 @@ class SettingScreenState extends State<SettingScreen>
     SectionItem(title: S.of(context).addressBook, url: "addressBook"),
     SectionItem(title: S.of(context).accountInformation, url: "accountInformation"),
     SectionItem(title: S.of(context).newsletterSubscriptions, url: "newsletterSubscription"),
-    // These two still open the storefront in a webview, and the webview has no
-    // Magento session (the app authenticates with a REST bearer token, not a
-    // PHP session cookie), so both land on the customer login form. There is no
-    // native equivalent in the app and no REST surface for a card vault or for
-    // a customer's own reviews, so they stay until the backend provides a
-    // session-bootstrap endpoint. Tracked in 86d3rrtpy.
-    SectionItem(title: S.of(context).storedPaymentMethods, url: "${serverConfig['url']}/eg-en/vault/cards/listaction/"),
-    SectionItem(title: S.of(context).myProductReviews, url: "${serverConfig['url']}/eg-en/review/customer/"),
+    // Stored Payment Methods (/vault/cards/listaction/) and My Product Reviews
+    // (/review/customer/) were removed. Both opened the storefront in a
+    // webview, and that webview holds no Magento session — the app
+    // authenticates with a REST bearer token, not a PHP session cookie — so
+    // both landed on the customer login form. There is no native equivalent in
+    // the app and no REST surface for a card vault or for a customer's own
+    // reviews, so nothing could be shown. Restore them only once the backend
+    // provides a session-bootstrap endpoint. See 86d3rrtpy.
+    //
     // Discount Coupons (/referralsystem/payout/), My Wallet
     // (/wallet/wallet/transaction/) and Return Merchandise Authorization
     // (/csrma/customerrma/index/) were removed: none of those modules is
