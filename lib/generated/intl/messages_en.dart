@@ -1089,6 +1089,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "share": MessageLookupByLibrary.simpleMessage("Share"),
         "shipped": MessageLookupByLibrary.simpleMessage("Shipped"),
         "shipping": MessageLookupByLibrary.simpleMessage("Shipping"),
+    "shippingAndDelivery": MessageLookupByLibrary.simpleMessage("Shipping & Delivery"),
         "shippingAddress":
             MessageLookupByLibrary.simpleMessage("Shipping Address"),
         "shippingMethod":

@@ -80,10 +80,16 @@ class Address {
 
     city = parsedJson['city'];
     state = parsedJson['region'];
-    country = parsedJson['country'];
-    countryId = parsedJson['countryId'];
+    // Magento names these `country_id` and `telephone`. Reading 'country' /
+    // 'countryId' / 'mobile' — keys that do not exist in a Magento address —
+    // is why order details showed a blank country and the literal text "null"
+    // where the phone should be (86d3rrauf #4). `country` holds the ISO-2 code
+    // ('EG') to stay consistent with toMagentoJson and getCountryName, which
+    // renders it as "Egypt".
+    country = parsedJson['country_id'] ?? parsedJson['country'];
+    countryId = parsedJson['country_id'] ?? parsedJson['countryId'];
     email = parsedJson['email'];
-    phoneNumber = parsedJson['mobile'];
+    phoneNumber = parsedJson['telephone'] ?? parsedJson['mobile'];
     zipCode = parsedJson['postcode'];
   }
 

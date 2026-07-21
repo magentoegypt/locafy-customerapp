@@ -49,6 +49,10 @@ class Order {
   OrderStatus? status;
   String?
       orderStatus; //in opencart, order_status will be responsed based on language. so I use this property to show on the UI instead of status property if status is unknown
+
+  /// Magento's order `state` — the fixed lifecycle bucket behind the
+  /// merchant-defined `status`. Used to resolve custom statuses (86d3rrauf #5).
+  String? state;
   DateTime? createdAt;
   DateTime? dateModified;
   double? total;
@@ -105,7 +109,35 @@ class Order {
     }
   }
 
-  OrderStatus parseOrderStatus(String? status) {
+  /// Magento's `state` is a FIXED vocabulary (new, pending_payment,
+  /// processing, complete, closed, canceled, holded, payment_review), unlike
+  /// `status`, which merchants define freely in the admin. Mapping through it
+  /// means a store-specific status the app has never heard of still lands on a
+  /// sensible step instead of "Unknown" (86d3rrauf #5).
+  OrderStatus? _statusFromMagentoState(String? state) {
+    switch (state?.toLowerCase()) {
+      case 'new':
+      case 'pending_payment':
+      case 'payment_review':
+        return OrderStatus.pending;
+      case 'processing':
+        return OrderStatus.processing;
+      case 'complete':
+        return OrderStatus.completed;
+      case 'closed':
+        return OrderStatus.refunded;
+      case 'canceled':
+        return OrderStatus.canceled;
+      case 'holded':
+        return OrderStatus.onHold;
+      default:
+        return null;
+    }
+  }
+
+  /// [state] is only supplied by the Magento parser; every other backend calls
+  /// this with a single argument and is unaffected.
+  OrderStatus parseOrderStatus(String? status, {String? state}) {
     final newStatus = status?.toLowerCase();
     switch (newStatus) {
       case 'on-hold':
@@ -132,10 +164,16 @@ class Order {
       case 'void':
         return OrderStatus.voided;
       default:
-        return OrderStatus.values.firstWhere(
+        final matched = OrderStatus.values.firstWhere(
           (element) => describeEnum(element) == newStatus,
           orElse: () => OrderStatus.unknown,
         );
+        if (matched != OrderStatus.unknown) return matched;
+        // A merchant-defined status the enum has no name for — e.g. this
+        // store's `Delivered_to_be_invioced`, which rendered as the literal
+        // word "Unknown" in Order History. Fall back to the state it belongs
+        // to before giving up.
+        return _statusFromMagentoState(state) ?? OrderStatus.unknown;
     }
   }
 
@@ -407,7 +445,9 @@ class Order {
     try {
       id = parsedJson['entity_id'].toString();
       number = "${parsedJson["increment_id"]}";
-      status = parseOrderStatus(parsedJson['status']);
+      state = parsedJson['state'] as String?;
+      orderStatus = parsedJson['status'] as String?;
+      status = parseOrderStatus(parsedJson['status'], state: state);
       createdAt = parsedJson['created_at'] != null
           ? DateTime.parse(parsedJson['created_at'] + 'Z') // Adding 'Z' for UTC format
           : DateTime.now();
@@ -424,6 +464,13 @@ class Order {
           ? double.parse("${parsedJson['tax_amount']}")
           : 0.0;
       parsedJson['items']?.forEach((item) {
+        // A configurable (or bundle/grouped) order line comes back as TWO rows:
+        // the visible parent, and a child row pointing at it via
+        // parent_item_id. The child repeats the product name with price and
+        // row_total 0, so it rendered as a second, detail-less card in the
+        // order and its qty was added again — one unit ordered showed as 2
+        // (86d3rrauf #2). Skip the child; the parent carries the real price.
+        if (item['parent_item_id'] != null) return;
         quantity += int.parse('${item['qty_ordered']}');
         lineItems.add(ProductItem.fromMagentoJson(item));
       });

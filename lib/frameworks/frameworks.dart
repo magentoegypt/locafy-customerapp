@@ -630,7 +630,10 @@ abstract class BaseFrameworks {
       children: [
         const SizedBox(height: 20),
         Align(
-          alignment: Alignment.topLeft,
+          // Directional, not physical: Alignment.topLeft pinned the "Status"
+          // heading to the left even in Arabic, where every sibling heading on
+          // this screen sits on the right (86d3rrauf #3).
+          alignment: AlignmentDirectional.topStart,
           child: Text(
             S.of(context).status,
             style: const TextStyle(

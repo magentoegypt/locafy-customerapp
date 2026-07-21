@@ -162,7 +162,7 @@ class _OrderHistoryDetailScreenState
                             Expanded(
                               child: Text(
                                 order.deliveryDate!,
-                                textAlign: TextAlign.right,
+                                textAlign: TextAlign.end,
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleMedium!
@@ -188,7 +188,7 @@ class _OrderHistoryDetailScreenState
                           Expanded(
                             child: Text(
                               order.paymentMethodTitle!,
-                              textAlign: TextAlign.right,
+                              textAlign: TextAlign.end,
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium!
@@ -216,7 +216,7 @@ class _OrderHistoryDetailScreenState
                               Expanded(
                                 child: Text(
                                   order.shippingMethodTitle!,
-                                  textAlign: TextAlign.right,
+                                  textAlign: TextAlign.end,
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleMedium!
@@ -232,7 +232,10 @@ class _OrderHistoryDetailScreenState
                     if (order.totalShipping != null)
                       Row(
                         children: <Widget>[
-                          Text(S.of(context).shipping,
+                          // Not S.of(context).shipping: that key also titles the
+                          // checkout step header, so retitling it here would
+                          // rename it there too (86d3rrauf #1).
+                          Text(S.of(context).shippingAndDelivery,
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium!
@@ -245,7 +248,7 @@ class _OrderHistoryDetailScreenState
                               PriceTools.getCurrencyFormatted(
                                   order.totalShipping, currencyRate,
                                   currency: currencyCode)!,
-                              textAlign: TextAlign.right,
+                              textAlign: TextAlign.end,
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium!
@@ -278,7 +281,7 @@ class _OrderHistoryDetailScreenState
                                   PriceTools.getCurrencyFormatted(
                                       item.total, currencyRate,
                                       currency: currencyCode)!,
-                                  textAlign: TextAlign.right,
+                                  textAlign: TextAlign.end,
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleMedium!
@@ -390,7 +393,11 @@ class _OrderHistoryDetailScreenState
               const SizedBox(height: 20),
 
               if (order.billing != null) ...[
-                Text(S.of(context).shippingAddress,
+                // additionalInformation, not shippingAddress: the latter also
+                // labels the address card in checkout and on the address
+                // screen, where "Additional Information" would be wrong
+                // (86d3rrauf #3).
+                Text(S.of(context).additionalInformation,
                     style: const TextStyle(
                         fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
@@ -418,7 +425,7 @@ class _OrderHistoryDetailScreenState
                       ),
                       Expanded(
                         child: Text(
-                          '${order.billing!.firstName}',
+                          order.billing!.firstName ?? '',
                           style: Theme.of(context).textTheme.titleMedium!.copyWith(
 
                             fontWeight: FontWeight.w700,
@@ -452,7 +459,7 @@ class _OrderHistoryDetailScreenState
                     ),
                     Expanded(
                       child: Text(
-                        '${order.billing!.lastName}',
+                        order.billing!.lastName ?? '',
                         style: Theme.of(context).textTheme.titleMedium!.copyWith(
 
                           fontWeight: FontWeight.w700,
@@ -486,7 +493,7 @@ class _OrderHistoryDetailScreenState
                     ),
                     Expanded(
                       child: Text(
-                        '${order.billing!.phoneNumber}',
+                        order.billing!.phoneNumber ?? '',
                         style: Theme.of(context).textTheme.titleMedium!.copyWith(
 
                           fontWeight: FontWeight.w700,
@@ -520,7 +527,7 @@ class _OrderHistoryDetailScreenState
                     ),
                     Expanded(
                       child: Text(
-                        '${order.billing!.street}',
+                        order.billing!.street ?? '',
                         style: Theme.of(context).textTheme.titleMedium!.copyWith(
 
                           fontWeight: FontWeight.w700,
@@ -530,40 +537,10 @@ class _OrderHistoryDetailScreenState
                       ),
                     ),
                   ],),
-                Row(
-                  children: [
-                    const SizedBox(
-                      height: 10.0,
-                    ),
-                    Expanded(
-                      child: Text(
-                        S.of(context).zipCode,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall!
-                            .copyWith(
-                          fontSize: 14.0,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .secondary
-                              .withOpacity(0.7),
-                          fontWeight: FontWeight.w700,
-                        )
-                            .apply(fontSizeFactor: 0.9),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        '${order.billing!.zipCode}',
-                        style: Theme.of(context).textTheme.titleMedium!.copyWith(
-
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14.0,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],),
+                // The zip-code row was removed: checkout never asks for a
+                // postcode, so Magento stores none and this always rendered an
+                // empty value (86d3rrauf #4). Address.zipCode itself is kept —
+                // the address-book write path still sends it.
                 Row(
                   children: [
                     const SizedBox(
@@ -588,7 +565,7 @@ class _OrderHistoryDetailScreenState
                     ),
                     Expanded(
                       child: Text(
-                        '${order.billing!.city}',
+                        order.billing!.city ?? '',
                         style: Theme.of(context).textTheme.titleMedium!.copyWith(
 
                           fontWeight: FontWeight.w700,

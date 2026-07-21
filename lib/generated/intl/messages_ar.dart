@@ -1072,6 +1072,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "share": MessageLookupByLibrary.simpleMessage("شارك"),
         "shipped": MessageLookupByLibrary.simpleMessage("تم شحنه"),
         "shipping": MessageLookupByLibrary.simpleMessage("طريقة الشحن"),
+    "shippingAndDelivery": MessageLookupByLibrary.simpleMessage("الشحن و التوصيل"),
         "shippingAddress":
             MessageLookupByLibrary.simpleMessage("عنوان التوصيل"),
         "shippingMethod":

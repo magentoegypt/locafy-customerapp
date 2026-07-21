@@ -1,3 +1,4 @@
+import 'package:country_pickers/country_pickers.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +11,17 @@ import '../../index.dart';
 
 class OrderListItem extends StatelessWidget {
   const OrderListItem({super.key});
+
+  /// Magento stores the country as an ISO-2 code; render the display name and
+  /// fall back to whatever we were given if it is not a code we recognise.
+  static String _countryName(String? country) {
+    if (country == null || country.isEmpty) return '';
+    try {
+      return CountryPickerUtils.getCountryByIsoCode(country).name;
+    } catch (_) {
+      return country;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -158,7 +170,13 @@ class OrderListItem extends StatelessWidget {
                                 // Display empty box if Order Address is null
                                 order.billing != null
                                     ? Text(
-                                        '${order.billing?.firstName} | ${order.billing?.city}, ${order.billing?.country}',
+                                        // Address.country holds the ISO-2 code
+                                        // ('EG'), so print the country NAME here
+                                        // the way the detail screen does —
+                                        // otherwise this line reads
+                                        // "… Cairo, EG" (it read "… Cairo, null"
+                                        // before country_id was parsed at all).
+                                        '${order.billing?.firstName ?? ''} | ${order.billing?.city ?? ''}, ${_countryName(order.billing?.country)}',
                                         style: const TextStyle(fontSize: 14.0),
                                       )
                                     : const SizedBox(),

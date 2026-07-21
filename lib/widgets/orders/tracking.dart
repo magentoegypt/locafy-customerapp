@@ -225,6 +225,11 @@ class _TimelineTrackingState extends State<TimelineTracking> {
         statusOrder = StatusOrder.processing;
         flowHandleStatus = statusOrderSuccessNotFail;
         break;
+      // Both spellings: this switch keys off OrderStatus.content, and Magento's
+      // status string is 'canceled' (one L), which resolves to
+      // OrderStatus.canceled — so cancelled orders were falling through to
+      // default and drawing the *pending* timeline instead (86d3rrauf #5).
+      case 'canceled':
       case 'cancelled': //Thể hiện timeline : Pendding(active) -> Failed(active) -> Cancelled(active)
         statusOrder = StatusOrder.cancelled;
         flowHandleStatus = statusOrderCancel;

@@ -9395,6 +9395,16 @@ class S {
     );
   }
 
+  /// `Shipping & Delivery`
+  String get shippingAndDelivery {
+    return Intl.message(
+      'Shipping & Delivery',
+      name: 'shippingAndDelivery',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Subscribe to our newsletter`
   String get subscribeToNewsletter {
     return Intl.message(
