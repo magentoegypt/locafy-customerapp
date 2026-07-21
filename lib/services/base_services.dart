@@ -151,6 +151,18 @@ abstract class BaseServices {
   Future<User?>? getUserInfo(cookie) => null;
   Future<bool?>? saveUserInfo(Address? address,bool isDelete) => null;
 
+  /// Whether the customer is subscribed to the newsletter.
+  ///
+  /// Magento carries this on the customer resource as
+  /// `extension_attributes.is_subscribed`. Returns null on frameworks that
+  /// don't expose it, which the UI treats as "unavailable" rather than "off".
+  Future<bool?>? getNewsletterSubscription() => null;
+
+  /// Subscribes or unsubscribes the customer, returning the state the server
+  /// confirms — not the state that was requested, so the UI can't drift out of
+  /// step with the store if the write is rejected.
+  Future<bool?>? setNewsletterSubscription(bool subscribe) => null;
+
   Future<User?>? createUser({
     String? firstName,
     String? lastName,

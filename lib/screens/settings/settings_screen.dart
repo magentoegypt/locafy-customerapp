@@ -91,12 +91,23 @@ class SettingScreenState extends State<SettingScreen>
     SectionItem(title: S.of(context).myWishList, url: "myWishList"),
     SectionItem(title: S.of(context).addressBook, url: "addressBook"),
     SectionItem(title: S.of(context).accountInformation, url: "accountInformation"),
+    SectionItem(title: S.of(context).newsletterSubscriptions, url: "newsletterSubscription"),
+    // These two still open the storefront in a webview, and the webview has no
+    // Magento session (the app authenticates with a REST bearer token, not a
+    // PHP session cookie), so both land on the customer login form. There is no
+    // native equivalent in the app and no REST surface for a card vault or for
+    // a customer's own reviews, so they stay until the backend provides a
+    // session-bootstrap endpoint. Tracked in 86d3rrtpy.
     SectionItem(title: S.of(context).storedPaymentMethods, url: "${serverConfig['url']}/eg-en/vault/cards/listaction/"),
     SectionItem(title: S.of(context).myProductReviews, url: "${serverConfig['url']}/eg-en/review/customer/"),
-    SectionItem(title: S.of(context).newsletterSubscriptions, url: "${serverConfig['url']}/eg-en/newsletter/manage/"),
-    SectionItem(title: S.of(context).discountCoupons, url: "${serverConfig['url']}/eg-en/referralsystem/payout/"),
-    SectionItem(title: S.of(context).myWallet, url: "${serverConfig['url']}/eg-en/wallet/wallet/transaction/"),
-    SectionItem(title: S.of(context).returnMerchandiseAuthorization, url: "${serverConfig['url']}/eg-en/csrma/customerrma/index/"),
+    // Discount Coupons (/referralsystem/payout/), My Wallet
+    // (/wallet/wallet/transaction/) and Return Merchandise Authorization
+    // (/csrma/customerrma/index/) were removed: none of those modules is
+    // installed on the store, so all three 404 into Magento's no-route handler,
+    // which 302s to a *catalog search* for the words in the path — the shopper
+    // tapped "My Wallet" and got a product grid. Logging in would not change
+    // that. Restore them only once the backend confirms the modules are live
+    // (and the webview can hold a session). See 86d3rrtpy.
   ];
 
   // Getter (not a cached `late final` field) so section titles/items rebuild in
@@ -1545,7 +1556,11 @@ class SettingScreenState extends State<SettingScreen>
         );
         break;
       case 'myWishList':
-        MainTabControlDelegate.getInstance().tabAnimateTo(2);
+        // By route, not by bottom-tab index: tabAnimateTo(2) hard-codes the
+        // wishlist's position in the tab bar, so adding, removing or reordering
+        // a tab silently sends this row to whatever screen now sits at index 2
+        // — a wrong destination rather than an obvious break.
+        FluxNavigate.pushNamed(RouteList.wishlist);
         break;
       case 'addressBook':
         // ChooseAddressScreen, not ShippingAddress: the latter is the *add a
@@ -1562,11 +1577,25 @@ class SettingScreenState extends State<SettingScreen>
         );
         break;
       case 'accountInformation':
-        _openAuthWebView(
-          '${ServerConfig().url}/my-account',
-          item.title,
-        );
+        // Was a webview on '{store}/my-account' — the WooCommerce account path,
+        // left over from the FluxStore Woo original. Magento has no such route,
+        // so its no-route handler turned it into a catalog search for the words
+        // "my account", and because the path carries no store-view prefix it
+        // resolved to the *Arabic* store view: an English shopper tapped
+        // "Account Information" and got an Arabic product grid (86d3rrtpy).
+        // UserUpdateScreen is native and already used by _handleUpdateProfile.
+        FluxNavigate.pushNamed(RouteList.updateUser);
         break;
+      case 'newsletterSubscription':
+        FluxNavigate.pushNamed(RouteList.newsletterSubscription);
+        break;
+      default:
+        // Every url either starts with http (handled above) or matches a case,
+        // so this is unreachable today — but a typo in a new sentinel would
+        // otherwise produce a row that silently does nothing, which is exactly
+        // the failure this ticket was first misdiagnosed as.
+        printLog('[Settings] unhandled My Account item: $url');
+        assert(false, 'Unhandled My Account menu item: $url');
     }
   }
 

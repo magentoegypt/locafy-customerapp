@@ -1970,6 +1970,71 @@ class MagentoService extends BaseServices {
     }
   }
 
+  /// Reads `extension_attributes.is_subscribed` off the customer resource.
+  /// Null means the store doesn't expose the attribute at all, which the
+  /// newsletter screen shows as unavailable rather than silently as "off".
+  @override
+  Future<bool?> getNewsletterSubscription() async {
+    final res = await httpGet(MagentoHelper.buildUrl(domain, 'customers/me')!,
+        headers: {'Authorization': 'Bearer ${UserBox().userInfo?.cookie}'});
+    final body = convert.jsonDecode(res.body);
+    if (body is Map && body['message'] != null) {
+      throw Exception(MagentoHelper.getErrorMessage(body));
+    }
+    final ext = body['extension_attributes'];
+    if (ext is Map && ext.containsKey('is_subscribed')) {
+      return ext['is_subscribed'] == true;
+    }
+    return null;
+  }
+
+  @override
+  Future<bool?> setNewsletterSubscription(bool subscribe) async {
+    // Read-modify-write: Magento rebuilds the customer row from the payload and
+    // saves it wholesale, so a minimal {email, firstname, lastname} body would
+    // clear default_billing / default_shipping and every custom_attribute.
+    // Echo the whole record back with one flag flipped instead.
+    //
+    // But drop `addresses` before sending. CustomerRepository::save() gates the
+    // entire address block on `getAddresses() !== null`: present means re-save
+    // every address and delete any stored id missing from the payload, absent
+    // means leave the book completely alone. Absent is what we want — flipping
+    // a newsletter flag has no business rewriting the address book, and a
+    // single address that no longer passes validation would otherwise fail the
+    // whole request. (This is also why updateUserInfo's long-standing partial
+    // PUTs — which fire on every launch via updateDeviceToken — don't wipe
+    // anyone's addresses.)
+    final res = await httpGet(MagentoHelper.buildUrl(domain, 'customers/me')!,
+        headers: {'Authorization': 'Bearer ${UserBox().userInfo?.cookie}'});
+    final customer = convert.jsonDecode(res.body);
+    if (customer is Map && customer['message'] != null) {
+      throw Exception(MagentoHelper.getErrorMessage(customer));
+    }
+    customer.remove('addresses');
+    final ext = customer['extension_attributes'];
+    if (ext is Map) {
+      ext['is_subscribed'] = subscribe;
+    } else {
+      customer['extension_attributes'] = {'is_subscribed': subscribe};
+    }
+
+    final put = await httpPut(MagentoHelper.buildUrl(domain, 'customers/me')!,
+        headers: {
+          'Authorization': 'Bearer ${UserBox().userInfo?.cookie}',
+          'content-type': 'application/json',
+        },
+        body: convert.jsonEncode({'customer': customer}));
+    final body = convert.jsonDecode(put.body);
+    if (body is Map && body['message'] != null) {
+      throw Exception(MagentoHelper.getErrorMessage(body));
+    }
+    final savedExt = body['extension_attributes'];
+    if (savedExt is Map && savedExt.containsKey('is_subscribed')) {
+      return savedExt['is_subscribed'] == true;
+    }
+    return null;
+  }
+
   @override
   Future<bool> saveUserInfo(Address? address,bool isDelete) async {
     try {

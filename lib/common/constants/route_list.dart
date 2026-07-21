@@ -18,6 +18,7 @@ class RouteList {
   static const String language = 'language';
   static const String currencies = 'currencies';
   static const String deleteAccount = 'delete-account';
+  static const String newsletterSubscription = 'newsletter-subscription';
 
   // Blog
   static const String blog = 'blog';

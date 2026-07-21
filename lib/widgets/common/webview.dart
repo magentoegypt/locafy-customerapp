@@ -12,6 +12,7 @@ import '../../generated/l10n.dart';
 import '../../models/entities/user.dart';
 import '../../models/user_model.dart';
 import '../../screens/common/app_bar_mixin.dart';
+import '../../services/index.dart';
 
 mixin WebviewMixin {
   Future<bool> overrideWebNavigation(String url) async {
@@ -130,7 +131,17 @@ class _WebViewState extends State<WebView> with WebviewMixin, AppBarMixin {
       url = '$url${url.paramSymbol}dummy=${DateTime.now().millisecondsSinceEpoch}';
     }
 
-    if (widget.auth && (user?.cookie?.isNotEmpty ?? false)) {
+    // `?cookie=<base64>` is an mstore WordPress-plugin convention: only a
+    // Woo/WordPress backend has a handler that reads it back and restores the
+    // session. Every other caller in the app already gates it on store type
+    // (NavigateTools.navigateToWebView), but this one did not — so on Magento
+    // it appended the customer's REST bearer token to storefront URLs, where it
+    // authenticated nothing (Magento just carries the param through its
+    // redirects) and leaked a live credential into request logs and Referer
+    // headers. Gate it the same way.
+    if (widget.auth &&
+        (ServerConfig().isWooType || ServerConfig().isWordPress) &&
+        (user?.cookie?.isNotEmpty ?? false)) {
       var base64Str = EncodeUtils.encodeCookie(user!.cookie!);
       url = '$url${url.paramSymbol}cookie=$base64Str';
     }
@@ -165,7 +176,11 @@ class _WebViewState extends State<WebView> with WebviewMixin, AppBarMixin {
           },
         ),
       )
-      ..loadRequest(Uri.parse(url));
+      // Forward `headers`: the field was declared and accepted by the
+      // constructor but never read, so any caller passing headers (the obvious
+      // way to authenticate a webview) would compile, look correct and send
+      // nothing.
+      ..loadRequest(Uri.parse(url), headers: widget.headers ?? const {});
     if(widget.onWebViewCreated != null)
     widget.onWebViewCreated!(_controller);
   }

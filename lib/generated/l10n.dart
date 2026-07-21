@@ -9395,6 +9395,36 @@ class S {
     );
   }
 
+  /// `Subscribe to our newsletter`
+  String get subscribeToNewsletter {
+    return Intl.message(
+      'Subscribe to our newsletter',
+      name: 'subscribeToNewsletter',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Get news about new arrivals, offers and promotions by email.`
+  String get newsletterDescription {
+    return Intl.message(
+      'Get news about new arrivals, offers and promotions by email.',
+      name: 'newsletterDescription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Newsletter subscriptions aren't available on this store yet.`
+  String get newsletterUnavailable {
+    return Intl.message(
+      'Newsletter subscriptions aren\'t available on this store yet.',
+      name: 'newsletterUnavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Discount Coupons`
   String get discountCoupons {
     return Intl.message(
