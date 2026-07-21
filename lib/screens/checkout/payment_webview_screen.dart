@@ -50,6 +50,28 @@ class _PaymentScreenState extends State<PaymentWebview> {
           });
         },
         onWebResourceError: (WebResourceError error) {
+          // Don't tear the payment screen down for benign errors.
+          //
+          // This used to pop unconditionally and report "Payment failed" for
+          // *any* error the webview raised, which is far too broad on iOS.
+          //
+          // Android populates isForMainFrame, so a failed subresource can be
+          // ignored outright. iOS never sets it: webview_flutter_wkwebview
+          // builds WebResourceError from an NSError and leaves isForMainFrame
+          // null, so it must not be treated as "main frame" evidence there.
+          //
+          // WKWebView also reports *cancelled* navigations — NSURLErrorCancelled
+          // (-999) — which happen routinely when one navigation supersedes
+          // another during a 3-D Secure redirect chain. Those arrive with
+          // errorType null, because only WKErrorDomain codes are mapped to a
+          // type; -999 is NSURLErrorDomain. Matching on the raw code is the
+          // only reliable signal, and it can't collide with Android, whose
+          // error codes are small negatives (-1, -2, …).
+          const nsUrlErrorCancelled = -999;
+          if (error.isForMainFrame == false) return;
+          if (error.errorCode == nsUrlErrorCancelled) return;
+          if (!mounted) return;
+
           Navigator.of(context).pop();
           widget.onFinish?.call(false, 'WebView error: ${error.description}');
         },
