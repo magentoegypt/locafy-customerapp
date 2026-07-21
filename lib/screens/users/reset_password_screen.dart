@@ -47,7 +47,9 @@ class _ResetPasswordState extends State<ResetPasswordScreen> {
 
       try {
         final params = {"mobile":widget.phoneNumber,"otp": pinCodeController.text.trim(),"password": passwordController.text.trim(),"type": "FORGOTPASS"};
-        print(params);
+        // Deliberately not logged: this map holds the OTP and the shopper's new
+        // password in cleartext, and a bare print() is not stripped from
+        // release builds.
         // final json = await Services().api.mobileVerifyOtp(params);
         // setState(() {
         //   isSubmitting = false;

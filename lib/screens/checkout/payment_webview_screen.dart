@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:inspireui/inspireui.dart' show printLog;
 
 import '../../common/config.dart';
 import '../../services/index.dart';
@@ -110,7 +111,9 @@ class _PaymentScreenState extends State<PaymentWebview> {
   }
 
   void _handleUrlChange(String url) {
-    print("url = "+url);
+    // printLog, not print: this URL carries the Paymob payment_token and the
+    // 3-D Secure redirect parameters, and print is not stripped in release.
+    printLog('[Payment] url changed');
     if (url.contains('success') || url.contains('processed') || url.contains('confirmation')) {
       Navigator.of(context).pop();
       widget.onFinish?.call(true, 'Payment completed successfully');

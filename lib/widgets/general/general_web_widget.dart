@@ -9,6 +9,7 @@ import '../../common/tools.dart';
 import '../../generated/l10n.dart';
 import '../../models/user_model.dart';
 import '../../routes/flux_navigate.dart';
+import '../../services/index.dart';
 import '../common/webview.dart';
 
 class GeneralWebWidget extends StatelessWidget {
@@ -42,8 +43,19 @@ class GeneralWebWidget extends StatelessWidget {
         var webUrl = item?.webUrl;
         if (item?.requiredLogin ?? false) {
           if (!value) return const SizedBox();
-          var base64Str = EncodeUtils.encodeCookie(user!.cookie!);
-          webUrl = '$webUrl?cookie=$base64Str';
+          // `?cookie=<base64>` is an mstore WordPress-plugin convention — only a
+          // Woo/WordPress backend has a handler that reads it back. On Magento
+          // `user.cookie` is the customer's REST bearer token, so appending it
+          // here authenticated nothing and merely published a live credential
+          // into the URL. Worse than the in-app webview case: the same `webUrl`
+          // is handed to Tools.launchURL(externalApplication) below, which puts
+          // the token in the system browser's history and any account sync.
+          // Gate it exactly like NavigateTools.navigateToWebView does.
+          if ((ServerConfig().isWooType || ServerConfig().isWordPress) &&
+              (user?.cookie?.isNotEmpty ?? false)) {
+            var base64Str = EncodeUtils.encodeCookie(user!.cookie!);
+            webUrl = '$webUrl?cookie=$base64Str';
+          }
         }
 
         if (item != null) {

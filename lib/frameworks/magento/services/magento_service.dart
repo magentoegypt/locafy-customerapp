@@ -141,7 +141,7 @@ class MagentoService extends BaseServices {
             (kEnableProductThumbnail && mediaGalleryEntries.length > 1) ||
         (!kEnableProductThumbnail && mediaGalleryEntries.length > 0)) {
       for (var item in mediaGalleryEntries) {
-        print('========================item: $item');
+        printLog('========================item: $item');
         images
             .add(MagentoHelper.getProductImageUrlByName(domain, item['file']));
       }
@@ -641,7 +641,7 @@ class MagentoService extends BaseServices {
       for (var element in brands) {
         brandIds.add(element.value);
       }
-      print(MagentoHelper.buildUrl(domain, 'mstore/categories', lang)!);
+      printLog(MagentoHelper.buildUrl(domain, 'mstore/categories', lang)!);
       var response = await httpGet(
           MagentoHelper.buildUrl(domain, 'mstore/categories', lang)!,
           headers: {'Authorization': 'Bearer $accessToken'});
@@ -951,7 +951,7 @@ class MagentoService extends BaseServices {
     try {
       final url =
           '$domain/eg-en/mageworx_searchsuiteautocomplete/ajax/index/?q=${Uri.encodeComponent(search ?? '')}';
-      print(url);
+      printLog(url);
       var response = await httpGet(Uri.parse(url),
           headers: {'Authorization': 'Bearer $accessToken'});
       if (response.statusCode == 200) {
@@ -1022,7 +1022,7 @@ class MagentoService extends BaseServices {
 
       'URL:${MagentoHelper.buildUrl(domain, 'mstore/products$endPoint', lang)!}'
           .log();
-      'Bearer Token:$accessToken'.log();
+      'admin token ${isBlank(accessToken) ? 'MISSING' : 'present'}'.log();
 
       var response = await httpCache(
         MagentoHelper.buildUrl(domain, 'mstore/products$endPoint', lang)!,
@@ -1615,9 +1615,9 @@ class MagentoService extends BaseServices {
   @override
   Future<List<ShippingMethod>> getShippingMethods({CartModel? cartModel, String? token, String? checkoutId, Store? store, String? langCode}) async {
     try {
-      print(token);
+      printLog('[Magento] customer token ${isBlank(token) ? 'MISSING' : 'present'}');
       var address = cartModel!.address!;
-      print(convert.jsonEncode(address.toMagentoJson()));
+      printLog(convert.jsonEncode(address.toMagentoJson()));
       var url = token != null
           ? MagentoHelper.buildUrl(
               domain, 'carts/mine/estimate-shipping-methods')!
@@ -1664,13 +1664,13 @@ class MagentoService extends BaseServices {
           'shipping_method_code': shippingMethod?.methodId
         }
       };
-      print(convert.jsonEncode(params));
+      printLog(convert.jsonEncode(params));
       var url = token != null
           ? MagentoHelper.buildUrl(domain, 'carts/mine/shipping-information')!
           : MagentoHelper.buildUrl(
               domain, 'guest-carts/$guestQuoteId/shipping-information')!;
-      print(url);
-      print(token);
+      printLog(url);
+      printLog('[Magento] customer token ${isBlank(token) ? 'MISSING' : 'present'}');
       final res = await httpPost(url,
           body: convert.jsonEncode(params),
           headers: token != null
@@ -1711,7 +1711,7 @@ class MagentoService extends BaseServices {
       endPoint += '&searchCriteria[pageSize]=$apiPageSize';
       endPoint += '&dummy=${DateTime.now().millisecondsSinceEpoch}';
 
-      print(accessToken);
+      printLog('[Magento] admin token ${isBlank(accessToken) ? 'MISSING' : 'present'}');
       var response = await httpGet(
           MagentoHelper.buildUrl(domain, 'orders$endPoint')!,
           headers: {'Authorization': 'Bearer $accessToken'});
@@ -1759,7 +1759,7 @@ class MagentoService extends BaseServices {
           } // Use pm_card_threeDSecureRequired for 3DS authentication
         };
       }
-      print(params);
+      printLog(params);
       final res = await httpPost(url,
           body: convert.jsonEncode(params),
           headers: !isGuest
@@ -1804,8 +1804,8 @@ class MagentoService extends BaseServices {
     try {
 
       var url =  MagentoHelper.buildUrl(domain, 'orders/$entityId')!;
-      print(url);
-      print(accessToken);
+      printLog(url);
+      printLog('[Magento] admin token ${isBlank(accessToken) ? 'MISSING' : 'present'}');
       final res = await httpGet(url,
           headers:  {
             'Authorization': 'Bearer ${accessToken}',
@@ -1929,7 +1929,8 @@ class MagentoService extends BaseServices {
         'password': password
       });
 
-      'create user payLoad is $payLoad'.log();
+      // Not logged: payLoad carries the new account's password in cleartext.
+      'create user request built'.log();
 
       var response =
           await httpPost(MagentoHelper.buildUrl(domain, 'customers')!,
@@ -2115,13 +2116,13 @@ class MagentoService extends BaseServices {
         addressArr.add(addresses);
       }
       params['addresses'] = addressArr.toList();
-      print(convert.jsonEncode({'customer': params}));
+      printLog(convert.jsonEncode({'customer': params}));
       var res = await httpPut(MagentoHelper.buildUrl(domain, 'customers/me')!,
           headers: {'Authorization': 'Bearer ${UserBox().userInfo?.cookie}'
             ,'content-type': 'application/json'},
           body: convert.jsonEncode({'customer': params}));
       final body = convert.jsonDecode(res.body);
-      print(body);
+      printLog(body);
       if (body['message'] != null) {
         throw Exception(MagentoHelper.getErrorMessage(body));
       } else {
@@ -2304,7 +2305,7 @@ class MagentoService extends BaseServices {
       await Future.forEach(items, (Map item) async {
         url = MagentoHelper.buildUrl(
             domain, 'carts/mine/items/${item['item_id']}');
-        print(url);
+        printLog(url);
         await httpDelete(
             url!,
             headers: {'Authorization': 'Bearer $token'});
@@ -2314,7 +2315,7 @@ class MagentoService extends BaseServices {
           headers: {'Authorization': 'Bearer $token'});
       return true;
     } catch (err) {
-      print(url);
+      printLog(url);
       return true;
      // rethrow;
     }
@@ -2403,10 +2404,10 @@ class MagentoService extends BaseServices {
             await deleteItemsInCart(List<Map>.from(cartInfo['items']), token);
           }
         } else if (res.statusCode == 401) {
-          print(url);
+          printLog(url);
           throw Exception('Token expired. Please logout then login again');
         } else if (res.statusCode != 404) {
-          print(url);
+          printLog(url);
           throw Exception(MagentoHelper.getErrorMessage(cartInfo));
         }
       }
@@ -2449,7 +2450,7 @@ class MagentoService extends BaseServices {
   Future<String> createCart() async {
 
     Uri? url = MagentoHelper.buildUrl(domain, 'carts/mine');
-    print(url);
+    printLog(url);
     try {
       var res =  await httpPost(url!,
           headers: {'Authorization': 'Bearer ${UserBox().userInfo?.cookie}','content-type': 'application/json'},);
@@ -2627,7 +2628,7 @@ class MagentoService extends BaseServices {
           },
         );
 
-        print(convert.jsonEncode({
+        printLog(convert.jsonEncode({
           'new_password': json['user_pass'],
           'confirm_password': json['user_pass'],
           'current_password': json['current_pass']
@@ -2652,7 +2653,7 @@ class MagentoService extends BaseServices {
                 ,'content-type': 'application/json'},
               body: payLoad);
           final body = convert.jsonDecode(res.body);
-          print(body);
+          printLog(body);
         }
         if (body is Map && body['message'] != null) {
           throw Exception(MagentoHelper.getErrorMessage(body));
@@ -2676,7 +2677,7 @@ class MagentoService extends BaseServices {
               ,'content-type': 'application/json'},
             body: payLoad);
         final body = convert.jsonDecode(res.body);
-        print(body);
+        printLog(body);
         if (body['message'] != null) {
           throw Exception(MagentoHelper.getErrorMessage(body));
         } else {
@@ -2702,7 +2703,7 @@ class MagentoService extends BaseServices {
               ,'content-type': 'application/json'},
             body: payLoad);
         final body = convert.jsonDecode(res.body);
-        print(body);
+        printLog(body);
       }
       return json;
     } catch (err) {
@@ -2737,7 +2738,7 @@ class MagentoService extends BaseServices {
     try {
       // Support get city list when user has extension installed https://codecanyon.net/item/magento-city-and-region-manager/17911995
 
-     print(MagentoHelper.buildUrl(domain, 'city?country=$countryId')!);
+     printLog(MagentoHelper.buildUrl(domain, 'city?country=$countryId')!);
       final response = await httpGet(
           MagentoHelper.buildUrl(domain, 'city?country=$countryId')!);
       var body = convert.jsonDecode(response.body);
@@ -2751,7 +2752,7 @@ class MagentoService extends BaseServices {
   Future getZonesByCityId(cityId) async {
     try {
       // Support get city list when user has extension installed https://codecanyon.net/item/magento-city-and-region-manager/17911995
-      print(MagentoHelper.buildUrl(domain, 'zone?city=$cityId')!);
+      printLog(MagentoHelper.buildUrl(domain, 'zone?city=$cityId')!);
       final response = await httpGet(
           MagentoHelper.buildUrl(domain, 'zone?city=$cityId')!);
       var body = convert.jsonDecode(response.body);
@@ -2874,11 +2875,13 @@ class MagentoService extends BaseServices {
     final bannersAPIUrl = MagentoHelper.buildUrl(domain, 'mobile/home/config');
 
     "getBannerImages: $bannersAPIUrl".log();
-    print(accessToken);
+    printLog('[Magento] admin token ${isBlank(accessToken) ? 'MISSING' : 'present'}');
     try {
       var response = await httpGet(
         MagentoHelper.buildUrl(domain, 'mobile/home/config')!,
-        headers: {'Authorization': 'Bearer jd7u3bu9g7ca1vgocv0dvpr77xof57jf'},
+        // Use the field, not another copy of the literal — an inline copy
+        // means rotating env.dart would silently miss this call.
+        headers: {'Authorization': 'Bearer $accessToken'},
       );
 
       final body = convert.jsonDecode(response.body);
@@ -2886,8 +2889,8 @@ class MagentoService extends BaseServices {
       "💫💫💫💫BannersResponse: $body".log();
        List<BannerImagesModel> bannersList = [];
       (body as List).first.forEach((key, value){
-        print('key is $key');
-        print('value is $value ');
+        printLog('key is $key');
+        printLog('value is $value ');
         bannersList.add(BannerImagesModel.fromJson(value));
       });
       //final bannersList = (body as List).map((i) => BannerImagesModel.fromJson(i)).toList();
@@ -2902,9 +2905,9 @@ class MagentoService extends BaseServices {
   @override
   Future<List<Product>?>? getWishList() async {
     try {
-      print(MagentoHelper.buildUrl(domain, 'mobiconnect/wishlist/getwishlist')!);
-      print('Bearer ${accessToken}');
-      print('customer_id ${UserBox().userInfo?.id}');
+      printLog(MagentoHelper.buildUrl(domain, 'mobiconnect/wishlist/getwishlist')!);
+      printLog('[Magento] admin token ${isBlank(accessToken) ? 'MISSING' : 'present'}');
+      printLog('customer_id ${UserBox().userInfo?.id}');
       var response = await httpPost(
         MagentoHelper.buildUrl(domain, 'mobiconnect/wishlist/getwishlist')!,
         headers: {
@@ -2954,7 +2957,7 @@ class MagentoService extends BaseServices {
   @override
   Future<List<Product>?>? getShoppingList(CartModel model,
       {bool replace = false}) async {
-    print('Bearer ${UserBox().userInfo?.cookie}');
+    printLog('[Magento] customer token ${isBlank(UserBox().userInfo?.cookie) ? 'MISSING' : 'present'}');
     try {
       var response = await httpGet(
         MagentoHelper.buildUrl(domain, 'carts/mine/items')!,
@@ -3124,7 +3127,7 @@ class MagentoService extends BaseServices {
         body: convert.jsonEncode(mainBody)
       );
       final body = convert.jsonDecode(response.body);
-      print(body);
+      printLog(body);
       return body;
     } catch (e) {
       return null;

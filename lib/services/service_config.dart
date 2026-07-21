@@ -192,7 +192,17 @@ mixin ConfigMixin {
     ServerConfig().setConfig(appConfig);
     CartInject().init(appConfig);
 
-    printLog('[🌍appConfig] ${appConfig['type']} $appConfig');
+    // Redact secrets before logging the config: `accessToken` is the Magento
+    // ADMIN integration token, and dumping the whole map put it in plain text
+    // in the device log on every launch. printLog is debug-only so this never
+    // shipped, but developer logs get pasted into tickets and chats.
+    const secretKeys = {'accessToken', 'consumerKey', 'consumerSecret'};
+    final safeConfig = Map<String, dynamic>.from(appConfig as Map)
+      ..updateAll((key, value) =>
+          secretKeys.contains(key) && value != null && '$value'.isNotEmpty
+              ? '<redacted>'
+              : value);
+    printLog('[🌍appConfig] ${appConfig['type']} $safeConfig');
 
     switch (appConfig['type']) {
       case 'opencart':

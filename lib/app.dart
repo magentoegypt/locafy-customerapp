@@ -195,7 +195,8 @@ class AppState extends State<App>
 
         Services().firebase.getMessagingToken().then((token) {
           try {
-            printLog('[🔽 updateDeviceToken] user cookie ${user.cookie}');
+            printLog('[🔽 updateDeviceToken] customer token '
+                '${(user.cookie?.isEmpty ?? true) ? 'MISSING' : 'present'}');
             Services().api.updateUserInfo({'deviceToken': token}, user.cookie);
           } catch (err, trace) {
             printError(err, trace);
