@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "19385734930",
-    "project_id": "headless-31464",
-    "storage_bucket": "headless-31464.firebasestorage.app"
+    "project_number": "692482194375",
+    "project_id": "magento-app-store",
+    "storage_bucket": "magento-app-store.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:19385734930:android:d45aa4341c80ecbc5cc5cb",
+        "mobilesdk_app_id": "1:692482194375:android:e081e5cbaffe6b5fd6f7e2",
         "android_client_info": {
           "package_name": "com.magentoegyptpro.ajstore"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCqDgXbdDXOIEl4A5gwQ4jPkA_nyThTmHI"
+          "current_key": "AIzaSyCSPBubPa6yEJOP_eMxUm89ME_ZIznZ6ps"
         }
       ],
       "services": {
