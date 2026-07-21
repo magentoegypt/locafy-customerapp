@@ -1592,8 +1592,27 @@ class Product {
     type = productJson['product_type'];
     sku = productJson['product_sku'];
     vendor = productJson['vendor_id'];
-    price = productJson['regular_price'];
-    minimalPrice = productJson['special_price'] != "no_special" ? productJson['special_price']:null; //special_price is discount price
+    // The wishlist endpoint returns prices as PREFORMATTED DISPLAY STRINGS —
+    // "EGP 950.00", "EGP 1,100.00" (with a non-breaking space) — while every
+    // price field on Product holds a plain numeric string that PriceTools
+    // parses with double.tryParse. Assigning the raw string straight to `price`
+    // meant it parsed as 0, so the wishlist showed EGP0.00; and because
+    // original_price was never set, a discounted product showed its regular
+    // price with no strike-through (86d3rtbnp follow-up).
+    final regular = _priceFromDisplayString(productJson['regular_price']);
+    final special = _priceFromDisplayString(productJson['special_price']);
+
+    regularPrice = regular;
+    original_price = regular;
+    minimalPrice = special; //special_price is discount price
+    salePrice = special;
+    // Effective price: what the shopper actually pays.
+    price = special ?? regular;
+    // Deliberately NOT setting onSale. ProductPricing renders the original
+    // price twice if both routes are live: once struck through above (keyed on
+    // original_price) and once inline beside the current price (keyed on
+    // onSale). The stacked form is what this tile already showed for
+    // PLP-sourced products, and what its fixed-height price slot is sized for.
     size_chart = productJson['size_chart'];
     minPrice = productJson['min_price'];
     maxPrice = productJson['max_price'];
@@ -1827,6 +1846,25 @@ class Product {
     final priceEl = document.querySelector('.price');
 
     return priceEl?.text.trim() ?? '';
+  }
+
+  /// Pulls the amount out of a preformatted price string such as
+  /// `EGP 1,100.00` and returns it as the plain numeric string the rest of
+  /// the app stores (`"1100.0"`). Returns null for anything without a usable
+  /// amount — an absent value, an empty string, or Magento's "no_special"
+  /// sentinel — so callers can distinguish "no discount" from "free".
+  ///
+  /// Assumes '.' is the decimal separator and ',' groups thousands, which is
+  /// how this store formats EGP. A locale that reverses the two would fail to
+  /// parse and yield null (no price shown) rather than a wrong number.
+  static String? _priceFromDisplayString(dynamic raw) {
+    if (raw == null) return null;
+    final text = raw.toString().trim();
+    if (text.isEmpty || text == 'no_special') return null;
+    // Drop the currency symbol, spaces (including U+00A0) and group separators.
+    final cleaned = text.replaceAll(RegExp(r'[^0-9.]'), '');
+    final value = double.tryParse(cleaned);
+    return value?.toString();
   }
 
   double extractPriceValue(String? htmlString) {
