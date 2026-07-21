@@ -22,6 +22,20 @@ class ProductWishListScreen extends StatefulWidget {
 class _WishListState extends State<ProductWishListScreen> with AppBarMixin {
   final ScrollController _scrollController = ScrollController();
 
+  /// Height of one wishlist tile: a 1:1 image plus the tile's fixed-height
+  /// name / price / button slots. Text scaling is applied to the text slots so
+  /// the tile still fits when the user has larger fonts set system-wide.
+  double _tileExtent(BuildContext context) {
+    final tileWidth = MediaQuery.of(context).size.width / 2;
+    // Mirrors WishlistItem: 10 horizontal margin + 8 padding on each side.
+    final imageWidth = tileWidth - (10 + 8) * 2;
+    final textScale = WishlistItem.textScaleOf(context);
+    const fixedSlots = WishlistItem.nameHeight + WishlistItem.priceHeight + 40;
+    // 8 vertical margin x2, 8 padding x2, 8 gap under the image.
+    const chrome = 8 * 2 + 8 * 2 + 8;
+    return imageWidth + fixedSlots * textScale + chrome;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -124,9 +138,17 @@ class _WishListState extends State<ProductWishListScreen> with AppBarMixin {
                   Expanded(
                     child: GridView.builder(
                       controller: _scrollController,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      // mainAxisExtent, not childAspectRatio: the tile's
+                      // fixed parts (name 36 + price 46 + button 40 + padding
+                      // and gaps) come to a known height, so deriving the cell
+                      // from them guarantees the image gets the remainder and
+                      // nothing overflows. childAspectRatio: 0.75 left the cell
+                      // ~30px short of the content on this device, which is why
+                      // the buttons were pushed out of their cards (86d3rtbnp).
+                      gridDelegate:
+                          SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        childAspectRatio: 0.75,
+                        mainAxisExtent: _tileExtent(context),
                       ),
                       itemCount: model.products.length,
                       itemBuilder: (context, index) {

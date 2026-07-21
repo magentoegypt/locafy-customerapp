@@ -93,118 +93,113 @@ class WishlistItem extends StatelessWidget {
   final VoidCallback? onAddToCart;
   final VoidCallback? onRemove;
 
+  /// Every tile is laid out identically so the rows line up: the image takes
+  /// whatever vertical space is left, and the name, price and button occupy
+  /// fixed-height slots. Previously the name (1-2 lines) and the price (1 line,
+  /// or 2 when there is a strike-through original) changed the tile's height,
+  /// so the ADD TO CART buttons sat at different heights — and the content
+  /// overflowed the grid cell by ~30px, which in a release build silently
+  /// clips instead of showing the debug stripes (86d3rtbnp).
+  /// Read by the wishlist grid to size each cell — keep the two in step.
+  static const double nameHeight = 36;
+  static const double priceHeight = 46;
+
+  /// Slots grow with the system font scale so larger text still fits; the
+  /// grid applies the identical clamp when sizing the cell.
+  static double textScaleOf(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.6);
+
   @override
   Widget build(BuildContext context) {
     final localTheme = Theme.of(context);
+    final scale = textScaleOf(context);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Container(
-          margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-          decoration: AppDecoration.outlineBluegray50019.copyWith(
-            borderRadius: BorderRadiusStyle.roundedBorder4,
-          ),
-          child: InkWell(
-            onTap: (){
-              Navigator.of(context).pushNamed(
-                RouteList.productDetail,
-                arguments: product,
-              );
-            },
-            child: Column(
-              key: ValueKey(product.id),
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Stack(
-                            clipBehavior: Clip.none, // ensures icon can overflow if needed
-                            children: [
-                              SizedBox(
-                                 width: constraints.maxWidth * 0.95,
-                                height: constraints.maxWidth * 0.6,
-                                child: ImageResize(
-                                    url: product.imageFeature,
-                                    size: kSize.medium),
-                              ),
-                             Positioned(
-                               top: -10,   // small padding from top
-                               left: -10,  // small padding from left
-                               child:  IconButton(
-                               icon: const Icon(Icons.close),
-                               onPressed: onRemove,
-                             ),)
-                            ],
-                          ),
-                          const SizedBox(width: 16.0),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  product.name ?? '',
-                                  style: localTheme.textTheme.bodySmall,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 7),
-                                ProductPricing(
-                                  product: product,
-                                  hide: false,
-                                ),
-                                const SizedBox(height: 5),
-                                Spacer(),
-                                if (Services()
-                                    .widget
-                                    .enableShoppingCart(product) &&
-                                    !ServerConfig().isListingType)
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      foregroundColor: Colors.white,
-                                      backgroundColor:
-                                      localTheme.primaryColor,
-                                      minimumSize: const Size.fromHeight(40), // height fixed
-                                      maximumSize: const Size(double.infinity, 40), // full width
-                                    ),
-                                    // Use the wishlist screen's type-aware
-                                    // handler (simple -> add directly,
-                                    // configurable -> open product page). Fall
-                                    // back to the add-to-cart dialog if no
-                                    // handler was supplied.
-                                    onPressed: onAddToCart ??
-                                        () => DialogAddToCart.show(context,
-                                            product: product),
-                                    child: (product.isPurchased &&
-                                        product.isDownloadable!)
-                                        ? Text(S
-                                        .of(context)
-                                        .download
-                                        .toUpperCase())
-                                        : Text(S
-                                        .of(context)
-                                        .addToCart
-                                        .toUpperCase()),
-                                  ),
-                                const SizedBox(height: 5),
-                              ],
-                            ),
-                          ),
-                        ],
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+      decoration: AppDecoration.outlineBluegray50019.copyWith(
+        borderRadius: BorderRadiusStyle.roundedBorder4,
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).pushNamed(
+            RouteList.productDetail,
+            arguments: product,
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            key: ValueKey(product.id),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Flexible, so the tile absorbs any leftover height here rather
+              // than pushing the button out of the cell.
+              Expanded(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fill(
+                      child: ImageResize(
+                        url: product.imageFeature,
+                        size: kSize.medium,
                       ),
                     ),
+                    Positioned(
+                      top: -8,
+                      left: -8,
+                      child: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: onRemove,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: nameHeight * scale,
+                child: Text(
+                  product.name ?? '',
+                  style: localTheme.textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(
+                height: priceHeight * scale,
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: ProductPricing(product: product, hide: false),
+                ),
+              ),
+              if (Services().widget.enableShoppingCart(product) &&
+                  !ServerConfig().isListingType)
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: localTheme.primaryColor,
+                    minimumSize: const Size.fromHeight(40),
+                    maximumSize: const Size(double.infinity, 40),
+                    padding: EdgeInsets.zero,
                   ),
-              ],
-            ),
+                  // Use the wishlist screen's type-aware handler (simple -> add
+                  // directly, configurable -> open product page). Fall back to
+                  // the add-to-cart dialog if no handler was supplied.
+                  onPressed: onAddToCart ??
+                      () => DialogAddToCart.show(context, product: product),
+                  child: (product.isPurchased && product.isDownloadable!)
+                      ? Text(S.of(context).download.toUpperCase())
+                      : Text(
+                          S.of(context).addToCart.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
