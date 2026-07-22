@@ -2412,7 +2412,14 @@ class MagentoService extends BaseServices {
         } else if (res.statusCode == 401) {
           printLog(url);
           throw Exception('Token expired. Please logout then login again');
-        } else if (res.statusCode != 404) {
+        } else {
+          // This used to read `!= 404`, so that a 404 fell through to the quote
+          // creation below. It never did — makeRequest throws on a 404 unless
+          // the call site opts in — and the fall-through would have been a
+          // no-op anyway: for `token != null` the block below re-issues this
+          // exact POST. A 404 from carts/mine is Magento failing to find the
+          // customer, which creating a cart cannot fix, so the useful outcome
+          // is to surface the backend's message rather than retry.
           printLog(url);
           throw Exception(MagentoHelper.getErrorMessage(cartInfo));
         }
@@ -2502,6 +2509,19 @@ class MagentoService extends BaseServices {
       /// (which carries an *absolute* quantity) as a POST would add that total
       /// on top of any existing line. A PUT that 404s on a stale item_id is
       /// left to the next cart resync instead of being blindly re-added.
+      ///
+      /// Reaching this at all needs `allowNotFound: true` on the request (see
+      /// _sendCartItemRequest); without it makeRequest throws on the 404 and
+      /// this whole branch is dead code.
+      ///
+      /// The match is on the substituted message: Magento sends
+      /// `{"message":"No such entity with %fieldName = %fieldValue",
+      /// "parameters":{"fieldName":"cartId",...}}` and getErrorMessage fills the
+      /// named placeholders in. Matching prose is tolerable only because these
+      /// cart URLs carry no locale, so buildUrl pins them to the eg-en store
+      /// view — and the string is in fact untranslated on both store views
+      /// today (checked against testing.locafy.market). Passing a locale to a
+      /// cart call would put that assumption at risk.
       if (res.statusCode == 404) {
         if ((message?.contains('No such entity') ?? false) && !isUpdate) {
           try {
@@ -2550,11 +2570,18 @@ class MagentoService extends BaseServices {
       'Authorization': 'Bearer ${UserBox().userInfo?.cookie}',
       'content-type': 'application/json'
     };
+    // allowNotFound: addUpdateItemsToCart branches on statusCode before reading
+    // the body, and needs to see the 404 to recover from an expired quote.
+    // Without it the throw in makeRequest skips that recovery entirely.
     return isUpdate
         ? httpPut(url,
-            headers: headers, body: convert.jsonEncode({'cartItem': params}))
+            headers: headers,
+            body: convert.jsonEncode({'cartItem': params}),
+            allowNotFound: true)
         : httpPost(url,
-            headers: headers, body: convert.jsonEncode({'cartItem': params}));
+            headers: headers,
+            body: convert.jsonEncode({'cartItem': params}),
+            allowNotFound: true);
   }
 
 

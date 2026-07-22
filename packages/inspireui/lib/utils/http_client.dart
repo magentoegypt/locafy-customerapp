@@ -73,7 +73,24 @@ String notFoundError(http.Response response) =>
     response.reasonPhrase ??
     'Not Found';
 
-Future<http.Response> _makeRequest(Future<http.Response> request) async {
+/// Runs [request] and applies this file's convention that a failure surfaces as
+/// a thrown String.
+///
+/// Set [allowNotFound] to receive a 404 as an ordinary [http.Response] — status
+/// and body intact — instead of a throw. It is opt-in per call site, and the
+/// default stays fail-closed on purpose: most callers of these helpers go
+/// straight to `jsonDecode(res.body)` with no status check, so handing them a
+/// 404 would have them parse an error payload as data (a product lookup would
+/// crash, a profile save would write an empty address book, an order cancel
+/// would report a cancellation that never happened).
+///
+/// Only pass it from a call site that branches on `statusCode` before reading
+/// the body — currently the cart calls that recover from an expired quote.
+@visibleForTesting
+Future<http.Response> makeRequest(
+  Future<http.Response> request, {
+  bool allowNotFound = false,
+}) async {
   final http.Response response;
   try {
     response = await request;
@@ -82,19 +99,19 @@ Future<http.Response> _makeRequest(Future<http.Response> request) async {
     // through here as a synthetic SocketException, which conflated "the server
     // answered 404" with "the socket failed".
     if (e.message.contains('Failed host lookup')) {
+      // Matched by StringExtensions.isNoInternetError, which is what decides
+      // whether the offline screen shows — keep the two in step.
       throw 'No Internet Connection';
     }
     throw e.message;
   }
 
-  if (response.statusCode == 404) {
-    // Still throws rather than returning the response: most callers of these
-    // helpers read the body without checking the status, so handing them a 404
-    // would have them parse an error payload as data. What changes is the
-    // message — the backend's own explanation instead of the bare reason
-    // phrase, which is all a 404 used to surface (e.g. the "Not Found" toast in
-    // 86d3rytm0, where Magento had actually said "The product that was
-    // requested doesn't exist").
+  if (response.statusCode == 404 && !allowNotFound) {
+    // Throws rather than returning the response, for the reason spelled out on
+    // [allowNotFound] above. What changes is the message — the backend's own
+    // explanation instead of the bare reason phrase, which is all a 404 used to
+    // surface (e.g. the "Not Found" toast in 86d3rytm0, where Magento had
+    // actually said "The product that was requested doesn't exist").
     //
     // The thrown value stays a String, as every other path here throws, so the
     // formatters that display it are unaffected.
@@ -105,11 +122,14 @@ Future<http.Response> _makeRequest(Future<http.Response> request) async {
 }
 
 /// The default http GET that support Logging
+///
+/// See [makeRequest] for [allowNotFound].
 Future<http.Response> httpGet(
   Uri url, {
   Map<String, String>? headers,
   bool enableDio = false,
   String kWebProxy = '',
+  bool allowNotFound = false,
 }) async {
   initProxyClient(MultiSite.mainSiteUrl ?? url);
   final startTime = DateTime.now();
@@ -137,15 +157,19 @@ Future<http.Response> httpGet(
       uri = Uri.parse(proxyURL);
     }
     printLog('♻️ GET:$url', startTime);
-    return _makeRequest(http.get(uri, headers: headers));
+    return makeRequest(http.get(uri, headers: headers),
+        allowNotFound: allowNotFound);
   }
 }
 
 /// The default http POST that support Logging
+///
+/// See [makeRequest] for [allowNotFound].
 Future<http.Response> httpPost(Uri url,
     {Map<String, String>? headers,
     Object? body,
-    bool enableDio = false}) async {
+    bool enableDio = false,
+    bool allowNotFound = false}) async {
   final startTime = DateTime.now();
   initProxyClient(MultiSite.mainSiteUrl ?? url);
   if (enableDio) {
@@ -168,15 +192,19 @@ Future<http.Response> httpPost(Uri url,
     }
   } else {
     printLog('🔼 POST:$url', startTime);
-    return _makeRequest(http.post(url, headers: headers, body: body));
+    return makeRequest(http.post(url, headers: headers, body: body),
+        allowNotFound: allowNotFound);
   }
 }
 
 /// The default http PUT that support Logging
+///
+/// See [makeRequest] for [allowNotFound].
 Future<http.Response> httpPut(Uri url,
     {Map<String, String>? headers,
     Object? body,
-    bool enableDio = false}) async {
+    bool enableDio = false,
+    bool allowNotFound = false}) async {
   final startTime = DateTime.now();
   initProxyClient(MultiSite.mainSiteUrl ?? url);
   if (enableDio) {
@@ -199,15 +227,19 @@ Future<http.Response> httpPut(Uri url,
     }
   } else {
     printLog('🔼 PUT:$url', startTime);
-    return _makeRequest(http.put(url, headers: headers, body: body));
+    return makeRequest(http.put(url, headers: headers, body: body),
+        allowNotFound: allowNotFound);
   }
 }
 
 /// The default http PUT that support Logging
+///
+/// See [makeRequest] for [allowNotFound].
 Future<http.Response> httpDelete(Uri url,
     {Map<String, String>? headers,
     Object? body,
-    bool enableDio = false}) async {
+    bool enableDio = false,
+    bool allowNotFound = false}) async {
   final startTime = DateTime.now();
   initProxyClient(MultiSite.mainSiteUrl ?? url);
   if (enableDio) {
@@ -230,15 +262,19 @@ Future<http.Response> httpDelete(Uri url,
     }
   } else {
     printLog('DELETE:$url', startTime);
-    return _makeRequest(http.delete(url, headers: headers, body: body));
+    return makeRequest(http.delete(url, headers: headers, body: body),
+        allowNotFound: allowNotFound);
   }
 }
 
 /// The default http PATCH that support Logging
+///
+/// See [makeRequest] for [allowNotFound].
 Future<http.Response> httpPatch(Uri url,
     {Map<String, String>? headers,
     Object? body,
-    bool enableDio = false}) async {
+    bool enableDio = false,
+    bool allowNotFound = false}) async {
   final startTime = DateTime.now();
   initProxyClient(MultiSite.mainSiteUrl ?? url);
   if (enableDio) {
@@ -261,7 +297,8 @@ Future<http.Response> httpPatch(Uri url,
     }
   } else {
     printLog('PATCH:$url', startTime);
-    return _makeRequest(http.patch(url, headers: headers, body: body));
+    return makeRequest(http.patch(url, headers: headers, body: body),
+        allowNotFound: allowNotFound);
   }
 }
 
