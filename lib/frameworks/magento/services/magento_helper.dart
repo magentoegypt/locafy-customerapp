@@ -3,6 +3,52 @@ import '../../../common/config.dart';
 import '../../../common/constants.dart';
 
 class MagentoHelper {
+  /// Rewrites a stored phone number into the local form Magento's Egyptian
+  /// validator accepts — `01020104267`, the shape its own error message gives
+  /// as the example ("Please enter a valid mobile number for Egypt (for
+  /// example 01012345678)").
+  ///
+  /// The address form's phone widget hands back the dial code joined to the
+  /// national number (`+201020104267`), and nothing between there and the API
+  /// converted it, so `customers/me` rejected the save (86d3rrpqr). Because
+  /// that PUT re-sends the *whole* address book, a single address in the wrong
+  /// shape failed adding, editing and deleting alike — so this is applied to
+  /// every address in the payload, not just the one being edited.
+  ///
+  /// Deliberately NOT used by [Address.toMagentoJson]: checkout posts the same
+  /// `+20…` value and Magento accepts it there, so that path is left alone.
+  ///
+  /// Anything that is not a recognisable local number is returned unchanged
+  /// rather than guessed at — this normalises formatting, it does not repair
+  /// bad data.
+  static String? normalizePhoneForMagento(String? phone) {
+    if (phone == null) return null;
+    final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return phone;
+
+    final dial =
+        kPhoneNumberConfig.dialCodeDefault.replaceAll(RegExp(r'[^0-9]'), '');
+
+    var national = digits;
+    // Only strip the dial code when what remains can still be a full national
+    // number, so a 10-digit number that merely happens to start with "20" is
+    // left intact.
+    if (dial.isNotEmpty &&
+        national.length > 10 &&
+        national.startsWith(dial)) {
+      national = national.substring(dial.length);
+    }
+
+    if (national.length == 10 && !national.startsWith('0')) {
+      return '0$national';
+    }
+    // Already local (0 + 10 digits) — hand it back untouched.
+    if (national.length == 11 && national.startsWith('0')) {
+      return national;
+    }
+    return phone;
+  }
+
   static String? getCustomAttribute(customAttributes, attribute) {
     String? value;
     if (customAttributes != null && customAttributes.length > 0) {

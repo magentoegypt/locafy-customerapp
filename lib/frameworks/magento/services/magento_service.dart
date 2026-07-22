@@ -2068,7 +2068,8 @@ class MagentoService extends BaseServices {
           addresses.id = int.parse(element.id ?? '0');
           addresses.firstname = address?.firstName;
           addresses.lastname = address?.lastName;
-          addresses.telephone = address?.phoneNumber;
+          addresses.telephone =
+              MagentoHelper.normalizePhoneForMagento(address?.phoneNumber);
           addresses.street = [];
           addresses.street?.add(address?.street ?? "");
           addresses.city = address?.city;
@@ -2080,7 +2081,11 @@ class MagentoService extends BaseServices {
           addresses.id = int.parse(element.id ?? '0');
           addresses.firstname = element.firstName;
           addresses.lastname = element.lastName;
-          addresses.telephone = element.phoneNumber;
+          // Untouched addresses are re-sent verbatim by this PUT, so one of
+          // them holding a `+20…` number failed the whole save — including
+          // deletes. Normalise them too (86d3rrpqr).
+          addresses.telephone =
+              MagentoHelper.normalizePhoneForMagento(element.phoneNumber);
           addresses.street = [];
           addresses.street?.add(element.street ?? "");
           addresses.city = element.city;
@@ -2105,7 +2110,8 @@ class MagentoService extends BaseServices {
         addresses.customerId = int.parse(UserBox().userInfo?.id ?? '0');
         addresses.firstname = address?.firstName;
         addresses.lastname = address?.lastName;
-        addresses.telephone = address?.phoneNumber;
+        addresses.telephone =
+            MagentoHelper.normalizePhoneForMagento(address?.phoneNumber);
         addresses.street = [];
         addresses.street?.add(address?.street ?? "");
         addresses.city = address?.city;
