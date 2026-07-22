@@ -25,19 +25,83 @@ class HttpBase extends http.BaseClient {
   }
 }
 
-Future<http.Response> _makeRequest(Future<http.Response> request) async {
+/// The human-readable reason out of an error response body, or null when the
+/// body carries nothing worth showing.
+///
+/// The backends behind this app report errors as `{"message": "..."}`. Magento
+/// additionally leaves `%1` / `%fieldName` placeholders in that string and
+/// supplies the values in a `parameters` list or map — the same substitution
+/// `MagentoHelper.getErrorMessage` performs for the statuses that already reach
+/// it, repeated here because a 404 never gets that far.
+///
+/// A store behind a WAF or a proxy answers with an HTML error page rather than
+/// JSON, and a parser dump is worse than saying nothing — so anything that is
+/// not JSON carrying a non-empty `message` returns null and the caller falls
+/// back to the status reason phrase.
+String? parseBackendErrorMessage(String? body) {
+  final trimmed = body?.trim() ?? '';
+  if (!trimmed.startsWith('{')) return null;
   try {
-    var response = await request;
-    if (response.statusCode == 404) {
-      throw SocketException(response.reasonPhrase ?? 'Not Found');
+    final decoded = jsonDecode(trimmed);
+    if (decoded is! Map) return null;
+    final raw = decoded['message'];
+    if (raw is! String || raw.trim().isEmpty) return null;
+
+    var message = raw;
+    final params = decoded['parameters'];
+    if (params is List) {
+      for (var i = 0; i < params.length; i++) {
+        message = message.replaceAll('%${i + 1}', '${params[i]}');
+      }
+    } else if (params is Map) {
+      params.forEach((key, value) {
+        message = message.replaceAll('%$key', '$value');
+      });
     }
-    return response;
+    return message.trim();
+  } catch (_) {
+    // Not JSON after all — nothing safe to show.
+    return null;
+  }
+}
+
+/// What a 404 reports to the caller: the backend's own explanation when it sent
+/// one, otherwise the status reason phrase.
+@visibleForTesting
+String notFoundError(http.Response response) =>
+    parseBackendErrorMessage(response.body) ??
+    response.reasonPhrase ??
+    'Not Found';
+
+Future<http.Response> _makeRequest(Future<http.Response> request) async {
+  final http.Response response;
+  try {
+    response = await request;
   } on SocketException catch (e) {
+    // A genuine transport failure. Unchanged: the 404 case used to be funnelled
+    // through here as a synthetic SocketException, which conflated "the server
+    // answered 404" with "the socket failed".
     if (e.message.contains('Failed host lookup')) {
       throw 'No Internet Connection';
     }
     throw e.message;
   }
+
+  if (response.statusCode == 404) {
+    // Still throws rather than returning the response: most callers of these
+    // helpers read the body without checking the status, so handing them a 404
+    // would have them parse an error payload as data. What changes is the
+    // message — the backend's own explanation instead of the bare reason
+    // phrase, which is all a 404 used to surface (e.g. the "Not Found" toast in
+    // 86d3rytm0, where Magento had actually said "The product that was
+    // requested doesn't exist").
+    //
+    // The thrown value stays a String, as every other path here throws, so the
+    // formatters that display it are unaffected.
+    // ignore: only_throw_errors
+    throw notFoundError(response);
+  }
+  return response;
 }
 
 /// The default http GET that support Logging
