@@ -9,6 +9,12 @@ import 'commission_data.dart';
 class ProductItem {
   String? id;
   String? productId;
+
+  /// Magento's `sku`. Kept alongside [productId] because Magento's review and
+  /// product-lookup routes key off the SKU, not the numeric entity id — posting
+  /// a review from Order History with the id 404s (86d3rytm0). Null on backends
+  /// whose order payload carries no sku; callers fall back to [productId].
+  String? sku;
   String? variationId;
   String? name;
   int? quantity;
@@ -200,6 +206,7 @@ class ProductItem {
   Map<String, dynamic> toJson() {
     return {
       'product_id': productId,
+      'sku': sku,
       'name': name,
       'quantity': quantity,
       'total': total,
@@ -209,6 +216,7 @@ class ProductItem {
 
   ProductItem.fromLocalJson(Map parsedJson) {
     productId = "${parsedJson["product_id"]}";
+    sku = parsedJson['sku']?.toString();
     name = parsedJson['name'];
     quantity = parsedJson['quantity'];
     total = parsedJson['total'].toString();
@@ -218,6 +226,7 @@ class ProductItem {
   ProductItem.fromMagentoJson(Map parsedJson) {
     try {
       productId = "${parsedJson["product_id"]}";
+      sku = parsedJson['sku']?.toString();
       name = parsedJson['name'];
       quantity = parsedJson['qty_ordered'];
       total = parsedJson['base_row_total'].toString();

@@ -228,7 +228,12 @@ class _StateProductOrderItem extends BaseScreen<ProductOrderItem> {
           Padding(
             padding: const EdgeInsets.only(top: 5.0),
             child: Reviews(
-              widget.product.productId,
+              // Magento keys reviews off the SKU, so passing the numeric
+              // product_id 404'd ("Not Found" on Send) and the existing rating
+              // never loaded (86d3rytm0). The PDP always passed product.sku;
+              // only this call site did not. Backends whose order payload has
+              // no sku keep their previous behaviour.
+              widget.product.sku ?? widget.product.productId,
               showYourRatingOnly: true,
             ),
           ),
