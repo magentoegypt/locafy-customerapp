@@ -27,7 +27,24 @@ extension StringExtensions on String {
         .replaceAll('}]', '\n}\n]');
   }
 
-  bool get isNoInternetError => contains('SocketException: Failed host lookup');
+  /// Whether this message describes a device that cannot reach the network at
+  /// all, so the caller can offer the offline screen instead of a generic
+  /// "something went wrong".
+  ///
+  /// The same failure reaches here spelled two ways. Anything routed through
+  /// `httpGet` and its siblings is rewritten by `makeRequest` in
+  /// utils/http_client.dart, which catches the SocketException and rethrows the
+  /// literal 'No Internet Connection' — that is what every network call in this
+  /// app actually produces. Only a caller that bypasses those helpers surfaces
+  /// the exception itself, whose toString() reads
+  /// `SocketException: Failed host lookup: '<host>' (OS Error: ...)`.
+  ///
+  /// Matching a substring rather than the whole string is deliberate: the
+  /// models wrap the error in a sentence of their own before it gets here
+  /// (ProductModel: 'There is an issue with the app ... $err').
+  bool get isNoInternetError =>
+      contains('No Internet Connection') ||
+      contains('SocketException: Failed host lookup');
 
   bool get isURLImage => isNotEmpty && (contains('http') || contains('https'));
 
