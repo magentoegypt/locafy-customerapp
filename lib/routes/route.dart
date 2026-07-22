@@ -19,8 +19,6 @@ import '../models/index.dart'
         UserModel;
 import '../modules/dynamic_layout/helper/helper.dart';
 import '../modules/dynamic_layout/index.dart';
-import '../modules/product_reviews/models/product_reviews_model.dart';
-import '../modules/product_reviews/product_review_screen.dart';
 
 import '../screens/checkout/CheckoutOption.dart';
 import '../screens/dynamic/dynamic_scrollable_screen.dart';
@@ -492,19 +490,6 @@ class Routes {
             userToken: arguments.userToken,
           ),
         );
-      case RouteList.productReviews:
-        final arguments = settings.arguments;
-        if (arguments is Product) {
-          final product = arguments;
-          return _buildRoute(
-            settings,
-            (context) => ChangeNotifierProvider(
-              create: (context) => ProductReviewsModel(product),
-              child: ProductReviewScreen(product: product),
-            ),
-          );
-        }
-        return _errorRoute();
       default:
         final allRoutes = {
           ...getAll(),

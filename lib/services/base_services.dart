@@ -706,10 +706,6 @@ abstract class BaseServices {
   Future<Order>? createIAPOrder(Map<String, dynamic> params, User? user) =>
       null;
 
-  Future<RatingCount?>? getProductRatingCount(String productId) async {
-    return null;
-  }
-
   Future<List<BannerImagesModel>?>? getBannerImages() async {
     return null;
   }

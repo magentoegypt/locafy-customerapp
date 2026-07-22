@@ -89,7 +89,6 @@ class RouteList {
   static const String dynamic = 'dynamic';
   static const String backdrop = 'backdrop';
   static const String brand = 'brand';
-  static const String productReviews = 'product-reviews';
 
   /// FluxNews
   static const String postManagement = 'postManagement';

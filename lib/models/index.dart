@@ -4,7 +4,6 @@ export 'category/category_filter_model.dart';
 export 'category/category_model.dart';
 export 'credit_card_model.dart';
 export 'entities/index.dart';
-export 'entities/rating_count.dart';
 export 'entities/sale_stats.dart';
 export 'filter_attribute_model.dart';
 export 'filter_tags_model.dart';
