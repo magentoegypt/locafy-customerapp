@@ -22,6 +22,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:magentoegypt/models/entities/address.dart';
 import 'package:magentoegypt/models/order/order.dart';
+import 'package:magentoegypt/widgets/orders/tracking.dart';
 
 void main() {
   group('Address.fromMagentoJson', () {
@@ -120,6 +121,52 @@ void main() {
       expect(order.parseOrderStatus('some_custom_status'), OrderStatus.unknown);
       expect(order.parseOrderStatus('some_custom_status', state: 'bogus'),
           OrderStatus.unknown);
+    });
+  });
+
+  group('resolveTimelineFlow', () {
+    // The timeline is handed `OrderStatus.content` — an enum *name* — so every
+    // case label has to be spelled the way describeEnum spells it. Twice now a
+    // label was not: `on-hold` never matched `onHold`, so a held order fell
+    // through to the default and stalled on Pending Payment with the On-hold
+    // step still grey (86d3rrauf). Asserting the whole map, rather than the one
+    // status that was reported, is what stops the next one slipping through.
+    test('every status the timeline handles lands on its own step', () {
+      const expected = {
+        OrderStatus.pending: StatusOrder.pendding,
+        OrderStatus.onHold: StatusOrder.onHold,
+        OrderStatus.processing: StatusOrder.processing,
+        OrderStatus.shipped: StatusOrder.shipping,
+        OrderStatus.delivered: StatusOrder.shipping,
+        OrderStatus.outForDelivery: StatusOrder.shipping,
+        OrderStatus.driverAssigned: StatusOrder.shipping,
+        OrderStatus.completed: StatusOrder.completed,
+        OrderStatus.cancelled: StatusOrder.cancelled,
+        OrderStatus.canceled: StatusOrder.cancelled,
+        OrderStatus.refunded: StatusOrder.refunded,
+        OrderStatus.failed: StatusOrder.failed,
+      };
+
+      expected.forEach((orderStatus, step) {
+        expect(
+          resolveTimelineFlow(orderStatus.content).current,
+          step,
+          reason: '${orderStatus.content} should stop on $step',
+        );
+      });
+    });
+
+    test('a held order marks Pending Payment and On-hold, nothing beyond', () {
+      final flow = resolveTimelineFlow(OrderStatus.onHold.content);
+      // _renderStatus activates every step up to and including this index.
+      expect(flow.steps.indexOf(flow.current), 1);
+      expect(flow.steps, kStatusOrderSuccessNotFail);
+    });
+
+    test('an unrecognised status still draws the pending flow', () {
+      final flow = resolveTimelineFlow(OrderStatus.unknown.content);
+      expect(flow.current, StatusOrder.pendding);
+      expect(flow.steps, kStatusOrderSuccessNotFail);
     });
   });
 }

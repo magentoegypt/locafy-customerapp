@@ -14,6 +14,106 @@ enum StatusOrder {
   refunded
 }
 
+// Shipping sits between Processing and Completed: an order that has left the
+// warehouse but is not yet finalised used to have no step to land on, so it
+// rendered as "unknown" (86d3rrauf #5).
+const kStatusOrderSuccessNotFail = [
+  StatusOrder.pendding,
+  StatusOrder.onHold,
+  StatusOrder.processing,
+  StatusOrder.shipping,
+  StatusOrder.completed
+];
+
+const kStatusOrderSuccessIsFail = [
+  StatusOrder.pendding,
+  StatusOrder.failed,
+  StatusOrder.processing,
+  StatusOrder.shipping,
+  StatusOrder.completed
+];
+
+const kStatusOrderSuccessRefunded = [
+  StatusOrder.pendding,
+  StatusOrder.onHold,
+  StatusOrder.processing,
+  StatusOrder.shipping,
+  StatusOrder.completed,
+  StatusOrder.refunded
+];
+
+const kStatusOrderCancel = [
+  StatusOrder.pendding,
+  StatusOrder.failed,
+  StatusOrder.cancelled
+];
+
+/// The step the timeline stops at, and the flow of steps it belongs to.
+class TimelineFlow {
+  final StatusOrder current;
+  final List<StatusOrder> steps;
+
+  const TimelineFlow(this.current, this.steps);
+}
+
+/// Maps an order status onto the step the timeline should highlight.
+///
+/// The argument is `OrderStatus.content` — an enum *name* from `describeEnum`,
+/// not a raw backend status string, because that is what the only caller
+/// (`renderOrderTimelineTracking`) passes. A case label spelled any other way
+/// simply never matches: `on-hold` never saw `onHold`, so every held order fell
+/// through to `default` and the timeline stalled on Pending Payment with the
+/// On-hold step still grey (86d3rrauf). Enum names come first below; the
+/// hyphenated spellings are kept as aliases for any caller passing a raw
+/// status.
+TimelineFlow resolveTimelineFlow(String? status) {
+  switch (status) {
+    case 'onHold': // Pendding(active) -> On-Hold(active) -> Processing -> Completed
+    case 'on-hold':
+      return const TimelineFlow(StatusOrder.onHold, kStatusOrderSuccessNotFail);
+
+    case 'pending': // Pendding(active) -> On-Hold -> Processing -> Completed
+    case 'pendding':
+      return const TimelineFlow(
+          StatusOrder.pendding, kStatusOrderSuccessNotFail);
+
+    case 'processing': // Pendding(active) -> On-Hold(active) -> Processing(active) -> Completed
+      return const TimelineFlow(
+          StatusOrder.processing, kStatusOrderSuccessNotFail);
+
+    // Both spellings: OrderStatus has a `canceled` value as well as
+    // `cancelled`, and Magento's status string is the one-L spelling — so
+    // cancelled orders were falling through to default and drawing the
+    // *pending* timeline instead (86d3rrauf #5).
+    case 'canceled':
+    case 'cancelled': // Pendding(active) -> Failed(active) -> Cancelled(active)
+      return const TimelineFlow(StatusOrder.cancelled, kStatusOrderCancel);
+
+    case 'refunded': // Pendding(active) -> On-Hold(active) -> Processing(active) -> Completed(active) -> Refunded(active)
+      return const TimelineFlow(
+          StatusOrder.refunded, kStatusOrderSuccessRefunded);
+
+    // Anything that means "on its way" lands on the Shipping step.
+    case 'shipped':
+    case 'delivered':
+    case 'outForDelivery':
+    case 'driverAssigned':
+      return const TimelineFlow(
+          StatusOrder.shipping, kStatusOrderSuccessNotFail);
+
+    case 'completed': // Pendding(active) -> On-Hold(active) -> Processing(active) -> Completed(active)
+      return const TimelineFlow(
+          StatusOrder.completed, kStatusOrderSuccessNotFail);
+
+    case 'failed': // Pendding(active) -> Failed(active) -> Processing -> Completed
+      return const TimelineFlow(StatusOrder.failed, kStatusOrderSuccessIsFail);
+
+    default:
+      return const TimelineFlow(
+          StatusOrder.pendding, kStatusOrderSuccessNotFail);
+  }
+}
+
 class TimelineTracking extends StatefulWidget {
   final Axis axisTimeLine;
   final String? status;
@@ -32,40 +132,6 @@ class TimelineTracking extends StatefulWidget {
 }
 
 class _TimelineTrackingState extends State<TimelineTracking> {
-  // Shipping sits between Processing and Completed: an order that has left the
-  // warehouse but is not yet finalised used to have no step to land on, so it
-  // rendered as "unknown" (86d3rrauf #5).
-  var statusOrderSuccessNotFail = [
-    StatusOrder.pendding,
-    StatusOrder.onHold,
-    StatusOrder.processing,
-    StatusOrder.shipping,
-    StatusOrder.completed
-  ];
-
-  var statusOrderSuccessIsFail = [
-    StatusOrder.pendding,
-    StatusOrder.failed,
-    StatusOrder.processing,
-    StatusOrder.shipping,
-    StatusOrder.completed
-  ];
-
-  var statusOrderSuccessRefunded = [
-    StatusOrder.pendding,
-    StatusOrder.onHold,
-    StatusOrder.processing,
-    StatusOrder.shipping,
-    StatusOrder.completed,
-    StatusOrder.refunded
-  ];
-
-  var statusOrderCancel = [
-    StatusOrder.pendding,
-    StatusOrder.failed,
-    StatusOrder.cancelled
-  ];
-
   bool get isAxisVertical => widget.axisTimeLine == Axis.vertical;
 
   @override
@@ -216,58 +282,9 @@ class _TimelineTrackingState extends State<TimelineTracking> {
 
   List<Widget> _renderStatus(String? status) {
     var listStatus = <Widget>[];
-    StatusOrder statusOrder;
-    var flowHandleStatus = statusOrderSuccessNotFail;
-
-    switch (status) {
-      case 'on-hold': //Thể hiện timeline : Pendding(active) -> On-Hold(active) -> Processing -> Completed
-        statusOrder = StatusOrder.onHold;
-        flowHandleStatus = statusOrderSuccessNotFail;
-        break;
-      case 'pendding': //Thể hiện timeline : Pendding(active) -> On-Hold -> Processing -> Completed
-        statusOrder = StatusOrder.pendding;
-        flowHandleStatus = statusOrderSuccessNotFail;
-        break;
-      case 'processing': //Thể hiện timeline : Pendding(active) -> On-Hold(active) -> Processing(active) -> Completed
-        statusOrder = StatusOrder.processing;
-        flowHandleStatus = statusOrderSuccessNotFail;
-        break;
-      // Both spellings: this switch keys off OrderStatus.content, and Magento's
-      // status string is 'canceled' (one L), which resolves to
-      // OrderStatus.canceled — so cancelled orders were falling through to
-      // default and drawing the *pending* timeline instead (86d3rrauf #5).
-      case 'canceled':
-      case 'cancelled': //Thể hiện timeline : Pendding(active) -> Failed(active) -> Cancelled(active)
-        statusOrder = StatusOrder.cancelled;
-        flowHandleStatus = statusOrderCancel;
-        break;
-      case 'refunded': //Thể hiện timeline : Pendding(active) -> On-Hold(active) -> Processing(active) -> Completed(active) -> Refunded(active)
-        statusOrder = StatusOrder.refunded;
-        flowHandleStatus = statusOrderSuccessRefunded;
-        break;
-
-      // Anything that means "on its way" lands on the Shipping step.
-      case 'shipped':
-      case 'delivered':
-      case 'outForDelivery':
-      case 'driverAssigned':
-        statusOrder = StatusOrder.shipping;
-        flowHandleStatus = statusOrderSuccessNotFail;
-        break;
-
-      case 'completed': //Thể hiện timeline : Pendding(active) -> On-Hold(active) -> Processing(active) -> Completed(active)
-        statusOrder = StatusOrder.completed;
-        flowHandleStatus = statusOrderSuccessNotFail;
-        break;
-
-      case 'failed': //Thể hiện timeline : Pendding(active) -> Failed(active) -> Processing -> Completed
-        statusOrder = StatusOrder.failed;
-        flowHandleStatus = statusOrderSuccessIsFail;
-        break;
-      default:
-        statusOrder = StatusOrder.pendding;
-        flowHandleStatus = statusOrderSuccessNotFail;
-    }
+    final flow = resolveTimelineFlow(status);
+    final statusOrder = flow.current;
+    final flowHandleStatus = flow.steps;
 
     for (var i = 0; i < flowHandleStatus.length; i++) {
       listStatus.add(_renderItem(
