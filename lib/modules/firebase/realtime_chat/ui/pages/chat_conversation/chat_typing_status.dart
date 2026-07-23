@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -39,7 +40,7 @@ class _ChatTypingStatusState extends State<ChatTypingStatus>
                 children: <Widget>[
                   CircleAvatar(
                     radius: 10.0,
-                    backgroundImage: NetworkImage(
+                    backgroundImage: CachedNetworkImageProvider(
                       getGravatarUrl(
                         context.select<ChatViewModel, String>(
                           (ChatViewModel _) => _.receiverEmail,

@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -84,7 +85,7 @@ class ChatMessageBubble extends StatelessWidget {
                   key: ValueKey('avatar-${chatMessage.sender}'),
                   dimension: 36.0,
                   child: CircleAvatar(
-                    foregroundImage: NetworkImage(
+                    foregroundImage: CachedNetworkImageProvider(
                       getGravatarUrl(chatMessage.sender),
                     ),
                     backgroundColor: Colors.grey[200],

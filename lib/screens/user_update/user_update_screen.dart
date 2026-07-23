@@ -1,4 +1,5 @@
 import 'package:country_code_picker/country_code_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:magentoegypt/ajstoreui/core/app_export.dart';
 import 'package:inspireui/inspireui.dart';
@@ -271,9 +272,11 @@ class _StateUserUpdate extends BaseScreen<UserUpdateScreen> {
                           ],
                         ),
                         child: (avatar?.isNotEmpty ?? false)
-                            ? Image.network(
-                                avatar!,
+                            ? CachedNetworkImage(
+                                imageUrl: avatar!,
                                 fit: BoxFit.cover,
+                                memCacheWidth: 300,
+                                errorWidget: (_, __, ___) => const SizedBox(),
                               )
                             : const SizedBox(),
                       ),
@@ -284,10 +287,15 @@ class _StateUserUpdate extends BaseScreen<UserUpdateScreen> {
                               borderRadius: BorderRadius.circular(150),
                               color: Theme.of(context).primaryColorLight),
                           child: (avatar?.isNotEmpty ?? false)
-                              ? Image.network(
-                                  avatar!,
+                              ? CachedNetworkImage(
+                                  imageUrl: avatar!,
                                   width: 150,
                                   height: 150,
+                                  memCacheWidth: 300,
+                                  errorWidget: (_, __, ___) => const Icon(
+                                    Icons.person,
+                                    size: 120,
+                                  ),
                                 )
                               : const Icon(
                                   Icons.person,

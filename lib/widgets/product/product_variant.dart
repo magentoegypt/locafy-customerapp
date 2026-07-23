@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:html_unescape/html_unescape.dart';
 
@@ -147,10 +148,11 @@ class BasicSelection extends StatelessWidget {
                 borderRadius: BorderRadius.circular(5),
                 child: AspectRatio(
                   aspectRatio: 3 / 4,
-                  child: Image.network(
-                    imageUrl,
+                  child: CachedNetworkImage(
+                    imageUrl: imageUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    memCacheWidth: 400,
+                    errorWidget: (_, __, ___) => Container(
                       color: (hex?.startsWith('#') ?? false)
                           ? HexColor(hex!)
                           : Colors.white,
@@ -182,7 +184,7 @@ class BasicSelection extends StatelessWidget {
               color: isHex ? HexColor(colorCode) : Colors.white,
               image: isSwatchImage
                   ? DecorationImage(
-                      image: NetworkImage(colorCode),
+                      image: CachedNetworkImageProvider(colorCode),
                       fit: BoxFit.cover,
                     )
                   : null,

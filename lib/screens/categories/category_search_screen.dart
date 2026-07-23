@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:html/parser.dart' as html_parser;
@@ -623,7 +624,8 @@ class _SearchCategoryItem extends StatelessWidget {
               height: 80,
               decoration: BoxDecoration(
                 image: DecorationImage(
-                    image: NetworkImage(category.image!), fit: BoxFit.cover),
+                    image: CachedNetworkImageProvider(category.image!),
+                    fit: BoxFit.cover),
               ),
             ),
             const SizedBox(width: 10.0),
@@ -772,9 +774,11 @@ class ProductListTile extends StatelessWidget {
             SizedBox(
               width: 90,
               height: 90,
-              child: Image.network(
-                product.imageFeature ?? '',
+              child: CachedNetworkImage(
+                imageUrl: product.imageFeature ?? '',
                 fit: BoxFit.contain,
+                memCacheWidth: 270,
+                errorWidget: (_, __, ___) => const SizedBox(),
               ),
             ),
 

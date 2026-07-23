@@ -22,11 +22,13 @@ import 'widgets/empty_cart.dart';
 import 'widgets/shopping_cart_sumary.dart';
 import 'widgets/wishlist.dart';
 
-// Move createShoppingCartRows is outside MyCart to reuse for POS
-List<Widget> createShoppingCartRows(CartModel model, BuildContext context) {
+/// Validate stock and cap quantities for every line in the cart. This fires a
+/// stock request per item and can mutate the cart, so it runs ONCE when the
+/// cart opens (see [_MyCartState.initState]) — never from build(), where it
+/// used to re-fire on every rebuild.
+void validateCartStockAndQuantities(CartModel model) {
   // ignore: curly_braces_in_flow_control_structures
   model.productsInCart.forEach((key, value) async {
-    //var productId = Product.cleanProductID(key);
     var productCheck = await Services().api.getStockStatus(key);
     var product = model.getProductById(key);
 
@@ -47,7 +49,12 @@ List<Widget> createShoppingCartRows(CartModel model, BuildContext context) {
       model.updateQuantity(product!, key, availQty);
     }
   });
+}
 
+// createShoppingCartRows stays outside MyCart to reuse for POS. It now only
+// builds the row widgets — stock validation moved to
+// validateCartStockAndQuantities so it doesn't re-run on every rebuild.
+List<Widget> createShoppingCartRows(CartModel model, BuildContext context) {
   var productList = {};
   var productListWidget = model.productsInCart.keys.map(
     (key) {
@@ -124,6 +131,10 @@ class _MyCartState extends State<MyCart> with SingleTickerProviderStateMixin {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         cartModel.reloadCartFromServer();
+        // Validate stock / cap quantities once on open — this used to re-run
+        // from build() on every rebuild, firing a stock request per line each
+        // time and mutating the cart mid-build.
+        validateCartStockAndQuantities(cartModel);
       }
     });
   }

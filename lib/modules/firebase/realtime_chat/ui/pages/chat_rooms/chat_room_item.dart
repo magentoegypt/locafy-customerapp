@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:inspireui/extensions/build_context_ext.dart';
 import 'package:provider/provider.dart';
@@ -92,7 +93,7 @@ class _ChatRoomItemState extends State<ChatRoomItem> {
               SizedBox.square(
                 dimension: 32.0,
                 child: CircleAvatar(
-                  foregroundImage: NetworkImage(
+                  foregroundImage: CachedNetworkImageProvider(
                     getGravatarUrl(widget.chatUser?.email ?? ''),
                   ),
                   backgroundColor: Colors.grey[200],

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'package:flutter/cupertino.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:inspireui/extensions/build_context_ext.dart';
 import 'package:magentoegypt/ajstoreui/core/app_export.dart';
@@ -561,9 +562,10 @@ class _SimpleLayoutState extends State<SimpleLayout>
                 padding: const EdgeInsets.all(16),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    product.size_chart ?? "$kMediaDomain/media/ced/csmarketplace/default/updated_size_chart_3_480x480.png", // replace this with your image URL
+                  child: CachedNetworkImage(
+                    imageUrl: product.size_chart ?? "$kMediaDomain/media/ced/csmarketplace/default/updated_size_chart_3_480x480.png", // replace this with your image URL
                     fit: BoxFit.contain,
+                    errorWidget: (_, __, ___) => const SizedBox(),
                   ),
                 ),
               ),

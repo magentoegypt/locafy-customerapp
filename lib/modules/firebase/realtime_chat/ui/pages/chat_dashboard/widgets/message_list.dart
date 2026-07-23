@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:inspireui/extensions/build_context_ext.dart';
 import 'package:provider/provider.dart';
@@ -38,7 +39,7 @@ class MessageList extends StatelessWidget {
                 children: [
                   if (selectedChatRoom != null) ...[
                     CircleAvatar(
-                      backgroundImage: NetworkImage(
+                      backgroundImage: CachedNetworkImageProvider(
                         getGravatarUrl(otherUser?.email ?? ''),
                       ),
                     ),
