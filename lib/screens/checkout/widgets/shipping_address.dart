@@ -286,11 +286,13 @@ class _ShippingAddressState extends State<ShippingAddress> {
   /// Resolve the saved governorate against the dropdown's list.
   ///
   /// The two sides come from DIFFERENT backing tables: the dropdown is fed by
-  /// the City/Region Manager extension (`states_name`), while `address.state`
-  /// is Magento core's `region.region`. Both are fetched over eg-en, so this is
-  /// not a language problem — the same governorate is simply spelled
-  /// differently in the two tables ("البحيرة" vs "Al Beheira"), and a strict
-  /// == comparison never matches for an address created outside the app.
+  /// the City/Region Manager extension, whose display name (`states_name`) is
+  /// Arabic, while `address.state` is Magento core's `region.region` — stored
+  /// in whatever language the address was created in. An address created on the
+  /// website therefore carries the ENGLISH region name ("Assuit"), which never
+  /// equalled the Arabic `states_name` and left the dropdown empty
+  /// (86d3tkj56 #2). Each extension entry also carries the Magento
+  /// `region_name` (English) and `region_id`, so match against those too.
   ///
   /// Match forgivingly, but NEVER guess: returning the wrong governorate is
   /// worse than returning none, because the form would then silently re-save
@@ -300,7 +302,9 @@ class _ShippingAddressState extends State<ShippingAddress> {
     final saved = savedState?.trim().toLowerCase() ?? '';
     if (saved.isEmpty) return null;
     return list.firstWhereOrNull(
-          (o) => (o.name ?? '').trim().toLowerCase() == saved,
+      (o) =>
+          (o.name ?? '').trim().toLowerCase() == saved ||
+          (o.regionName ?? '').trim().toLowerCase() == saved,
     );
   }
 

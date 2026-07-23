@@ -225,13 +225,17 @@ extension on _ShippingAddressState {
     // *regions* — the selection is kept in address.state so the order payload
     // sends it as `region` and the summary shows its name (was showing the
     // dead "SG" default).
-    // Trim/case-insensitive: the saved value and the list come from different
-    // backing tables and differ in spacing/casing more often than not.
+    // Trim/case-insensitive, and match either the extension's Arabic
+    // `states_name` (o.name) or the Magento core `region_name` (o.regionName):
+    // a website-created address stores the English region name, which only
+    // matches the latter (86d3tkj56 #2).
     final savedState = address!.state?.trim().toLowerCase() ?? '';
     City? firstCity = savedState.isEmpty
         ? null
         : cities!.firstWhereOrNull(
-            (o) => (o.name ?? '').trim().toLowerCase() == savedState);
+            (o) =>
+                (o.name ?? '').trim().toLowerCase() == savedState ||
+                (o.regionName ?? '').trim().toLowerCase() == savedState);
 
     if (firstCity != null) {
       value = firstCity.id;
