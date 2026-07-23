@@ -194,8 +194,8 @@ class ShoppingCartRow extends StatelessWidget with ActionButtonMixin {
                                         if (variation != null)
                                           Services()
                                               .widget
-                                              .renderVariantCartItem(
-                                                  context, variation!, options),
+                                              .renderVariantCartItem(context,
+                                                  product, variation!, options),
                                         if (addonsOptions?.isNotEmpty ?? false)
                                           Services()
                                               .widget

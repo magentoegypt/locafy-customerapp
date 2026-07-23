@@ -271,8 +271,67 @@ class MagentoWidget extends BaseFrameworks
   }
 
   @override
-  Widget renderVariantCartItem(BuildContext context, variation, Map? options) {
-    return const SizedBox();
+  Widget renderVariantCartItem(
+      BuildContext context, Product? product, variation, Map? options) {
+    // Show the selected configurable options (e.g. "Size: 6 yrs") under the
+    // name so cart lines for different variants are distinguishable — this was
+    // a stub returning SizedBox, so the variant never rendered (86d3tntae).
+    // The selection is stored as {attribute_code: option_value_id}; the human
+    // label lives in the parent product's attribute options
+    // (option['value'] == id -> option['label']) — the same map the variant
+    // swatches resolve against.
+    final attributes = product?.attributes;
+    if (attributes == null || attributes.isEmpty) return const SizedBox();
+
+    // attribute_code -> selected option value id. Prefer the options map
+    // captured on add; fall back to the variation's own attributes.
+    final selections = <String, String>{};
+    options?.forEach((k, v) {
+      if (k != null && v != null) selections['$k'] = '$v';
+    });
+    if (selections.isEmpty && variation is ProductVariation) {
+      for (final a in variation.attributes) {
+        if (a.name != null && a.option != null) selections[a.name!] = a.option!;
+      }
+    }
+    if (selections.isEmpty) return const SizedBox();
+
+    final parts = <String>[];
+    selections.forEach((code, valueId) {
+      ProductAttribute? attr;
+      for (final a in attributes) {
+        if ((a.name ?? '').toLowerCase() == code.toLowerCase()) {
+          attr = a;
+          break;
+        }
+      }
+      if (attr == null) return;
+      var label = valueId;
+      for (final o in attr.options ?? const []) {
+        if (o is Map && '${o['value']}' == valueId && o['label'] is String) {
+          label = o['label'] as String;
+          break;
+        }
+      }
+      final title = (attr.label?.trim().isNotEmpty ?? false)
+          ? attr.label!.trim()
+          : (attr.name ?? '').trim();
+      if (label.trim().isNotEmpty && label != 'null') {
+        parts.add(title.isNotEmpty ? '$title: $label' : label);
+      }
+    });
+    if (parts.isEmpty) return const SizedBox();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4.0),
+      child: Text(
+        parts.join('   •   '),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.secondary,
+          fontSize: 12,
+        ),
+      ),
+    );
   }
 
   @override

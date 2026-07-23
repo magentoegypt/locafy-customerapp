@@ -87,6 +87,7 @@ abstract class BaseFrameworks {
 
   Widget renderVariantCartItem(
     BuildContext context,
+    Product? product,
     ProductVariation variation,
     Map? options,
   ) =>
