@@ -124,10 +124,20 @@ class _CategoryLandingScreenState extends State<CategoryLandingScreen> {
           onTap: (c) => _openProducts(id: c.id, name: c.name),
         ));
       } else {
+        // A single-id section is a labelled carousel; on the website the same
+        // block is a hero banner you click to open that category's full page.
+        // Make the header tap through to it — e.g. "Sale::Limited Time Offer"
+        // opens the Kids Sale (419) product grid, matching the web hero at
+        // kidswear/discover/kidswear-sale.html (ClickUp 86d3g3mea).
+        final id = ids.first;
         widgets.add(_ProductSection(
           title: label,
+          onViewAll: () => _openProducts(
+            id: id,
+            name: _categoryById(id)?.name ?? label.split('::').first.trim(),
+          ),
           future: Services().api.fetchProductsByCategory(
-                categoryId: ids.first,
+                categoryId: id,
                 page: 1,
                 lang: _lang,
               ),
@@ -225,7 +235,11 @@ class _CategoryLandingScreenState extends State<CategoryLandingScreen> {
 /// uppercase above the big title, like the website.
 class _SectionHeader extends StatelessWidget {
   final String title;
-  const _SectionHeader(this.title);
+
+  /// When set, the whole header is tappable and shows a forward chevron —
+  /// opening the section's full category page like the web hero (86d3g3mea).
+  final VoidCallback? onViewAll;
+  const _SectionHeader(this.title, {this.onViewAll});
 
   @override
   Widget build(BuildContext context) {
@@ -233,9 +247,10 @@ class _SectionHeader extends StatelessWidget {
     final parts = title.split('::');
     final mainTitle = parts.first.trim();
     final subtitle = parts.length > 1 ? parts[1].trim() : null;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
     // Web `.lookbook-title`: padding 64px top / 44px bottom, and the subtitle
     // has a 12px margin-bottom before the title — scaled a little for mobile.
-    return Padding(
+    final header = Padding(
       padding: const EdgeInsets.only(top: 44, bottom: 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -252,18 +267,35 @@ class _SectionHeader extends StatelessWidget {
                 ),
               ),
             ),
-          Text(
-            mainTitle,
-            textAlign: TextAlign.center,
-            // Web `.lookbook-title h2`: Playfair Display serif, weight 600,
-            // ~32px, letter-spacing 0.04em, colour #111.
-            style: GoogleFonts.playfairDisplay(
-              fontSize: 30,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.2,
-              height: 1.15,
-              color: const Color(0xFF111111),
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  mainTitle,
+                  textAlign: TextAlign.center,
+                  // Web `.lookbook-title h2`: Playfair Display serif, weight
+                  // 600, ~32px, letter-spacing 0.04em, colour #111.
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.2,
+                    height: 1.15,
+                    color: const Color(0xFF111111),
+                  ),
+                ),
+              ),
+              if (onViewAll != null) ...[
+                const SizedBox(width: 4),
+                Icon(
+                  // Point the way the eye reads — left in RTL, right in LTR.
+                  isRtl ? Icons.chevron_left : Icons.chevron_right,
+                  size: 24,
+                  color: const Color(0xFF8C7A5B),
+                ),
+              ],
+            ],
           ),
           // Web `.lookbook-line`: 74x1px, 18px top margin, centered, a
           // horizontal gradient fading transparent -> #8C7A5B -> transparent.
@@ -287,6 +319,14 @@ class _SectionHeader extends StatelessWidget {
         ],
       ),
     );
+
+    return onViewAll == null
+        ? header
+        : GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onViewAll,
+            child: header,
+          );
   }
 }
 
@@ -395,7 +435,15 @@ class _ProductSection extends StatefulWidget {
   final String title;
   final Future<List<Product>?> future;
 
-  const _ProductSection({required this.title, required this.future});
+  /// Tapping the section header opens the full category page (the web hero's
+  /// click target). Null leaves the header non-interactive.
+  final VoidCallback? onViewAll;
+
+  const _ProductSection({
+    required this.title,
+    required this.future,
+    this.onViewAll,
+  });
 
   @override
   State<_ProductSection> createState() => _ProductSectionState();
@@ -445,7 +493,7 @@ class _ProductSectionState extends State<_ProductSection> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _SectionHeader(widget.title),
+              _SectionHeader(widget.title, onViewAll: widget.onViewAll),
               const SizedBox(
                 height: 120,
                 child: Center(child: CircularProgressIndicator()),
