@@ -624,7 +624,8 @@ class _SearchCategoryItem extends StatelessWidget {
               height: 80,
               decoration: BoxDecoration(
                 image: DecorationImage(
-                    image: CachedNetworkImageProvider(category.image!),
+                    image: CachedNetworkImageProvider(category.image!,
+                        headers: const {'Accept': 'image/webp'}),
                     fit: BoxFit.cover),
               ),
             ),
@@ -776,6 +777,7 @@ class ProductListTile extends StatelessWidget {
               height: 90,
               child: CachedNetworkImage(
                 imageUrl: product.imageFeature ?? '',
+                httpHeaders: const {'Accept': 'image/webp'},
                 fit: BoxFit.contain,
                 memCacheWidth: 270,
                 errorWidget: (_, __, ___) => const SizedBox(),

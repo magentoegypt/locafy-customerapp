@@ -150,6 +150,7 @@ class BasicSelection extends StatelessWidget {
                   aspectRatio: 3 / 4,
                   child: CachedNetworkImage(
                     imageUrl: imageUrl,
+                    httpHeaders: const {'Accept': 'image/webp'},
                     fit: BoxFit.cover,
                     memCacheWidth: 400,
                     errorWidget: (_, __, ___) => Container(
@@ -184,7 +185,8 @@ class BasicSelection extends StatelessWidget {
               color: isHex ? HexColor(colorCode) : Colors.white,
               image: isSwatchImage
                   ? DecorationImage(
-                      image: CachedNetworkImageProvider(colorCode),
+                      image: CachedNetworkImageProvider(colorCode,
+                          headers: const {'Accept': 'image/webp'}),
                       fit: BoxFit.cover,
                     )
                   : null,

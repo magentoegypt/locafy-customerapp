@@ -104,6 +104,10 @@ class ImageResize extends StatelessWidget {
       height: height,
       fit: fit,
       cache: true,
+      // Ask the CDN for WebP: it content-negotiates a ~40% smaller webp of the
+      // -small/-medium/-large variant when available, else returns the original
+      // format unchanged. Flutter decodes webp natively.
+      headers: const {'Accept': 'image/webp'},
       timeRetry: const Duration(milliseconds: 500),
       // Keep the decoded bitmap in the (capped) image cache when a row scrolls
       // off, so scrolling back doesn't re-decode and stutter. Memory stays

@@ -114,6 +114,7 @@ class ProductCardSwatches extends StatelessWidget {
         child: ClipOval(
           child: CachedNetworkImage(
             imageUrl: imageUrl,
+            httpHeaders: const {'Accept': 'image/webp'},
             fit: BoxFit.cover,
             // Small circular swatch — cache on disk and decode at display size
             // instead of re-downloading/decoding the full image each time.

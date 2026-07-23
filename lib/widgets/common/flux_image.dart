@@ -144,6 +144,9 @@ class FluxImage extends StatelessWidget {
         fit: fit,
         color: color,
         cache: true,
+        // Ask the CDN for WebP (served ~40% smaller when available, else the
+        // original format). Flutter decodes webp natively.
+        headers: const {'Accept': 'image/webp'},
         alignment: alignment,
         cacheWidth: cacheWidth,
         loadStateChanged: (state) {

@@ -564,6 +564,7 @@ class _SimpleLayoutState extends State<SimpleLayout>
                   borderRadius: BorderRadius.circular(12),
                   child: CachedNetworkImage(
                     imageUrl: product.size_chart ?? "$kMediaDomain/media/ced/csmarketplace/default/updated_size_chart_3_480x480.png", // replace this with your image URL
+                    httpHeaders: const {'Accept': 'image/webp'},
                     fit: BoxFit.contain,
                     errorWidget: (_, __, ___) => const SizedBox(),
                   ),

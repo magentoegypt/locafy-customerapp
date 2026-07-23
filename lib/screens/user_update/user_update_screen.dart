@@ -274,6 +274,7 @@ class _StateUserUpdate extends BaseScreen<UserUpdateScreen> {
                         child: (avatar?.isNotEmpty ?? false)
                             ? CachedNetworkImage(
                                 imageUrl: avatar!,
+                                httpHeaders: const {'Accept': 'image/webp'},
                                 fit: BoxFit.cover,
                                 memCacheWidth: 300,
                                 errorWidget: (_, __, ___) => const SizedBox(),
@@ -289,6 +290,7 @@ class _StateUserUpdate extends BaseScreen<UserUpdateScreen> {
                           child: (avatar?.isNotEmpty ?? false)
                               ? CachedNetworkImage(
                                   imageUrl: avatar!,
+                                  httpHeaders: const {'Accept': 'image/webp'},
                                   width: 150,
                                   height: 150,
                                   memCacheWidth: 300,
