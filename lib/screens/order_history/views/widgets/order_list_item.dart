@@ -120,8 +120,8 @@ class OrderListItem extends StatelessWidget {
                       ),
                       margin: const EdgeInsets.all(8),
                       padding: EdgeInsets.only(
-                          right: Tools.isRTL(context) ? 0.0 : 20,
-                          left: !Tools.isRTL(context) ? 0.0 : 20),
+                          right: Tools.isRTL(context) ? 0.0 : 8,
+                          left: !Tools.isRTL(context) ? 0.0 : 8),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -133,21 +133,27 @@ class OrderListItem extends StatelessWidget {
                               borderRadius: BorderRadius.circular(5.0),
                             ),
                           ),
+                          // Total and Status hold the widest content
+                          // (formatted price, status label), so they get more
+                          // of the row than Tax/Qty (86d3tkhgz).
                           OrderStatusWidget(
                             title: S.of(context).total,
                             detail: PriceTools.getCurrencyFormatted(
                                 order.total, null,
                                 currency: currencyCode),
+                            flex: 3,
                           ),
                           OrderStatusWidget(
                             title: S.of(context).tax,
                             detail: PriceTools.getCurrencyFormatted(
                                 order.totalTax, null,
                                 currency: currencyCode),
+                            flex: 2,
                           ),
                           OrderStatusWidget(
                             title: S.of(context).qty,
                             detail: order.quantity.toString(),
+                            flex: 1,
                           ),
                           if (order.status != null)
                             OrderStatusWidget(
@@ -156,6 +162,7 @@ class OrderListItem extends StatelessWidget {
                                       order.orderStatus != null
                                   ? order.orderStatus
                                   : order.status!.content,
+                              flex: 3,
                             ),
                         ],
                       ),
@@ -174,8 +181,9 @@ class OrderListItem extends StatelessWidget {
 class OrderStatusWidget extends StatelessWidget {
   final String? title;
   final String? detail;
+  final int flex;
 
-  const OrderStatusWidget({Key? key, this.title, this.detail})
+  const OrderStatusWidget({Key? key, this.title, this.detail, this.flex = 1})
       : super(key: key);
 
   String getTitleStatus(String status, BuildContext context) {
@@ -221,6 +229,7 @@ class OrderStatusWidget extends StatelessWidget {
     }
 
     return Expanded(
+      flex: flex,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -229,31 +238,41 @@ class OrderStatusWidget extends StatelessWidget {
             height: 10.0,
           ),
           Expanded(
-            child: Text(
-              title.toString(),
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall!
-                  .copyWith(
-                    fontSize: 14.0,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .secondary
-                        .withOpacity(0.7),
-                    fontWeight: FontWeight.w700,
-                  )
-                  .apply(fontSizeFactor: 0.9),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                title.toString(),
+                maxLines: 1,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall!
+                    .copyWith(
+                      fontSize: 14.0,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .secondary
+                          .withOpacity(0.7),
+                      fontWeight: FontWeight.w700,
+                    )
+                    .apply(fontSizeFactor: 0.9),
+              ),
             ),
           ),
           Expanded(
-            child: Text(
-              getTitleStatus(detail!, context).capitalize(),
-              style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                    color: statusOrderColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14.0,
-                  ),
-              overflow: TextOverflow.ellipsis,
+            // Scale the value to fit its column instead of ellipsizing —
+            // "EGP5,730.00" and long status labels used to clip to "EGP940…" /
+            // "Pending…" (86d3tkhgz).
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                getTitleStatus(detail!, context).capitalize(),
+                maxLines: 1,
+                style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                      color: statusOrderColor,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14.0,
+                    ),
+              ),
             ),
           ),
         ],
