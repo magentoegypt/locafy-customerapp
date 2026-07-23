@@ -54,8 +54,15 @@ Map<String, dynamic> environment = {
     /// set isCaching to true if you have upload the config file to mstore-api
     /// set kIsResizeImage to true if you have finished running Re-generate image plugin
     /// ref: https://support.inspireui.com/help-center/articles/3/8/19/app-performance
+    ///
+    /// kIsResizeImage ON: the testing backend now serves -small/-medium/-large
+    /// siblings (verified 2026-07-23: a 534KB original -> 3KB/8.6KB/43KB
+    /// variants, all real). Product images request the resized sibling via
+    /// ImageTools.formatImage. Before pointing the app at a different backend
+    /// (e.g. production locafy.market), confirm it has the variants too, or
+    /// product images will 404 to a grey placeholder.
     "isCaching": false,
-    "kIsResizeImage": false,
+    "kIsResizeImage": true,
 
     /// Stripe payment only: set currencyCode and smallestUnitRate.
     /// All API requests expect amounts to be provided in a currency’s smallest unit.
