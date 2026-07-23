@@ -155,8 +155,9 @@ class ProductsScreenState extends State<ProductsScreen>
   }
 
   @override
-  Future<void> getProductList() async {
+  Future<void> getProductList({bool refresh = false}) async {
     await productModel.getProductsList(
+      refresh: refresh,
       categoryId: categoryId,
       minPrice: minPrice,
       maxPrice: maxPrice,

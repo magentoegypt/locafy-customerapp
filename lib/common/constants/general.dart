@@ -39,6 +39,12 @@ const kMagentoPayments = [
 /// The result is limited to 10 items (https://tppr.me/QYsm9) if `options` or `modifiers` is used in `include` field. Refer to this link https://developer.bigcommerce.com/api-reference/4101d472a814d-get-all-products. So we need to override apiPageSize to 10 instead
 final apiPageSize = ServerConfig().isBigCommerce ? 100 : 100;
 
+/// A home carousel renders a single horizontal rail, so fetching a full
+/// [apiPageSize] page (100) to show a handful of items is pure waste. One-shot
+/// (non-paginated) layout fetches cap at this instead. A section can still
+/// override with its own `limit`, and paginated grids keep [apiPageSize].
+const kHomeCarouselLimit = 10;
+
 
 const kSizeLeftMenu = 250.0;
 

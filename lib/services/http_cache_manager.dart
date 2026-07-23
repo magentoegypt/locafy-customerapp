@@ -10,10 +10,20 @@ import 'package:inspireui/inspireui.dart';
 // Time keep the file without a cache-control header
 const Duration keepDuration = Duration(hours: 1);
 
+// Catalog API responses (product lists) shift intraday as price/stock change,
+// so they cache only briefly — long enough that opening a product and coming
+// back re-uses the list instantly, short enough that a stale price self-heals.
+const Duration catalogKeepDuration = Duration(minutes: 5);
+
 class HttpFileService extends FileService {
   final http.Client _httpClient;
 
-  HttpFileService({http.Client? httpClient})
+  /// How long a fetched file stays fresh when the response carries no
+  /// `Cache-Control`. Overridable so a short-lived catalog cache can pass a
+  /// few minutes instead of the [keepDuration] default.
+  final Duration keep;
+
+  HttpFileService({http.Client? httpClient, this.keep = keepDuration})
       : _httpClient = httpClient ?? http.Client();
 
   @override
@@ -25,16 +35,19 @@ class HttpFileService extends FileService {
     }
     final httpResponse = await _httpClient.send(req);
 
-    return HttpGetResponse(httpResponse);
+    return HttpGetResponse(httpResponse, keep);
   }
 }
 
 class HttpGetResponse implements FileServiceResponse {
-  HttpGetResponse(this._response);
+  HttpGetResponse(this._response, [this._keep = keepDuration]);
 
   final DateTime _receivedTime = DateTime.now();
 
   final http.StreamedResponse _response;
+
+  /// Fallback freshness window when the response has no `Cache-Control`.
+  final Duration _keep;
 
   @override
   int get statusCode => _response.statusCode;
@@ -51,7 +64,7 @@ class HttpGetResponse implements FileServiceResponse {
 
   @override
   DateTime get validTill {
-    var ageDuration = Duration(milliseconds: keepDuration.inMilliseconds);
+    var ageDuration = Duration(milliseconds: _keep.inMilliseconds);
     final controlHeader = _header(HttpHeaders.cacheControlHeader);
     if (controlHeader != null) {
       final controlSettings = controlHeader.split(',');
@@ -99,5 +112,26 @@ class HttpCacheManager extends CacheManager with ImageCacheManager {
       : super(Config(
           key,
           fileService: HttpFileService(httpClient: HttpBase()),
+        ));
+}
+
+/// Short-lived, image-free cache for catalog API responses (product lists).
+/// Kept separate from [HttpCacheManager] so evicting stale product lists never
+/// touches the image cache, and [catalogKeepDuration] bounds price/stock
+/// staleness while still making back-navigation instant.
+class CatalogCacheManager extends CacheManager {
+  static const key = 'catalogApiCache';
+
+  static final CatalogCacheManager _instance = CatalogCacheManager._();
+  factory CatalogCacheManager() {
+    return _instance;
+  }
+
+  CatalogCacheManager._()
+      : super(Config(
+          key,
+          stalePeriod: catalogKeepDuration,
+          fileService: HttpFileService(
+              httpClient: HttpBase(), keep: catalogKeepDuration),
         ));
 }

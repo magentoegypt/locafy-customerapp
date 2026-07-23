@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:inspireui/inspireui.dart' show HexColor;
 
@@ -111,10 +112,13 @@ class ProductCardSwatches extends StatelessWidget {
         height: 40,
         decoration: BoxDecoration(shape: BoxShape.circle, border: border),
         child: ClipOval(
-          child: Image.network(
-            imageUrl,
+          child: CachedNetworkImage(
+            imageUrl: imageUrl,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) =>
+            // Small circular swatch — cache on disk and decode at display size
+            // instead of re-downloading/decoding the full image each time.
+            memCacheWidth: (40 * MediaQuery.devicePixelRatioOf(context)).round(),
+            errorWidget: (_, __, ___) =>
                 _hexFill(context, option.swatchValue),
           ),
         ),

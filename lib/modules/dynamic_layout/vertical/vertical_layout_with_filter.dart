@@ -244,7 +244,9 @@ class _VerticalViewLayoutWithFilterState
       context.read<FilterAttributeModel>();
 
   @override
-  Future<void> getProductList() async {
+  Future<void> getProductList({bool refresh = false}) async {
+    // This infinite grid loads via _loadProduct; the short-TTL catalog cache
+    // (a few minutes) is acceptable here, so `refresh` isn't threaded through.
     canLoad.value = true;
     await _loadProduct();
   }

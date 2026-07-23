@@ -70,7 +70,9 @@ abstract class BaseServices {
             String? searchText,
           Map<String, List<String>>? attributeFilters,
           String? include,
-          String? nextCursor}) async =>
+          String? nextCursor,
+          int? perPage,
+          bool refreshCache = false}) async =>
       const <Product>[];
 
   Future<AppConfig?> getAppConfig({String lang = 'en'}) async => null;

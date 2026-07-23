@@ -46,8 +46,11 @@ class FluxImage extends StatelessWidget {
       return const SizedBox();
     }
 
+    // Decode at the display width in physical pixels instead of the old ×2.5
+    // guess (which over-decoded on low-DPI and under-decoded on high-DPI).
+    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
     final cacheWidth = width != null && (width ?? 0) > 0
-        ? (width! * 2.5).toInt()
+        ? (width! * devicePixelRatio).round()
         : kCacheImageWidth;
 
     if (!imageUrl.contains('http')) {

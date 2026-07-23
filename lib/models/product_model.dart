@@ -171,7 +171,8 @@ class ProductModel with ChangeNotifier {
       List? include,
       String? search,
         String? searchText,
-      Map<String, List<String>>? attributeFilters}) async {
+      Map<String, List<String>>? attributeFilters,
+      bool refresh = false}) async {
     try {
       if (isFetching) {
         await _cancelLoadProduct?.cancel();
@@ -222,6 +223,7 @@ class ProductModel with ChangeNotifier {
         include: include?.join(','),
         search: search, searchText: searchText,
         attributeFilters: attributeFilters,
+        refreshCache: refresh,
       ));
 
       final products = await _cancelLoadProduct!.value;

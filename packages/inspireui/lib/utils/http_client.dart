@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -13,6 +14,12 @@ import '../utils/secure_storage.dart';
 
 /// enable network proxy
 const debugNetworkProxy = false;
+
+/// Ceiling for any single HTTP request. Without it a stalled socket leaves the
+/// caller awaiting forever, which the UI shows as an endless spinner. On expiry
+/// we surface the same "offline" signal a dropped connection does — see the
+/// [TimeoutException] handler in [makeRequest].
+const kHttpRequestTimeout = Duration(seconds: 20);
 
 class HttpBase extends http.BaseClient {
   final http.Client _client = http.Client();
@@ -93,7 +100,13 @@ Future<http.Response> makeRequest(
 }) async {
   final http.Response response;
   try {
-    response = await request;
+    response = await request.timeout(kHttpRequestTimeout);
+  } on TimeoutException {
+    // A stalled or too-slow connection. Surface the same "offline" signal a
+    // dropped socket does (matched by StringExtensions.isNoInternetError) so
+    // the UI shows the retry screen instead of spinning indefinitely.
+    // ignore: only_throw_errors
+    throw 'No Internet Connection';
   } on SocketException catch (e) {
     // A genuine transport failure. Unchanged: the 404 case used to be funnelled
     // through here as a synthetic SocketException, which conflated "the server

@@ -48,6 +48,22 @@ class MagentoService extends BaseServices {
   List<String> brandIds = [];
   Map<String, String>? _brandLabelsCache;
 
+  /// Home banners are requested once per `DynamicLayout` section, so a single
+  /// home load fires `getBannerImages` ~7x. Coalesce concurrent calls onto one
+  /// in-flight request and reuse the result for a short window; a pull-to-
+  /// refresh past the TTL fetches fresh. See [getBannerImages].
+  List<BannerImagesModel>? _bannersCache;
+  DateTime? _bannersCachedAt;
+  Future<List<BannerImagesModel>?>? _bannersInFlight;
+  static const _bannersTtl = Duration(minutes: 3);
+
+  /// Per-sku caches for the PDP configurable flow. Two widgets (variant body +
+  /// bottom bar) both request variations on open; coalescing the in-flight
+  /// fetch collapses the duplicate children + per-variant-stock round-trips,
+  /// and the attribute list is cached for the session (stable per sku).
+  final Map<String, Future<List<ProductAttribute>>> _configAttributesCache = {};
+  final Map<String, Future<List<ProductVariation>>> _variationsInFlight = {};
+
   /// The API's `total_count` from the last `fetchProductsByCategory` response,
   /// so the product-list header can show the real category/brand total instead
   /// of just the loaded page size (e.g. "100 items" for every list).
@@ -595,7 +611,20 @@ class MagentoService extends BaseServices {
   }
 
 
-  Future<List<ProductAttribute>> getConfigurableproductsAttributes(String sku) async {
+  Future<List<ProductAttribute>> getConfigurableproductsAttributes(String sku) {
+    // Attributes are stable per sku for a session and are requested several
+    // times per PDP open (detail seed + each variant widget), so cache them.
+    final cached = _configAttributesCache[sku];
+    if (cached != null) return cached;
+    final future = _fetchConfigurableProductsAttributes(sku);
+    _configAttributesCache[sku] = future;
+    // Drop a failed fetch so a later attempt can retry.
+    future.then((_) {}, onError: (_) => _configAttributesCache.remove(sku));
+    return future;
+  }
+
+  Future<List<ProductAttribute>> _fetchConfigurableProductsAttributes(
+      String sku) async {
     try {
       var response = await httpGet(
           MagentoHelper.buildUrl(domain, 'configurable-products/$sku/options/list')!,
@@ -636,15 +665,21 @@ class MagentoService extends BaseServices {
   @override
   Future<List<Category>> getCategories({lang}) async {
     try {
+      printLog(MagentoHelper.buildUrl(domain, 'mstore/categories', lang)!);
+      // Brands and the category tree are independent fetches — kick them off
+      // together so the category request isn't queued behind the brand one
+      // (parsing below still needs brands, so we await both). Categories change
+      // rarely; the standard (1h) disk cache also makes the tree load instantly
+      // on re-entry and across app launches.
+      final categoriesFuture = httpCache(
+          MagentoHelper.buildUrl(domain, 'mstore/categories', lang)!,
+          headers: {'Authorization': 'Bearer $accessToken'});
       final brands = await fetchBrands();
       brandIds.clear();
       for (var element in brands) {
         brandIds.add(element.value);
       }
-      printLog(MagentoHelper.buildUrl(domain, 'mstore/categories', lang)!);
-      var response = await httpGet(
-          MagentoHelper.buildUrl(domain, 'mstore/categories', lang)!,
-          headers: {'Authorization': 'Bearer $accessToken'});
+      var response = await categoriesFuture;
       var list = <Category>[];
       if (response.statusCode == 200) {
         for (var item in convert.jsonDecode(response.body)['children_data']) {
@@ -998,7 +1033,7 @@ class MagentoService extends BaseServices {
       var endPoint = '?';
       if (config.containsKey('category')) {
         endPoint +=
-            "searchCriteria[filter_groups][0][filters][0][field]=category_id&searchCriteria[filter_groups][0][filters][0][value]=${config["category"]}&searchCriteria[filter_groups][0][filters][0][condition_type]=eq&searchCriteria[pageSize]=${config['limit'] ?? apiPageSize}";
+            "searchCriteria[filter_groups][0][filters][0][field]=category_id&searchCriteria[filter_groups][0][filters][0][value]=${config["category"]}&searchCriteria[filter_groups][0][filters][0][condition_type]=eq&searchCriteria[pageSize]=${config['limit'] ?? (config.containsKey('page') ? apiPageSize : kHomeCarouselLimit)}";
       }
       if (config.containsKey('page')) {
         endPoint += "&searchCriteria[currentPage]=${config["page"]}";
@@ -1095,7 +1130,9 @@ class MagentoService extends BaseServices {
       String? search,
         String? searchText,
       Map<String, List<String>>? attributeFilters,
-      nextCursor}) async {
+      nextCursor,
+      int? perPage,
+      bool refreshCache = false}) async {
     try {
       var endPoint = '?';
       if (categoryId != null) {
@@ -1192,7 +1229,7 @@ class MagentoService extends BaseServices {
         endPoint +=
             '&searchCriteria[filter_groups][3][filters][0][field]=special_price&searchCriteria[filter_groups][3][filters][0][condition_type]=notnull';
       }
-      endPoint += '&searchCriteria[pageSize]=$apiPageSize';
+      endPoint += '&searchCriteria[pageSize]=${perPage ?? apiPageSize}';
 
       endPoint +=
           '&searchCriteria[filter_groups][1][filters][0][field]=visibility&searchCriteria[filter_groups][1][filters][0][value]=4';
@@ -1204,9 +1241,13 @@ class MagentoService extends BaseServices {
           endPoint += '&q=$encodedSearch';
         }
       }
-      var response = await httpGet(
+      // Short-TTL catalog cache: opening a product and coming back re-uses the
+      // list instantly; a pull-to-refresh passes refreshCache to bypass it.
+      var response = await httpCache(
           MagentoHelper.buildUrl(domain, 'mstore/products$endPoint', lang)!,
-          headers: {'Authorization': 'Bearer $accessToken'});
+          headers: {'Authorization': 'Bearer $accessToken'},
+          shortLived: true,
+          refreshCache: refreshCache);
 
       var list = <Product>[];
       if (response.statusCode == 200) {
@@ -1555,7 +1596,30 @@ class MagentoService extends BaseServices {
   }
 
   @override
-  Future<List<ProductVariation>> getProductVariations(Product product, {String? lang = 'en'}) async {
+  Future<List<ProductVariation>> getProductVariations(Product product,
+      {String? lang = 'en'}) async {
+    final sku = product.sku ?? '';
+    if (sku.isEmpty) return _fetchProductVariations(product, lang: lang);
+
+    final inFlight = _variationsInFlight[sku];
+    if (inFlight != null) {
+      // A sibling widget (variant body / bottom bar) already started this fetch
+      // on PDP open — reuse it instead of firing a second children +
+      // per-variant-stock round-trip. Attributes are cached, so populating this
+      // product's copy is cheap.
+      final list = await inFlight;
+      product.attributes = await getConfigurableproductsAttributes(sku);
+      return list;
+    }
+
+    final future = _fetchProductVariations(product, lang: lang);
+    _variationsInFlight[sku] = future;
+    future.whenComplete(() => _variationsInFlight.remove(sku));
+    return future;
+  }
+
+  Future<List<ProductVariation>> _fetchProductVariations(Product product,
+      {String? lang = 'en'}) async {
     try {
       // Kick off the children list and the attribute set together — both only
       // need the SKU, so there's no reason to wait for one before the other.
@@ -2904,11 +2968,31 @@ class MagentoService extends BaseServices {
   }
 
   @override
-  getBannerImages() async {
-    final bannersAPIUrl = MagentoHelper.buildUrl(domain, 'mobile/home/config');
+  Future<List<BannerImagesModel>?> getBannerImages() {
+    final cached = _bannersCache;
+    final at = _bannersCachedAt;
+    if (cached != null &&
+        at != null &&
+        DateTime.now().difference(at) < _bannersTtl) {
+      return Future.value(cached);
+    }
+    // Reuse an in-flight request so ~7 simultaneous section mounts share one
+    // network round-trip instead of firing seven identical ones.
+    return _bannersInFlight ??= _fetchBannerImages().then((result) {
+      _bannersInFlight = null;
+      if (result != null) {
+        _bannersCache = result;
+        _bannersCachedAt = DateTime.now();
+      }
+      return result;
+    });
+  }
 
-    "getBannerImages: $bannersAPIUrl".log();
-    printLog('[Magento] admin token ${isBlank(accessToken) ? 'MISSING' : 'present'}');
+  Future<List<BannerImagesModel>?> _fetchBannerImages() async {
+    "getBannerImages: ${MagentoHelper.buildUrl(domain, 'mobile/home/config')}"
+        .log();
+    printLog(
+        '[Magento] admin token ${isBlank(accessToken) ? 'MISSING' : 'present'}');
     try {
       var response = await httpGet(
         MagentoHelper.buildUrl(domain, 'mobile/home/config')!,
@@ -2920,17 +3004,12 @@ class MagentoService extends BaseServices {
       final body = convert.jsonDecode(response.body);
 
       "💫💫💫💫BannersResponse: $body".log();
-       List<BannerImagesModel> bannersList = [];
-      (body as List).first.forEach((key, value){
-        printLog('key is $key');
-        printLog('value is $value ');
+      final bannersList = <BannerImagesModel>[];
+      (body as List).first.forEach((key, value) {
         bannersList.add(BannerImagesModel.fromJson(value));
       });
-      //final bannersList = (body as List).map((i) => BannerImagesModel.fromJson(i)).toList();
       return bannersList;
     } catch (e) {
-      //rethrow;
-
       return null;
     }
   }

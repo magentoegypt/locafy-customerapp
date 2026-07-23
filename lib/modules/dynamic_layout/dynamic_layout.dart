@@ -66,11 +66,13 @@ class _DynamicLayoutState extends State<DynamicLayout> {
 
   @override
   Widget build(BuildContext context) {
-    final appModel = Provider.of<AppModel>(context, listen: true);
-
+    // Don't listen to the whole AppModel here — that rebuilt every home section
+    // on any AppModel change. Only the Logo case depends on it, and it now
+    // subscribes narrowly (themeConfig) via context.select below.
     switch (widget.config['layout']) {
       case Layout.logo:
-        final themeConfig = appModel.themeConfig;
+        final themeConfig =
+            context.select((AppModel appModel) => appModel.themeConfig);
         return Logo(
           config: LogoConfig.fromJson(widget.config),
           logo: themeConfig.logo,
@@ -113,13 +115,7 @@ class _DynamicLayoutState extends State<DynamicLayout> {
 
           // banners?[0] is the top slider banners receiving via api
           // check each banner if not not null in banners api
-
-          "⏰ ⏰ ⏰ ⏰ ⏰ ⏰ ⏰ ${bannerConfig.items[0].image}".log();
-
           if (bannerConfig.items[0].image.contains('HomeTopBanner')) {
-            "=======================  if (bannerConfig.items[0].image.contains('HomeTopBanner'))"
-                .log();
-
             if ((banners?.length ?? 0) > 0 && banners?[0].image1 != null) {
               bannerConfig.items[0].image =
                   "${kMediaDomain}/media/${banners?[0].image1}";
@@ -170,10 +166,6 @@ class _DynamicLayoutState extends State<DynamicLayout> {
 
           // banners?[0] is the top slider banners receiving via api
           // check each banner if not not null in banners api
-
-          "⏰ ⏰ ⏰ ⏰ ⏰ ⏰ ⏰ ${bannerConfig.items[0].image}".log();
-         // assets/images/category-banner-two.png
-          print(bannerConfig.items.length);
           if (bannerConfig.items[0].image.contains('HomeTopBanner')) {
             if ((banners?.length ?? 0) > 0 && banners?[0].image1 != null) {
               bannerConfig.items[0].image =
@@ -203,7 +195,6 @@ class _DynamicLayoutState extends State<DynamicLayout> {
           }
 
           //${kMediaDomain}/media/
-          print(bannerConfig.items.first.image);
           return Padding(
             padding: const EdgeInsets.only(top: 8.0),
             child: AppBanner(
@@ -241,7 +232,6 @@ class _DynamicLayoutState extends State<DynamicLayout> {
         if (widget.config['type'] == 'image') {
           final categoryConfig = CategoryConfig.fromJson(widget.config);
 
-          "⏰ ⏰ ⏰ ⏰ ⏰ ⏰ ⏰ ${categoryConfig.items[0].image}".log();
           if((banners?.length ?? 0) > 1) {
             categoryConfig.items[0].image =
             "${kMediaDomain}/media/${banners?[1].image1}";

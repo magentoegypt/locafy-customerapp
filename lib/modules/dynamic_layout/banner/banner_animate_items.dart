@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:transparent_image/transparent_image.dart';
+
+import '../../../widgets/common/flux_image.dart';
 import '../config/banner_config.dart';
 import '../helper/helper.dart';
 
 class BannerAnimated extends StatefulWidget {
   final BannerConfig config;
 
-  @override
   const BannerAnimated({Key? key, required this.config}) : super(key: key);
 
   @override
@@ -52,11 +52,13 @@ class _BannerAnimatedState extends State<BannerAnimated>
                     child: child,
                   );
                 },
-                child: FadeInImage.memoryNetwork(
+                // FluxImage (extended_image) disk-caches the banner, so it no
+                // longer re-downloads on every rebuild the way
+                // FadeInImage.memoryNetwork did.
+                child: FluxImage(
+                  imageUrl: widget.config.imageBanner!,
                   height: Helper.formatDouble(widget.config.height),
                   width: MediaQuery.of(context).size.width,
-                  placeholder: kTransparentImage,
-                  image: widget.config.imageBanner!,
                   fit: BoxFit.cover,
                 ),
               ),

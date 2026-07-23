@@ -15,6 +15,7 @@ Future<http.Response> httpCache(
   Uri url, {
   Map<String, String>? headers,
   bool refreshCache = false,
+  bool shortLived = false,
 }) async {
   final startTime = DateTime.now();
 
@@ -24,15 +25,19 @@ Future<http.Response> httpCache(
     uri = Uri.parse(proxyURL);
   }
 
+  // Catalog data (product lists) uses a short-TTL store that is separate from
+  // the image cache; everything else uses the standard 1h store.
+  final manager = shortLived ? CatalogCacheManager() : HttpCacheManager();
+
   if (refreshCache) {
-    await HttpCacheManager().removeFile(uri.toString());
+    await manager.removeFile(uri.toString());
     printLog('🔴 REMOVE CACHE:$url', startTime);
   }
 
   // Enable default on FluxBuilder
   if (kAdvanceConfig.httpCache || isBuilder) {
     try {
-      var file = await HttpCacheManager().getSingleFile(
+      var file = await manager.getSingleFile(
         uri.toString(),
         headers: (headers ?? {})..addAll({'Content-Encoding': 'gzip'}),
       );

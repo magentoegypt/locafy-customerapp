@@ -55,6 +55,10 @@ class _CategoryLandingScreenState extends State<CategoryLandingScreen> {
   late final String _lang;
   late final Future<List<Map<String, dynamic>>> _sectionsFuture;
 
+  /// Section widgets are built once from the resolved sections; caching them
+  /// keeps each section's product fetch from re-firing on every rebuild.
+  List<Widget>? _children;
+
   @override
   void initState() {
     super.initState();
@@ -197,7 +201,7 @@ class _CategoryLandingScreenState extends State<CategoryLandingScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           final sections = snapshot.data ?? const [];
-          final children = sections.isNotEmpty
+          final children = _children ??= sections.isNotEmpty
               ? _sectionWidgets(sections)
               : _fallbackWidgets();
           return ListView(

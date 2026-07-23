@@ -90,8 +90,12 @@ class ImageResize extends StatelessWidget {
       );
     }
 
+    // Decode at the display width in physical pixels (aspect ratio preserved
+    // via a single dimension), replacing the old ×2.5 guess that over-decoded
+    // on low-DPI screens and under-decoded on high-DPI ones.
+    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
     final cacheWidth = (this.width != null && this.width! > 0)
-        ? (this.width! * 2.5).toInt()
+        ? (this.width! * devicePixelRatio).round()
         : kCacheImageWidth;
 
     final image = ExtendedImage.network(
@@ -101,7 +105,10 @@ class ImageResize extends StatelessWidget {
       fit: fit,
       cache: true,
       timeRetry: const Duration(milliseconds: 500),
-      clearMemoryCacheWhenDispose: true,
+      // Keep the decoded bitmap in the (capped) image cache when a row scrolls
+      // off, so scrolling back doesn't re-decode and stutter. Memory stays
+      // bounded by PaintingBinding.imageCache (see main.dart).
+      clearMemoryCacheWhenDispose: false,
       cacheWidth: cacheWidth,
       enableLoadState: false,
       alignment: Alignment(

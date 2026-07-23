@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:talker_flutter/talker_flutter.dart';
 
@@ -20,59 +21,49 @@ class CustomLog extends FlutterTalkerLog {
 
 enum TalkerType { fine, info, verbose, warning, logTyped, log }
 
+/// One shared Talker for the whole app. The previous code built a brand-new
+/// Talker (own history buffer + logger) on *every* call — including from inside
+/// build() — so it now lives behind [kDebugMode] and a lazily-created
+/// singleton, and does nothing in release.
+Talker? _sharedTalker;
+Talker get _talker => _sharedTalker ??= Talker(
+      observers: [],
+      settings: TalkerSettings(
+        enabled: true,
+        useHistory: true,
+        maxHistoryItems: 100,
+        useConsoleLogs: true,
+      ),
+      logger: TalkerLogger(
+        output: (message) {
+          message.log();
+        },
+      ),
+    );
+
 void logTalker({
   required String classFileName,
   required TalkerType logType,
   required String message,
 }) {
-  if (true) {
-    var talker = Talker(
-      /// Your own observers to handle errors's exception's and log's
-      /// like Crashlytics or Sentry observer
-      observers: [],
-      settings: TalkerSettings(
-        /// You can enable/disable all talker processes with this field
-        enabled: true,
-
-        /// You can enable/disable saving logs data in history
-        useHistory: true,
-
-        /// Length of history that saving logs data
-        maxHistoryItems: 100,
-
-        /// You can enable/disable console logs
-        useConsoleLogs: true,
-      ),
-
-      /// Setup your implementation of logger
-      logger: TalkerLogger(
-        output: (message) {
-          '⏰⏰⏰ $classFileName 🌷🌷🌷 $message'.log();
-        },
-      ),
-
-      ///etc...
-    );
-
-    switch (logType) {
-      case TalkerType.fine:
-        talker.fine(message);
-        break;
-      case TalkerType.info:
-        talker.info(message);
-        break;
-      case TalkerType.verbose:
-        talker.verbose(message);
-        break;
-      case TalkerType.warning:
-        talker.warning(message);
-        break;
-      case TalkerType.logTyped:
-        talker.log(CustomLog(message));
-        break;
-      case TalkerType.log:
-        talker.log(CustomLog(message));
-        break;
-    }
+  if (!kDebugMode) return;
+  final tagged = '⏰⏰⏰ $classFileName 🌷🌷🌷 $message';
+  switch (logType) {
+    case TalkerType.fine:
+      _talker.fine(tagged);
+      break;
+    case TalkerType.info:
+      _talker.info(tagged);
+      break;
+    case TalkerType.verbose:
+      _talker.verbose(tagged);
+      break;
+    case TalkerType.warning:
+      _talker.warning(tagged);
+      break;
+    case TalkerType.logTyped:
+    case TalkerType.log:
+      _talker.log(CustomLog(tagged));
+      break;
   }
 }

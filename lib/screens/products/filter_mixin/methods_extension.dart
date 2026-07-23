@@ -96,7 +96,9 @@ extension ProductsFilterMixinMethodExtension on ProductsFilterMixin {
   Future<void> onRefresh() async {
     page = 1;
     rebuild();
-    await getProductList();
+    // Explicit pull-to-refresh must show live data, so bypass the short-TTL
+    // catalog cache for this fetch.
+    await getProductList(refresh: true);
   }
 
   void initFilter({ProductConfig? config}) {

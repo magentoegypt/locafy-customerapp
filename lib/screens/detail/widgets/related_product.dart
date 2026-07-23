@@ -30,6 +30,9 @@ class _RelatedProductState extends State<RelatedProduct> {
   Future<List<Product>?> getRelativeProducts(context) => _memoizer.runOnce(() {
         return services.api.fetchProductsByCategory(
             page: 1,
+            // A related-products rail shows only a handful; no need to pull a
+            // full 100-item page.
+            perPage: 10,
             categoryId: widget.product!.categoryId,
             include: widget.product?.relatedIds,
             lang: Provider.of<AppModel>(context).langCode);

@@ -55,6 +55,11 @@ class MainTabsState extends CustomOverlayState<MainTabs>
   var isInitialized = false;
 
   final List<Widget> _tabView = [];
+
+  /// Tabs visited at least once. Unvisited tabs render a zero-cost placeholder
+  /// instead of building their whole Navigator subtree at startup; once
+  /// visited, a tab stays mounted (Offstage) so its state is preserved.
+  final Set<int> _builtTabs = {};
   Map saveIndexTab = {};
   Map<String, String?> childTabName = {};
   int currentTabIndex = 0;
@@ -322,6 +327,17 @@ class MainTabsState extends CustomOverlayState<MainTabs>
                       _tabView.length,
                       (index) {
                         final active = controller.index == index;
+                        // Lazily build a tab the first time it becomes active,
+                        // then keep it mounted so its state is preserved. Never
+                        // -visited tabs stay a zero-cost placeholder instead of
+                        // building their Navigator subtree at startup.
+                        if (!active && !_builtTabs.contains(index)) {
+                          return const Offstage(
+                            offstage: true,
+                            child: SizedBox.shrink(),
+                          );
+                        }
+                        _builtTabs.add(index);
                         return Offstage(
                           offstage: !active,
                           child: TickerMode(

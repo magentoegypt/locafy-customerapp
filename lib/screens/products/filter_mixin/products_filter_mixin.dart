@@ -27,7 +27,7 @@ mixin ProductsFilterMixin {
 
   CategoryModel get categoryModel;
 
-  Future<void> getProductList();
+  Future<void> getProductList({bool refresh = false});
 
   void clearProductList();
 

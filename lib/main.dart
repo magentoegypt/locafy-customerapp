@@ -67,6 +67,12 @@ void main() {
   printLog('[main] ===== START main.dart =======');
   WidgetsFlutterBinding.ensureInitialized();
 
+  /// Bound the decoded-image memory cache. List/card images are no longer
+  /// evicted on scroll (see ImageResize.clearMemoryCacheWhenDispose), so cap
+  /// RAM here instead: ~150 MB holds a few screens of right-sized bitmaps hot
+  /// for smooth scroll-back while staying bounded on low-end devices.
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 150 << 20; // 150 MB
+
   /// Configure the global build-error fallback ONCE, up front, so no widget
   /// can later mute the whole app's errors into a blank screen. See
   /// [_globalErrorWidget].
@@ -112,7 +118,14 @@ void main() {
         /// Init Firebase settings due to version 0.5.0+ requires to.
         /// Use await to prevent any usage until the initialization is completed.
         await Services().firebase.init();
-        await Configurations().loadRemoteConfig();
+
+        /// Don't let a slow Remote Config fetch hold the splash hostage. It
+        /// usually returns fast (cached values within the fetch interval); on a
+        /// stalled network, boot on the bundled/last-merged config and let RC
+        /// apply next launch instead of blocking first paint indefinitely.
+        await Configurations()
+            .loadRemoteConfig()
+            .timeout(const Duration(seconds: 5), onTimeout: () {});
       }
     } catch (e) {
       printLog(e);
