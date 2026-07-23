@@ -2539,6 +2539,25 @@ class MagentoService extends BaseServices {
     return parseProductFromJson(products[0], brandLabels: brandLabels);
   }
 
+  @override
+  Future<Product?> getProductBySku(String sku) async {
+    if (sku.isEmpty) return null;
+    // Same admin-token product search as getProduct, but keyed by sku (the
+    // reviews feed carries only the sku, not the numeric entity_id).
+    final endPoint =
+        '?searchCriteria[filterGroups][0][filters][0][field]=sku'
+        '&searchCriteria[filterGroups][0][filters][0][condition_type]=eq'
+        '&searchCriteria[filterGroups][0][filters][0][value]='
+        '${Uri.encodeQueryComponent(sku)}';
+    final response = await httpGet(
+        MagentoHelper.buildUrl(domain, 'products$endPoint')!,
+        headers: {'Authorization': 'Bearer $accessToken'});
+    final products = convert.jsonDecode(response.body)['items'];
+    if (products == null || products.isEmpty) return null;
+    final brandLabels = await getBrandLabels();
+    return parseProductFromJson(products[0], brandLabels: brandLabels);
+  }
+
   Future<bool> deleteItemsInCart(List<Map> items, String? token) async {
     Uri? url;
     try {

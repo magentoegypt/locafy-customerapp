@@ -198,6 +198,9 @@ abstract class BaseServices {
 
   Future<Product?>? getProduct(id, {lang}) => null;
 
+  /// Full product looked up by SKU — lets a review link back to its product.
+  Future<Product?>? getProductBySku(String sku) => null;
+
   Future<ProductVariation?>? getVariationProduct(id, variationId, {lang}) =>
       null;
 

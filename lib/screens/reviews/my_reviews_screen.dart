@@ -6,7 +6,7 @@ import '../../common/config.dart';
 import '../../common/constants.dart';
 import '../../common/tools.dart';
 import '../../generated/l10n.dart';
-import '../../models/index.dart' show Review, UserModel;
+import '../../models/index.dart' show Product, Review, UserModel;
 import '../../services/index.dart';
 import '../../widgets/common/start_rating.dart';
 import '../common/app_bar_mixin.dart';
@@ -122,6 +122,34 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> with AppBarMixin {
     );
   }
 
+  /// Open the reviewed product's detail page. The feed carries only the SKU,
+  /// so fetch the full product first (admin-token search) behind a brief
+  /// loader; if it's gone from the catalog, say so instead of navigating.
+  Future<void> _openProduct(Review review) async {
+    final sku = review.sku;
+    if (sku == null || sku.isEmpty) return;
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(child: kLoadingWidget(context)),
+    );
+    Product? product;
+    try {
+      product = await services.api.getProductBySku(sku);
+    } catch (_) {
+      product = null;
+    }
+    navigator.pop(); // dismiss the loader
+    if (!mounted) return;
+    if (product == null) {
+      Tools.showSnackBar(messenger, S.of(context).notFound);
+      return;
+    }
+    navigator.pushNamed(RouteList.productDetail, arguments: product);
+  }
+
   Widget _reviewCard(Review review) {
     final theme = Theme.of(context);
     final product = review.sku != null ? _products[review.sku] : null;
@@ -129,109 +157,113 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> with AppBarMixin {
         ? product!.name
         : (review.sku ?? '');
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12.0),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(8.0),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (product?.image != null) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6.0),
-                    child: ImageResize(
-                      url: product!.image,
-                      // Use the app's -small/-medium resize backend (the
-                      // Magento resize cache serves a placeholder here).
-                      isResize: true,
-                      size: kSize.small,
-                      width: 48,
-                      height: 48,
-                      fit: BoxFit.cover,
+    return GestureDetector(
+      onTap: () => _openProduct(review),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12.0),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (product?.image != null) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6.0),
+                      child: ImageResize(
+                        url: product!.image,
+                        // Use the app's -small/-medium resize backend (the
+                        // Magento resize cache serves a placeholder here).
+                        isResize: true,
+                        size: kSize.small,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    child: Text(
+                      productName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const Icon(Icons.chevron_right, size: 18, color: kGrey400),
                 ],
-                Expanded(
-                  child: Text(
-                    productName,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                if (kAdvanceConfig.enableRating)
-                  SmoothStarRating(
-                    label: const Text(''),
-                    allowHalfRating: true,
-                    starCount: 5,
-                    rating: review.rating ?? 0.0,
-                    size: 16.0,
-                    color: theme.primaryColor,
-                    borderColor: theme.primaryColor,
-                    spacing: 0.0,
-                  ),
-                const Spacer(),
-                _statusChip(review.status),
-              ],
-            ),
-            if ((review.review ?? '').isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                review.review!,
-                style: const TextStyle(color: kGrey600, fontSize: 14),
               ),
-            ],
-            if (review.images.isNotEmpty) ...[
               const SizedBox(height: 8),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (var i = 0; i < review.images.length; i++)
-                      InkWell(
-                        onTap: () => showDialog<void>(
-                          context: context,
-                          builder: (_) => ImageGalery(
-                            images: review.images,
-                            index: i,
-                            resize: false,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: ImageResize(
-                            url: review.images[i],
-                            width: 72,
-                            height: 72,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                  ],
+              Row(
+                children: [
+                  if (kAdvanceConfig.enableRating)
+                    SmoothStarRating(
+                      label: const Text(''),
+                      allowHalfRating: true,
+                      starCount: 5,
+                      rating: review.rating ?? 0.0,
+                      size: 16.0,
+                      color: theme.primaryColor,
+                      borderColor: theme.primaryColor,
+                      spacing: 0.0,
+                    ),
+                  const Spacer(),
+                  _statusChip(review.status),
+                ],
+              ),
+              if ((review.review ?? '').isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  review.review!,
+                  style: const TextStyle(color: kGrey600, fontSize: 14),
                 ),
+              ],
+              if (review.images.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < review.images.length; i++)
+                        InkWell(
+                          onTap: () => showDialog<void>(
+                            context: context,
+                            builder: (_) => ImageGalery(
+                              images: review.images,
+                              index: i,
+                              resize: false,
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: ImageResize(
+                              url: review.images[i],
+                              width: 72,
+                              height: 72,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Text(
+                timeago.format(review.createdAt),
+                style: const TextStyle(color: kGrey400, fontSize: 11),
               ),
             ],
-            const SizedBox(height: 8),
-            Text(
-              timeago.format(review.createdAt),
-              style: const TextStyle(color: kGrey400, fontSize: 11),
-            ),
-          ],
+          ),
         ),
       ),
     );

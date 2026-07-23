@@ -48,14 +48,26 @@ class _StateProductOrderItem extends BaseScreen<ProductOrderItem> {
   void afterFirstLayout(BuildContext context) async {
     super.afterFirstLayout(context);
 
-    if (widget.product.featuredImage == null) {
+    // Fetch the full product when we need its image OR its canonical review
+    // sku. A completed order's review must target the configurable PARENT, but
+    // the order line replaces the parent sku with the ordered CHILD sku (its
+    // product_id still points at the parent), so resolve the parent here.
+    final needsProduct = widget.product.featuredImage == null ||
+        (widget.orderStatus == OrderStatus.completed && !widget.disableReview);
+    if (needsProduct) {
       var productObj = await Services().api.getProduct(
             widget.product.productId,
           );
       if (productObj != null) {
         setState(() {
           product = productObj;
-          imageFeatured = product!.imageFeature ?? kDefaultImage;
+          imageFeatured = product!.imageFeature ??
+              widget.product.featuredImage ??
+              kDefaultImage;
+        });
+      } else {
+        setState(() {
+          imageFeatured = widget.product.featuredImage ?? kDefaultImage;
         });
       }
     } else {
@@ -224,16 +236,20 @@ class _StateProductOrderItem extends BaseScreen<ProductOrderItem> {
 
         /// Review for completed order only.
         if (widget.orderStatus == OrderStatus.completed &&
-            !widget.disableReview)
+            !widget.disableReview &&
+            !isLoading)
           Padding(
             padding: const EdgeInsets.only(top: 5.0),
             child: Reviews(
-              // Magento keys reviews off the SKU, so passing the numeric
-              // product_id 404'd ("Not Found" on Send) and the existing rating
-              // never loaded (86d3rytm0). The PDP always passed product.sku;
-              // only this call site did not. Backends whose order payload has
-              // no sku keep their previous behaviour.
-              widget.product.sku ?? widget.product.productId,
+              // Reviews attach to a SKU. For a configurable product the order
+              // line carries the ordered CHILD sku, so a review would land on
+              // the variant instead of the product page. `product` is fetched
+              // by the line's product_id (which points at the configurable
+              // PARENT), so its sku is the parent sku — use it, falling back to
+              // the line sku (86d3rytm0: never the numeric product_id) if the
+              // fetch failed. Gated on !isLoading so Reviews builds once with
+              // the resolved sku instead of first querying the child.
+              product?.sku ?? widget.product.sku ?? widget.product.productId,
               showYourRatingOnly: true,
             ),
           ),
