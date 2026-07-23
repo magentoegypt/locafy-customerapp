@@ -48,6 +48,7 @@ class MagentoService extends BaseServices {
   Map<String, ProductAttribute>? attributes;
   List<String> brandIds = [];
   Map<String, String>? _brandLabelsCache;
+  Future<Map<String, String>>? _brandLabelsInFlight;
 
   /// Home banners are requested once per `DynamicLayout` section, so a single
   /// home load fires `getBannerImages` ~7x. Coalesce concurrent calls onto one
@@ -380,6 +381,15 @@ class MagentoService extends BaseServices {
   /// fetched once and cached for the app session.
   Future<Map<String, String>> getBrandLabels() async {
     if (_brandLabelsCache != null) return _brandLabelsCache!;
+    // Share a single in-flight fetch: profiling showed this ~1.3s brand-
+    // attribute call, awaited inline in the product parse, was the biggest hit
+    // on the first product list (the parse itself is ~12ms). It's primed at
+    // startup (see main.dart); the guard means a product list opened before the
+    // prime finishes awaits that same fetch instead of starting a second one.
+    return _brandLabelsInFlight ??= _loadBrandLabels();
+  }
+
+  Future<Map<String, String>> _loadBrandLabels() async {
     try {
       final options = await getProductAttributesWithOption('brand');
       _brandLabelsCache = {
@@ -389,6 +399,7 @@ class MagentoService extends BaseServices {
     } catch (e) {
       _brandLabelsCache = {};
     }
+    _brandLabelsInFlight = null;
     return _brandLabelsCache!;
   }
 
@@ -1352,27 +1363,16 @@ class MagentoService extends BaseServices {
 
       var list = <Product>[];
       if (response.statusCode == 200) {
-        // TEMP-PROFILE (revert): measure PLP parse on a --profile build.
-        final _sw = Stopwatch()..start();
         final decoded = convert.jsonDecode(response.body);
-        final _decodeMs = _sw.elapsedMicroseconds / 1000.0;
         final total = decoded is Map ? decoded['total_count'] : null;
         lastCategoryProductsTotal =
             total is int ? total : int.tryParse('$total');
         final brandLabels = await getBrandLabels();
-        final _swMap = Stopwatch()..start();
         for (var item
             in (decoded is Map ? decoded['items'] : null) ?? const []) {
           var product = parseProductFromJson(item, brandLabels: brandLabels);
           list.add(product);
         }
-        final _mapMs = _swMap.elapsedMicroseconds / 1000.0;
-        // ignore: avoid_print
-        print('[PLPPROF] items=${list.length} '
-            'body=${(response.body.length / 1024).toStringAsFixed(1)}kb '
-            'jsonDecode=${_decodeMs.toStringAsFixed(1)}ms '
-            'map=${_mapMs.toStringAsFixed(1)}ms '
-            'parseTotal=${(_sw.elapsedMicroseconds / 1000.0).toStringAsFixed(1)}ms');
       }
       return list;
     } catch (e) {

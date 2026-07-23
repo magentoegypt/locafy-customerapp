@@ -15,6 +15,7 @@ import 'common/config.dart';
 import 'common/constants.dart';
 import 'data/boxes.dart';
 import 'env.dart';
+import 'frameworks/magento/services/magento_service.dart';
 import 'services/dependency_injection.dart';
 import 'services/locale_service.dart';
 import 'services/services.dart';
@@ -142,6 +143,17 @@ void main() {
 
     await DependencyInjection.inject();
     Services().setAppConfig(serverConfig);
+
+    // Warm the brand id→label cache off the critical path. Profiling the PLP
+    // showed the first product list blocked ~1.3s on this brand-attribute fetch
+    // (awaited inline in the product parse; the parse itself is ~12ms). Priming
+    // it here moves the cost into the splash/home window so the first product
+    // grid opens on a warm cache. Fire-and-forget; MagentoService dedupes an
+    // in-flight fetch, so a fast navigation shares this one call.
+    final productApi = Services().api;
+    if (productApi is MagentoService) {
+      unawaited(productApi.getBrandLabels());
+    }
 
     if (isMobile && kAdvanceConfig.autoDetectLanguage) {
       final lang = SettingsBox().languageCode;
