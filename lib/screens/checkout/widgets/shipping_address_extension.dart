@@ -145,16 +145,16 @@ extension on _ShippingAddressState {
             message: "Please select address first",
           );
         }else{
-          // Saved addresses may predate the phone/region rules (or were
-          // synced from the website without a district) — block them here so
-          // the order payload never carries an invalid phone or empty
-          // region/city, and ask the user to edit the address instead.
+          // A saved address may predate the region rules or have been synced
+          // from the website without a district — block those so the order
+          // payload never carries an empty region/city, and ask the user to
+          // edit it. We do NOT re-validate the phone FORMAT here: checkout
+          // accepts any stored form (Magento normalises +20 / 20 / 01…; see the
+          // scope note in test/address_phone_format_test.dart). Re-selecting a
+          // saved local-format number (01…) was wrongly firing the "10-digit,
+          // no leading 0" error and blocking checkout (86d3g53f8). isValid()
+          // below already requires a non-empty phone.
           final selected = listAddress[selectIndex];
-          final phoneError = phoneErrorFor(selected?.phoneNumber);
-          if (phoneError != null) {
-            _showMessage(phoneError);
-            return;
-          }
           if (!(selected?.isValid() ?? false) || selected?.state == 'SG') {
             _showMessage(S.of(context).pleaseUpdateAddress);
             return;
