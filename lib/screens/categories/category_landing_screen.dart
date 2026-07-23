@@ -513,7 +513,7 @@ class _ProductSectionState extends State<_ProductSection> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _SectionHeader(widget.title),
+            _SectionHeader(widget.title, onViewAll: widget.onViewAll),
             SizedBox(
               height: cardHeight,
               child: ListView.separated(
