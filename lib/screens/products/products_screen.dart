@@ -40,6 +40,13 @@ class ProductsScreen extends StatefulWidget {
   final String? routeName;
   final bool autoFocusSearch;
 
+  /// When set, the category strip lists this parent's children — the current
+  /// category's *siblings* — instead of the current category's own children,
+  /// so a leaf subcategory page opened from a home banner still shows the
+  /// "remaining subcategories" to switch between (ClickUp 86d3g3mea item 1).
+  /// Null for Search and direct category taps, which keep the child strip.
+  final String? siblingParentId;
+
   const ProductsScreen({
     super.key,
     this.products,
@@ -49,6 +56,7 @@ class ProductsScreen extends StatefulWidget {
     this.enableSearchHistory = false,
     this.routeName,
     this.autoFocusSearch = true,
+    this.siblingParentId,
   });
 
   @override
@@ -234,6 +242,7 @@ class ProductsScreenState extends State<ProductsScreen>
         appbarCategory: ProductCategoryMenu(
           enableSearchHistory: widget.enableSearchHistory,
           newCategoryId: categoryId,
+          siblingParentId: widget.siblingParentId,
           onTap: (categoryId, categoryName) {
             include = null;
             // Switching subcategory from the tab strip changes the category in
@@ -340,6 +349,10 @@ class ProductsScreenState extends State<ProductsScreen>
                                     enableSearchHistory:
                                         widget.enableSearchHistory,
                                     newCategoryId: categoryId,
+                                    // Banner→subcategory flow lists siblings
+                                    // (the parent's other children) to switch
+                                    // between; null elsewhere keeps children.
+                                    siblingParentId: widget.siblingParentId,
                                     onTap: (categoryId, categoryName) {
                                       include = null;
                                       // Same in-place category switch as the

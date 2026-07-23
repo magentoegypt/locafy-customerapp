@@ -37,8 +37,17 @@ class SubcategoryScreen extends StatefulWidget {
   final String? categoryName;
   final int level;
 
-  const SubcategoryScreen({Key? key, this.categoryName, required this.level})
-      : super(key: key);
+  /// The category whose children this screen lists. Passed on to a leaf's
+  /// products page as the sibling-strip parent so that page can show the
+  /// "remaining subcategories" at this level (ClickUp 86d3g3mea item 1).
+  final String? parentId;
+
+  const SubcategoryScreen({
+    Key? key,
+    this.categoryName,
+    required this.level,
+    this.parentId,
+  }) : super(key: key);
 
   @override
   State<SubcategoryScreen> createState() => _SubcategoryScreenState();
@@ -141,6 +150,12 @@ class _SubcategoryScreenState extends State<SubcategoryScreen> {
                                 arguments: BackDropArguments(
                                   cateId: category.id,
                                   cateName: category.name,
+                                  // Banner → subcategory flow: the products
+                                  // page shows the other subcategories at this
+                                  // level (children of this screen's parent) so
+                                  // the user can switch between them, matching
+                                  // the website (86d3g3mea item 1).
+                                  siblingParentId: widget.parentId,
                                 ),
                               );
                             },

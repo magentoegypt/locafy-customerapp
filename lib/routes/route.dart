@@ -159,6 +159,7 @@ class Routes {
                   config: productConfig,
                   listingLocation: listingLocationId,
                   countdownDuration: countdownDuration,
+                  siblingParentId: arguments.siblingParentId,
                 );
               }
 
@@ -171,6 +172,7 @@ class Routes {
                 config: productConfig,
                 countdownDuration: countdownDuration,
                 listingLocation: listingLocationId,
+                siblingParentId: arguments.siblingParentId,
               );
             } catch (e, trace) {
               printError(e, trace);
@@ -451,6 +453,7 @@ class Routes {
                   child: SubcategoryScreen(
                     categoryName: arguments.categoryName,
                     level: arguments.level,
+                    parentId: arguments.parentId,
                   ),
                 ),
               );

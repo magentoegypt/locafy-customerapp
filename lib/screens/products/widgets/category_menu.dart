@@ -10,6 +10,13 @@ class ProductCategoryMenu extends StatefulWidget {
   final String isComingFrom;
   final bool imageLayout;
   final String? newCategoryId;
+
+  /// When non-null, the strip lists this parent's children — i.e. the current
+  /// category's *siblings* — instead of the current category's own children,
+  /// while still highlighting [newCategoryId]. Used by the home-banner →
+  /// subcategory products page so a leaf still shows the "remaining
+  /// subcategories" to switch between (ClickUp 86d3g3mea item 1).
+  final String? siblingParentId;
   final Function(String?,String?)? onTap;
 
   const ProductCategoryMenu({
@@ -18,6 +25,7 @@ class ProductCategoryMenu extends StatefulWidget {
     this.isComingFrom = "",
     this.imageLayout = false,
     this.newCategoryId,
+    this.siblingParentId,
     this.onTap,
   });
 
@@ -108,23 +116,25 @@ class StateProductCategoryMenu extends State<ProductCategoryMenu> {
         return Center(child: kLoadingWidget(context));
       }
 
-      /// Website parity: a category page lists its OWN child categories —
-      /// Boys -> Outwear / Homewear / Footwear / Underwear.
+      /// Two modes, chosen by the caller:
       ///
-      /// This used to walk UP to the parent and list the parent's children,
-      /// i.e. the current category's SIBLINGS, which is exactly what QA
-      /// reported as the page showing "the remaining subcategories of the main
-      /// category" (86d3g3mea). A leaf category (a sub-subcategory such as
-      /// "Outwear boy") has no children, so the row now disappears on its own —
-      /// which is what 86d3g43qr asks for ("all tabs showing categories or
-      /// subcategories should be removed from this page").
-      final children =
-          getSubCategories(categoryModel.categories, widget.newCategoryId) ??
+      /// - Default (Search, direct category taps): list this category's OWN
+      ///   child categories — Boys -> Outwear / Homewear / Footwear / Underwear.
+      ///   A leaf has no children, so the row disappears on its own, which is
+      ///   what 86d3g43qr asks for ("tabs … removed from this page").
+      /// - [siblingParentId] set (home-banner → subcategory flow): list that
+      ///   parent's children — the current category's SIBLINGS — so a leaf
+      ///   opened from a banner still shows "the remaining subcategories of the
+      ///   main category" to switch between, matching the website (86d3g3mea
+      ///   item 1). [newCategoryId] stays highlighted as the active one.
+      final listParentId = widget.siblingParentId ?? widget.newCategoryId;
+      final categories =
+          getSubCategories(categoryModel.categories, listParentId) ??
               <Category>[];
-      if (children.isEmpty) {
+      if (categories.isEmpty) {
         return const SizedBox(width: double.infinity);
       }
-      return renderListCategories(children);
+      return renderListCategories(categories);
     });
   }
 

@@ -9,6 +9,15 @@ class BackDropArguments {
   final String? brandImg;
   final String? searchText;
   final bool showCountdown;
+
+  /// When set, the products page shows a horizontal strip of the *sibling*
+  /// subcategories (the other children of this category id) so the user can
+  /// switch between the "remaining subcategories of the main category" in
+  /// place — the web-style category page. Set only on the home-banner →
+  /// subcategory flow (see [SubcategoryScreen]); left null for Search and
+  /// direct category taps, which keep the child-category strip / flat list
+  /// (ClickUp 86d3g3mea item 1).
+  final String? siblingParentId;
   Duration countdownDuration = Duration.zero;
 
   BackDropArguments({
@@ -22,6 +31,7 @@ class BackDropArguments {
     this.brandImg,
     this.searchText,
     this.showCountdown = false,
+    this.siblingParentId,
     this.countdownDuration = Duration.zero,
   });
 }
