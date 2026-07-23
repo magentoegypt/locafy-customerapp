@@ -3277,8 +3277,14 @@ class MagentoService extends BaseServices {
               headers: {'Authorization': 'Bearer ${UserBox().userInfo?.cookie}'
                 ,'content-type': 'application/json'},
               body: payLoad);
-          final body = convert.jsonDecode(res.body);
-          printLog(body);
+          final phoneBody = convert.jsonDecode(res.body);
+          printLog(phoneBody);
+          // Same as the standalone phone branch: don't swallow a rejected
+          // mobile write when the phone is changed together with the password
+          // (86d3tkj7z #1, #2).
+          if (phoneBody is Map && phoneBody['message'] != null) {
+            throw Exception(MagentoHelper.getErrorMessage(phoneBody));
+          }
         }
         if (body is Map && body['message'] != null) {
           throw Exception(MagentoHelper.getErrorMessage(body));
@@ -3329,6 +3335,14 @@ class MagentoService extends BaseServices {
             body: payLoad);
         final body = convert.jsonDecode(res.body);
         printLog(body);
+        // A phone update Magento rejects (most often a `mobile` that already
+        // belongs to another account) used to be swallowed here: the method
+        // returned success, the screen kept the new number locally, and it
+        // reverted on the next customers/me refresh with no message shown
+        // (86d3tkj7z #1, #2). Surface it so the screen's onError fires.
+        if (body is Map && body['message'] != null) {
+          throw Exception(MagentoHelper.getErrorMessage(body));
+        }
       }
       return json;
     } catch (err) {
