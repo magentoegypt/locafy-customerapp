@@ -43,30 +43,38 @@ class PaymentMethodItem extends StatelessWidget {
                           onChanged: onSelected),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            if (kPayments[paymentMethod.id] != null)
-                              FluxImage(
-                                imageUrl: kPayments[paymentMethod.id],
-                                height: 30,
+                        child: kPayments[paymentMethod.id] != null
+                            ? Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: FluxImage(
+                                  imageUrl: kPayments[paymentMethod.id],
+                                  height: 30,
+                                ),
+                              )
+                            : Row(
+                                children: <Widget>[
+                                  // Leading brand mark so each option reads as
+                                  // "logo + name" in checkout. Unmapped codes
+                                  // fall back to name only.
+                                  ..._buildBrandMark(context, paymentMethod.id),
+                                  Expanded(
+                                    // Never null-assert the title — a method
+                                    // with a missing title degrades to a plain
+                                    // name (its code) instead of throwing during
+                                    // build and tripping the global ErrorWidget
+                                    // (the red "Something went wrong" beside
+                                    // COD/Visa in the QA build, 86d3g53f8 #7).
+                                    child: Services()
+                                        .widget
+                                        .renderShippingPaymentTitle(
+                                          context,
+                                          paymentMethod.title ??
+                                              paymentMethod.id ??
+                                              '',
+                                        ),
+                                  ),
+                                ],
                               ),
-                            if (kPayments[paymentMethod.id] == null)
-                              // Match the website: show just the payment
-                              // method name. Never null-assert the title — a
-                              // method with a missing title must degrade to a
-                              // plain name (fall back to its code) rather than
-                              // throw during build and trip the global
-                              // ErrorWidget, which is what rendered the red
-                              // "Something went wrong" beside COD/Visa in the
-                              // QA build (ClickUp 86d3g53f8, item 7).
-                              Services().widget.renderShippingPaymentTitle(
-                                  context,
-                                  paymentMethod.title ??
-                                      paymentMethod.id ??
-                                      ''),
-                          ],
-                        ),
                       )
                     ],
                   ),
@@ -79,5 +87,38 @@ class PaymentMethodItem extends StatelessWidget {
         const Divider(height: 1)
       ],
     );
+  }
+
+  /// Leading brand mark(s) for a payment method, shown before its name so each
+  /// checkout row reads as "logo + name". Keyed by the Magento payment code.
+  /// Real card art (Visa/Mastercard) is bundled; COD/BNPL use a representative
+  /// glyph until brand logos are supplied. Unknown codes get no mark (name
+  /// only), so a new backend method can never break the row.
+  List<Widget> _buildBrandMark(BuildContext context, String? id) {
+    final color = Theme.of(context).colorScheme.secondary;
+    const gap = SizedBox(width: 10);
+    switch (id) {
+      case 'online': // Secure online payment by Visa / MasterCard
+        return [
+          Image.asset('assets/icons/credit_cards/visa.png', height: 22),
+          const SizedBox(width: 4),
+          Image.asset('assets/icons/credit_cards/mastercard.png', height: 22),
+          gap,
+        ];
+      case 'cashondelivery':
+        return [Icon(Icons.payments_outlined, size: 24, color: color), gap];
+      case 'sympl': // Pay later in installments
+        return [
+          Icon(Icons.calendar_month_outlined, size: 24, color: color),
+          gap
+        ];
+      case 'aman':
+        return [
+          Icon(Icons.account_balance_wallet_outlined, size: 24, color: color),
+          gap
+        ];
+      default:
+        return const [];
+    }
   }
 }
