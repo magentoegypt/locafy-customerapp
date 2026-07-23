@@ -3,7 +3,16 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-class LocalWidgetsLocalizations implements WidgetsLocalizations {
+/// Adds RTL support on top of Flutter's default widget-library localizations.
+///
+/// Extends [DefaultWidgetsLocalizations] (instead of implementing
+/// WidgetsLocalizations with a throwing noSuchMethod) so every member the
+/// framework needs has a value — including newer ones like
+/// `radioButtonUnselectedLabel`, which Radio reads for an unselected button's
+/// accessibility label. The old version defined only `textDirection` and threw
+/// NoSuchMethodError for anything else, crashing the checkout payment step's
+/// unselected radios into the global error widget (ClickUp 86d3g53f8).
+class LocalWidgetsLocalizations extends DefaultWidgetsLocalizations {
   /// Construct an object that defines the localized values for the widgets
   /// library for the given `locale`.
   ///
@@ -52,9 +61,6 @@ class LocalWidgetsLocalizations implements WidgetsLocalizations {
   /// [WidgetsApp] automatically adds this value to [WidgetsApp.localizationsDelegates].
   static const LocalizationsDelegate<WidgetsLocalizations> delegate =
       WidgetsLocalizationsDelegate();
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class WidgetsLocalizationsDelegate
