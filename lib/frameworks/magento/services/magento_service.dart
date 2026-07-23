@@ -1478,9 +1478,16 @@ class MagentoService extends BaseServices {
             if (item is! Map) continue;
             final sku = '${item['sku'] ?? ''}';
             if (sku.isEmpty) continue;
-            final image = item['small_image'] is Map
+            var image = item['small_image'] is Map
                 ? item['small_image']['url'] as String?
                 : null;
+            // GraphQL hands back the `/catalog/product/cache/<hash>/` resize
+            // URL, which serves the store placeholder on this backend. Strip it
+            // to the original path so the app's own `-small/-medium` resize
+            // backend loads the real image — the same way the PLP/PDP do (the
+            // Magento resize cache is unreliable here; the originals are fine).
+            image = image?.replaceFirst(
+                RegExp(r'/catalog/product/cache/[^/]+/'), '/catalog/product/');
             result[sku] = (name: '${item['name'] ?? ''}', image: image);
           }
         }

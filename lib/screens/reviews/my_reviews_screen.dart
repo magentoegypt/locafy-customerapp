@@ -149,6 +149,10 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> with AppBarMixin {
                     borderRadius: BorderRadius.circular(6.0),
                     child: ImageResize(
                       url: product!.image,
+                      // Use the app's -small/-medium resize backend (the
+                      // Magento resize cache serves a placeholder here).
+                      isResize: true,
+                      size: kSize.small,
                       width: 48,
                       height: 48,
                       fit: BoxFit.cover,
