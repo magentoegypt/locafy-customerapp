@@ -60,8 +60,6 @@ class _StateReviews extends BaseScreen<Reviews> {
       if (widget.showYourRatingOnly) {
         reviewList =
             reviewList?.where((r) => r.sku == widget.productId).toList();
-        printLog('[REVIEW-DIAG] list productId=${widget.productId} '
-            'fetched=${onValue.data?.length} shown=${reviewList?.length}');
       }
       if (mounted) {
         setState(() {

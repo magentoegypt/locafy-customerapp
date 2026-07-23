@@ -43,6 +43,9 @@ class RouteList {
   static const String orders = 'orders';
   static const String orderDetail = 'order-detail';
 
+  // Customer's own reviews (My Account)
+  static const String myReviews = 'my-reviews';
+
   // Notify
   static const String notify = 'notify';
 

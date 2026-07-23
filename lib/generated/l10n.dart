@@ -4637,6 +4637,36 @@ class S {
     );
   }
 
+  /// `My Reviews`
+  String get myReviews {
+    return Intl.message(
+      'My Reviews',
+      name: 'myReviews',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Not approved`
+  String get reviewNotApproved {
+    return Intl.message(
+      'Not approved',
+      name: 'reviewNotApproved',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Pending`
+  String get reviewPending {
+    return Intl.message(
+      'Pending',
+      name: 'reviewPending',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Publish`
   String get publish {
     return Intl.message(

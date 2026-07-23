@@ -26,6 +26,7 @@ import '../screens/dynamic/dynamic_tabmenu_screen.dart';
 import '../screens/index.dart';
 import '../screens/order_history/index.dart';
 import '../screens/page_tab_screen.dart';
+import '../screens/reviews/my_reviews_screen.dart';
 import '../screens/subcategories/models/subcategory_model.dart';
 import '../screens/settings/newsletter_subscription_screen.dart';
 import '../screens/user_update/user_update_screen.dart';
@@ -263,6 +264,8 @@ class Routes {
             child: ListOrderHistoryScreen(),
           ),
         );
+      case RouteList.myReviews:
+        return _buildRoute(settings, (_) => const MyReviewsScreen());
       case RouteList.search:
         return _buildRoute(
           settings,

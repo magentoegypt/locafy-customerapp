@@ -684,6 +684,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "myProducts": MessageLookupByLibrary.simpleMessage("منتجاتي"),
         "myProductsEmpty":
             MessageLookupByLibrary.simpleMessage("ليس لديك أي منتجات!"),
+        "myReviews": MessageLookupByLibrary.simpleMessage("مراجعاتي"),
         "myWallet": MessageLookupByLibrary.simpleMessage("محفظتى"),
         "myWishList": MessageLookupByLibrary.simpleMessage("أمنياتي"),
         "nItems": m19,
@@ -1001,6 +1002,8 @@ class MessageLookup extends MessageLookupByLibrary {
         "retry": MessageLookupByLibrary.simpleMessage("إعادة المحاولة"),
         "review": MessageLookupByLibrary.simpleMessage("ملخص الطلب"),
         "reviewApproval": MessageLookupByLibrary.simpleMessage("مراجعة الآراء"),
+        "reviewNotApproved": MessageLookupByLibrary.simpleMessage("غير معتمدة"),
+        "reviewPending": MessageLookupByLibrary.simpleMessage("قيد المراجعة"),
         "reviewPendingApproval": MessageLookupByLibrary.simpleMessage(
             "تم إرسال رأيك وينتظر الموافقة!"),
         "reviewSent": MessageLookupByLibrary.simpleMessage("تم إرسال رأيك!"),

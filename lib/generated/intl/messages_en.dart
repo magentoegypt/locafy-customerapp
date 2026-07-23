@@ -694,6 +694,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "myProducts": MessageLookupByLibrary.simpleMessage("My Products"),
         "myProductsEmpty": MessageLookupByLibrary.simpleMessage(
             "You don\'t have any products. Try to create one!"),
+        "myReviews": MessageLookupByLibrary.simpleMessage("My Reviews"),
         "myWallet": MessageLookupByLibrary.simpleMessage("My Wallet"),
         "myWishList": MessageLookupByLibrary.simpleMessage("My Wishlist"),
         "nItems": m19,
@@ -1014,6 +1015,9 @@ class MessageLookup extends MessageLookupByLibrary {
         "review": MessageLookupByLibrary.simpleMessage("Review"),
         "reviewApproval":
             MessageLookupByLibrary.simpleMessage("Review Approval"),
+        "reviewNotApproved":
+            MessageLookupByLibrary.simpleMessage("Not approved"),
+        "reviewPending": MessageLookupByLibrary.simpleMessage("Pending"),
         "reviewPendingApproval": MessageLookupByLibrary.simpleMessage(
             "Your review has been sent and is waiting for approval!"),
         "reviewSent":

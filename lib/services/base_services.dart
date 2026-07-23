@@ -93,6 +93,12 @@ abstract class BaseServices {
           {int page = 1, int perPage = 20, String? token}) =>
       null;
 
+  /// Product name + thumbnail keyed by SKU — gives the My Reviews list product
+  /// context, since the reviews feed carries only SKUs.
+  Future<Map<String, ({String name, String? image})>> getReviewedProductInfo(
+          List<String> skus) async =>
+      {};
+
   Future<PagingResponse<ProductReview>>? getProductReviews(productSKU,
           {int page = 1, int perPage = 10}) =>
       null;

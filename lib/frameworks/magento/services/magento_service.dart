@@ -1423,16 +1423,14 @@ class MagentoService extends BaseServices {
     try {
       final authToken = token ?? UserBox().userInfo?.cookie;
       if (authToken == null || authToken.isEmpty) {
-        printLog('[REVIEW-DIAG] getMyReviews: no auth token');
         return PagingResponse(data: <Review>[]);
       }
-      final url = MagentoHelper.buildUrl(domain,
-          'customers/me/reviews?currentPage=$page&pageSize=$perPage',
-          SettingsBox().languageCode)!;
-      final res =
-          await httpGet(url, headers: {'Authorization': 'Bearer $authToken'});
-      printLog('[REVIEW-DIAG] getMyReviews $url -> ${res.statusCode}'
-          ' len=${res.body.length}');
+      final res = await httpGet(
+        MagentoHelper.buildUrl(domain,
+            'customers/me/reviews?currentPage=$page&pageSize=$perPage',
+            SettingsBox().languageCode)!,
+        headers: {'Authorization': 'Bearer $authToken'},
+      );
       if (res.statusCode == 200) {
         final decoded = convert.jsonDecode(res.body);
         if (decoded is List) {
@@ -1440,18 +1438,57 @@ class MagentoService extends BaseServices {
           for (final item in decoded) {
             if (item is Map) list.add(_reviewFromRest(item));
           }
-          printLog('[REVIEW-DIAG] getMyReviews parsed=${list.length}'
-              ' skus=${list.map((r) => r.sku).toList()}');
           return PagingResponse(data: list);
         }
       }
-      printLog('[REVIEW-DIAG] getMyReviews non-200/notList body='
-          '${res.body.length > 200 ? res.body.substring(0, 200) : res.body}');
       return PagingResponse(data: <Review>[]);
     } catch (e) {
-      printLog('[REVIEW-DIAG] getMyReviews error: $e');
+      printLog('getMyReviews error: $e');
       return PagingResponse(data: <Review>[]);
     }
+  }
+
+  @override
+  Future<Map<String, ({String name, String? image})>> getReviewedProductInfo(
+      List<String> skus) async {
+    final result = <String, ({String name, String? image})>{};
+    final distinct = skus.where((s) => s.isNotEmpty).toSet().toList();
+    if (distinct.isEmpty) return result;
+    try {
+      final langCode = (SettingsBox().languageCode ?? 'en').toLowerCase();
+      final store = langCode == 'ar' ? 'eg_ar' : 'eg_en';
+      final skuList =
+          distinct.map((s) => '"${s.replaceAll('"', r'\"')}"').join(',');
+      final query = '''
+{
+  products(filter: {sku: {in: [$skuList]}}, pageSize: ${distinct.length}) {
+    items { sku name small_image { url } }
+  }
+}''';
+      final response = await httpPost(
+        '$domain/graphql'.toUri()!,
+        headers: {'content-type': 'application/json', 'Store': store},
+        body: convert.jsonEncode({'query': query}),
+      );
+      if (response.statusCode == 200) {
+        final body = convert.jsonDecode(response.body);
+        final items = body?['data']?['products']?['items'];
+        if (items is List) {
+          for (final item in items) {
+            if (item is! Map) continue;
+            final sku = '${item['sku'] ?? ''}';
+            if (sku.isEmpty) continue;
+            final image = item['small_image'] is Map
+                ? item['small_image']['url'] as String?
+                : null;
+            result[sku] = (name: '${item['name'] ?? ''}', image: image);
+          }
+        }
+      }
+    } catch (e) {
+      printLog('getReviewedProductInfo error: $e');
+    }
+    return result;
   }
 
   /// Maps one object from a REST reviews feed (the public product feed or the

@@ -92,14 +92,17 @@ class SettingScreenState extends State<SettingScreen>
     SectionItem(title: S.of(context).addressBook, url: "addressBook"),
     SectionItem(title: S.of(context).accountInformation, url: "accountInformation"),
     SectionItem(title: S.of(context).newsletterSubscriptions, url: "newsletterSubscription"),
-    // Stored Payment Methods (/vault/cards/listaction/) and My Product Reviews
-    // (/review/customer/) were removed. Both opened the storefront in a
-    // webview, and that webview holds no Magento session — the app
-    // authenticates with a REST bearer token, not a PHP session cookie — so
-    // both landed on the customer login form. There is no native equivalent in
-    // the app and no REST surface for a card vault or for a customer's own
-    // reviews, so nothing could be shown. Restore them only once the backend
-    // provides a session-bootstrap endpoint. See 86d3rrtpy.
+    SectionItem(title: S.of(context).myReviews, url: "myReviews"),
+    // My Reviews is native now (above): the backend added
+    // GET /V1/customers/me/reviews (self), so the customer's own reviews render
+    // in-app instead of the dead webview that used to land on the login form.
+    //
+    // Stored Payment Methods (/vault/cards/listaction/) stays removed: it also
+    // opened a storefront webview that holds no Magento session — the app
+    // authenticates with a REST bearer token, not a PHP session cookie — so it
+    // landed on the login form, and there is still no REST surface for a card
+    // vault. Restore it only once the backend provides a session-bootstrap
+    // endpoint. See 86d3rrtpy.
     //
     // Discount Coupons (/referralsystem/payout/), My Wallet
     // (/wallet/wallet/transaction/) and Return Merchandise Authorization
@@ -1555,6 +1558,9 @@ class SettingScreenState extends State<SettingScreen>
           RouteList.orders,
           arguments: user,
         );
+        break;
+      case 'myReviews':
+        FluxNavigate.pushNamed(RouteList.myReviews);
         break;
       case 'myWishList':
         // By route, not by bottom-tab index: tabAnimateTo(2) hard-codes the
