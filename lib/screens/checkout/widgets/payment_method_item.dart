@@ -52,8 +52,19 @@ class PaymentMethodItem extends StatelessWidget {
                                 height: 30,
                               ),
                             if (kPayments[paymentMethod.id] == null)
+                              // Match the website: show just the payment
+                              // method name. Never null-assert the title — a
+                              // method with a missing title must degrade to a
+                              // plain name (fall back to its code) rather than
+                              // throw during build and trip the global
+                              // ErrorWidget, which is what rendered the red
+                              // "Something went wrong" beside COD/Visa in the
+                              // QA build (ClickUp 86d3g53f8, item 7).
                               Services().widget.renderShippingPaymentTitle(
-                                  context, paymentMethod.title!),
+                                  context,
+                                  paymentMethod.title ??
+                                      paymentMethod.id ??
+                                      ''),
                           ],
                         ),
                       )
