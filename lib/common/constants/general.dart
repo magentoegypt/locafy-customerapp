@@ -45,6 +45,17 @@ final apiPageSize = ServerConfig().isBigCommerce ? 100 : 100;
 /// override with its own `limit`, and paginated grids keep [apiPageSize].
 const kHomeCarouselLimit = 10;
 
+/// Page size for the paginated product grid (PLP / in-list search).
+///
+/// The PLP used to request a full [apiPageSize] (100) products for its FIRST
+/// page — a heavy first load (large JSON parse + 100 cards + 100 image fetches)
+/// that kept the grid on a spinner far longer than needed. It paginates on
+/// scroll (`currentPage`; the end is detected when a page comes back empty,
+/// independent of page size), and the header count comes from the API's real
+/// `total_count`, so a smaller page paints much sooner and the rest streams in
+/// as the user scrolls — with no effect on the displayed total. Tune here.
+const kProductListPerPage = 20;
+
 
 const kSizeLeftMenu = 250.0;
 

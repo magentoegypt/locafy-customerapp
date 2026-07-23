@@ -213,6 +213,10 @@ class ProductModel with ChangeNotifier {
         order: order,
         lang: lang,
         page: page,
+        // Smaller first/scroll page so the grid paints fast instead of waiting
+        // on a full 100-product page (apiPageSize). Pagination fills the rest
+        // on scroll; end-of-list is isEmpty-based so this is size-agnostic.
+        perPage: kProductListPerPage,
         featured: featured,
         onSale: onSale,
         attribute: attribute,
