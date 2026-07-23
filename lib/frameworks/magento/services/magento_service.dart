@@ -2977,8 +2977,12 @@ class MagentoService extends BaseServices {
         return S.current.sessionExpired;
       }
 
-      /// A missing/inactive customer quote (typically right after placing an
-      /// order) 404s with "No such entity". Recreate the quote and retry once.
+      /// A missing/inactive customer quote 404s here in two shapes: a brand-new
+      /// customer who has no quote yet — the first add returns "The current
+      /// customer does not have an active cart" (86d3tn1v1) — or a quote that
+      /// went missing right after placing an order — "No such entity with
+      /// cartId ...". Both are recovered the same way: recreate the quote and
+      /// retry once.
       /// Only a fresh add (POST) is safe to retry this way — retrying a PUT
       /// (which carries an *absolute* quantity) as a POST would add that total
       /// on top of any existing line. A PUT that 404s on a stale item_id is
@@ -2997,7 +3001,10 @@ class MagentoService extends BaseServices {
       /// today (checked against testing.locafy.market). Passing a locale to a
       /// cart call would put that assumption at risk.
       if (res.statusCode == 404) {
-        if ((message?.contains('No such entity') ?? false) && !isUpdate) {
+        final noCart = message?.toLowerCase() ?? '';
+        if ((noCart.contains('no such entity') ||
+                noCart.contains('active cart')) &&
+            !isUpdate) {
           try {
             final created = await createCart();
             if (created.isNotEmpty) {
