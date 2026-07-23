@@ -88,6 +88,11 @@ abstract class BaseServices {
           {int page = 1, int perPage = 10}) =>
       null;
 
+  /// The signed-in customer's own reviews (all products, includes pending).
+  Future<PagingResponse<Review>>? getMyReviews(
+          {int page = 1, int perPage = 20, String? token}) =>
+      null;
+
   Future<PagingResponse<ProductReview>>? getProductReviews(productSKU,
           {int page = 1, int perPage = 10}) =>
       null;

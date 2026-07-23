@@ -1282,6 +1282,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "womanCollections":
             MessageLookupByLibrary.simpleMessage("مجموعات المرأة"),
         "writeComment": MessageLookupByLibrary.simpleMessage("اكتب تعليقك"),
+        "writeReview": MessageLookupByLibrary.simpleMessage("اكتب مراجعة"),
         "writeYourNote": MessageLookupByLibrary.simpleMessage("اكتب ملاحظتك"),
         "yearsAgo": m33,
         "yes": MessageLookupByLibrary.simpleMessage("نعم"),

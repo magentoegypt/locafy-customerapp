@@ -215,6 +215,21 @@ class ImageTools {
     }
     return base64.toString();
   }
+
+  /// Like [compressAndConvertImagesForUploading] but returns one base64 string
+  /// per image instead of a single comma-joined blob — the shape the reviews
+  /// upload API expects (`images: string[]`).
+  static Future<List<String>> compressImagesForUpload(
+      List<dynamic> images) async {
+    final result = <String>[];
+    for (final image in images) {
+      final encoded = await compressImage(image);
+      if (encoded.isNotEmpty) {
+        result.add(encoded);
+      }
+    }
+    return result;
+  }
 }
 
 /// The picker ships its own strings and defaults to Chinese, which leaked into

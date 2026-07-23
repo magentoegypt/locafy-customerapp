@@ -14,10 +14,17 @@ class ImageGalery extends StatelessWidget {
   final int? index;
   final String? heroTagPrefix;
 
+  /// Product images have server resize variants (`-large` etc.); review photos
+  /// are stored as final URLs with no variants, so pass false for those to skip
+  /// the resize rewrite — otherwise it points at a missing `-large` file and
+  /// the viewer shows a broken image.
+  final bool resize;
+
   const ImageGalery({
     this.images,
     this.index,
     this.heroTagPrefix,
+    this.resize = true,
   });
 
   @override
@@ -26,6 +33,7 @@ class ImageGalery extends StatelessWidget {
       index,
       images!.map((image) => PicSwiperItem(image, des: '')).toList(),
       heroTagPrefix: heroTagPrefix,
+      resize: resize,
     );
   }
 }
@@ -41,11 +49,13 @@ class PicSwiper extends StatefulWidget {
   final int? index;
   final List<PicSwiperItem> pics;
   final String? heroTagPrefix;
+  final bool resize;
 
   const PicSwiper(
     this.index,
     this.pics, {
     this.heroTagPrefix,
+    this.resize = true,
   });
 
   @override
@@ -109,8 +119,9 @@ class _PicSwiperState extends State<PicSwiper>
                 ExtendedImageGesturePageView.builder(
                   itemBuilder: (BuildContext context, int index) {
                     final thumbnailImage = widget.pics[index].picUrl!;
-                    var item =
-                        ImageTools.formatImage(thumbnailImage, kSize.large)!;
+                    var item = widget.resize
+                        ? ImageTools.formatImage(thumbnailImage, kSize.large)!
+                        : thumbnailImage;
                     printLog('Image: $item');
                     Widget image = ExtendedImage.network(
                       item,

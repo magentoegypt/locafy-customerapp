@@ -1374,13 +1374,140 @@ class MagentoService extends BaseServices {
 
 
   @override
-  Future<PagingResponse<Review>>? getReviews(productId, {int page = 1, int perPage = 10}) async {
+  Future<PagingResponse<Review>>? getReviews(productId,
+      {int page = 1, int perPage = 10}) async {
+    final sku = '$productId';
     try {
-      // This Magento build has no REST review routes — reviews are only
-      // exposed via GraphQL. `productId` must be the product SKU.
-      final langCode = (SettingsBox().languageCode ?? 'en').toLowerCase();
-      final store = langCode == 'ar' ? 'eg_ar' : 'eg_en';
-      final query = '''
+      // Customer photos are only carried on the REST reviews feed (approved
+      // reviews for the product), so it is the source of truth for the list.
+      // GraphQL — which has no image field — stays as a fallback for when the
+      // REST route is unavailable. `productId` must be the product SKU.
+      final res = await httpGet(
+        MagentoHelper.buildUrl(domain,
+            'products/${Uri.encodeComponent(sku)}/reviews',
+            SettingsBox().languageCode)!,
+      );
+      if (res.statusCode == 200) {
+        final decoded = convert.jsonDecode(res.body);
+        if (decoded is List) {
+          final list = <Review>[];
+          for (final item in decoded) {
+            if (item is Map) list.add(_reviewFromRest(item));
+          }
+          return PagingResponse(data: list);
+        }
+      }
+      // Reachable but unexpected payload — try GraphQL before giving up.
+      return PagingResponse(
+          data: await _getReviewsViaGraphQL(sku, page, perPage));
+    } catch (e) {
+      printLog('getReviews REST error: $e');
+      try {
+        return PagingResponse(
+            data: await _getReviewsViaGraphQL(sku, page, perPage));
+      } catch (e2) {
+        // Degrade to the widget's empty state rather than a stuck spinner.
+        printLog('getReviews GraphQL fallback error: $e2');
+        return PagingResponse(data: <Review>[]);
+      }
+    }
+  }
+
+  /// The signed-in customer's own reviews across all products (includes
+  /// pending ones), from the `self`-scoped REST feed. Powers the "your
+  /// reviews" surfaces (e.g. the review box on a completed order) that the
+  /// public product feed can't serve — it carries no customer identity.
+  @override
+  Future<PagingResponse<Review>>? getMyReviews(
+      {int page = 1, int perPage = 20, String? token}) async {
+    try {
+      final authToken = token ?? UserBox().userInfo?.cookie;
+      if (authToken == null || authToken.isEmpty) {
+        printLog('[REVIEW-DIAG] getMyReviews: no auth token');
+        return PagingResponse(data: <Review>[]);
+      }
+      final url = MagentoHelper.buildUrl(domain,
+          'customers/me/reviews?currentPage=$page&pageSize=$perPage',
+          SettingsBox().languageCode)!;
+      final res =
+          await httpGet(url, headers: {'Authorization': 'Bearer $authToken'});
+      printLog('[REVIEW-DIAG] getMyReviews $url -> ${res.statusCode}'
+          ' len=${res.body.length}');
+      if (res.statusCode == 200) {
+        final decoded = convert.jsonDecode(res.body);
+        if (decoded is List) {
+          final list = <Review>[];
+          for (final item in decoded) {
+            if (item is Map) list.add(_reviewFromRest(item));
+          }
+          printLog('[REVIEW-DIAG] getMyReviews parsed=${list.length}'
+              ' skus=${list.map((r) => r.sku).toList()}');
+          return PagingResponse(data: list);
+        }
+      }
+      printLog('[REVIEW-DIAG] getMyReviews non-200/notList body='
+          '${res.body.length > 200 ? res.body.substring(0, 200) : res.body}');
+      return PagingResponse(data: <Review>[]);
+    } catch (e) {
+      printLog('[REVIEW-DIAG] getMyReviews error: $e');
+      return PagingResponse(data: <Review>[]);
+    }
+  }
+
+  /// Maps one object from a REST reviews feed (the public product feed or the
+  /// customer's own feed — same shape) to a [Review], pulling photo URLs out
+  /// of `images`, ordered by `sort_order`.
+  Review _reviewFromRest(Map item) {
+    final title = '${item['title'] ?? ''}'.trim();
+    final detail = '${item['detail'] ?? ''}'.trim();
+    final percent = item['rating_percent'];
+    final urls = <String>[];
+    final imgs = item['images'];
+    if (imgs is List) {
+      final sorted = imgs.whereType<Map>().toList()
+        ..sort((a, b) => (((a['sort_order'] as num?) ?? 0))
+            .compareTo(((b['sort_order'] as num?) ?? 0)));
+      for (final img in sorted) {
+        final url = '${img['url'] ?? ''}'.trim();
+        if (url.isNotEmpty) urls.add(url);
+      }
+    }
+    return Review.fromMagentoJson({
+      'id': item['review_id'],
+      'sku': item['sku'],
+      'status': item['status'],
+      'name': item['nickname'],
+      'review': _mergeTitleDetail(title, detail),
+      // REST sends a 0-100 percentage; the UI expects 0-5.
+      'rating': percent is num ? percent / 20.0 : null,
+      'date_created': item['created_at'],
+      'images': urls,
+    });
+  }
+
+  /// The app's review form has a single field, so a submitted review's title is
+  /// an auto-truncated copy of the body ("great pro…" vs "great product.").
+  /// Show the title only when it's a genuinely distinct headline — otherwise
+  /// the body would appear twice (86d3g53dk #10).
+  String _mergeTitleDetail(String title, String detail) {
+    final t = title.trim();
+    final d = detail.trim();
+    if (d.isEmpty) return t;
+    if (t.isEmpty) return d;
+    // Strip a trailing ellipsis/period/space so a truncated title still
+    // matches the start of the full body.
+    final core = t.replaceAll(RegExp(r'[…\.\s]+$'), '');
+    if (t == d || (core.isNotEmpty && d.startsWith(core))) {
+      return d;
+    }
+    return '$t\n$d';
+  }
+
+  Future<List<Review>> _getReviewsViaGraphQL(
+      String productId, int page, int perPage) async {
+    final langCode = (SettingsBox().languageCode ?? 'en').toLowerCase();
+    final store = langCode == 'ar' ? 'eg_ar' : 'eg_en';
+    final query = '''
 {
   products(filter: {sku: {eq: "$productId"}}) {
     items {
@@ -1396,42 +1523,34 @@ class MagentoService extends BaseServices {
     }
   }
 }''';
-      final response = await httpPost(
-        '$domain/graphql'.toUri()!,
-        headers: {'content-type': 'application/json', 'Store': store},
-        body: convert.jsonEncode({'query': query}),
-      );
-      var list = <Review>[];
-      if (response.statusCode == 200) {
-        final body = convert.jsonDecode(response.body);
-        final items = body?['data']?['products']?['items'];
-        if (items is List && items.isNotEmpty) {
-          final reviewItems = items.first?['reviews']?['items'];
-          if (reviewItems is List) {
-            for (final item in reviewItems) {
-              final summary = '${item['summary'] ?? ''}'.trim();
-              final text = '${item['text'] ?? ''}'.trim();
-              final rating = item['average_rating'];
-              list.add(Review.fromMagentoJson({
-                'name': item['nickname'],
-                'review': summary.isEmpty || summary == text
-                    ? text
-                    : '$summary\n$text',
-                // GraphQL returns a 0-100 percentage; the UI expects 0-5.
-                'rating': rating is num ? rating / 20.0 : null,
-                'date_created': item['created_at'],
-              }));
-            }
+    final response = await httpPost(
+      '$domain/graphql'.toUri()!,
+      headers: {'content-type': 'application/json', 'Store': store},
+      body: convert.jsonEncode({'query': query}),
+    );
+    final list = <Review>[];
+    if (response.statusCode == 200) {
+      final body = convert.jsonDecode(response.body);
+      final items = body?['data']?['products']?['items'];
+      if (items is List && items.isNotEmpty) {
+        final reviewItems = items.first?['reviews']?['items'];
+        if (reviewItems is List) {
+          for (final item in reviewItems) {
+            final summary = '${item['summary'] ?? ''}'.trim();
+            final text = '${item['text'] ?? ''}'.trim();
+            final rating = item['average_rating'];
+            list.add(Review.fromMagentoJson({
+              'name': item['nickname'],
+              'review': _mergeTitleDetail(summary, text),
+              // GraphQL returns a 0-100 percentage; the UI expects 0-5.
+              'rating': rating is num ? rating / 20.0 : null,
+              'date_created': item['created_at'],
+            }));
           }
         }
       }
-      return PagingResponse(data: list);
-    } catch (e) {
-      // Degrade to the widget's empty state rather than leaving the
-      // Reviews section stuck on its loading spinner.
-      printLog('getReviews error: $e');
-      return PagingResponse(data: <Review>[]);
     }
+    return list;
   }
 
   @override
@@ -1566,6 +1685,12 @@ class MagentoService extends BaseServices {
     if (nickname.isEmpty) {
       nickname = '${data?['reviewer_email'] ?? ''}'.split('@').first.trim();
     }
+    // Photos ride along as an array of base64 strings; the backend saves them
+    // and returns their URLs in the response (86d3g53dk #10). They sit inside
+    // the `review` object with the other review fields.
+    final images = data?['images'] is List
+        ? (data!['images'] as List).whereType<String>().toList()
+        : const <String>[];
     final body = {
       'review': {
         'nickname': nickname,
@@ -1573,6 +1698,7 @@ class MagentoService extends BaseServices {
         'summary': text.length > 40 ? '${text.substring(0, 40)}…' : text,
         'text': text,
         'ratings': ratings,
+        if (images.isNotEmpty) 'images': images,
       }
     };
     final res = await httpPost(

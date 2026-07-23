@@ -5,6 +5,7 @@ import '../../services/index.dart';
 class Review {
   int? id;
   int? productId;
+  String? sku;
   String? name;
   String? email;
   String? review;
@@ -49,15 +50,20 @@ class Review {
 
   Review.fromMagentoJson(Map parsedJson) {
     id = parsedJson['id'];
+    sku = parsedJson['sku'];
+    status = parsedJson['status'];
     name = parsedJson['name'];
     email = parsedJson['email'];
     review = parsedJson['review'];
     rating = parsedJson['rating'] is num
         ? (parsedJson['rating'] as num).toDouble()
         : null;
-    createdAt = parsedJson['date_created'] != null
-        ? DateTime.tryParse('${parsedJson['date_created']}') ?? DateTime.now()
-        : DateTime.now();
+    createdAt = _parseMagentoDate(parsedJson['date_created']);
+    if (parsedJson['images'] is List) {
+      for (final item in parsedJson['images']) {
+        if (item is String) images.add(item);
+      }
+    }
   }
 
   Review.fromWCFMJson(Map parsedJson) {
@@ -120,6 +126,21 @@ class Review {
     } catch (err) {
       printLog('FluxListing Review $err');
     }
+  }
+
+  /// Magento sends timestamps as UTC wall-clock with no zone marker
+  /// (e.g. `2026-07-23 10:45:00`). `DateTime.parse` reads a marker-less string
+  /// as the device's local time, so `timeago` was off by the device's UTC
+  /// offset — a review posted minutes earlier showed "6 hours ago" on a
+  /// UTC+5:30 device. Tag it UTC, then convert to local.
+  static DateTime _parseMagentoDate(dynamic raw) {
+    if (raw == null) return DateTime.now();
+    final s = '$raw'.trim();
+    if (s.isEmpty) return DateTime.now();
+    final hasZone =
+        s.endsWith('Z') || RegExp(r'[+-]\d{2}:?\d{2}$').hasMatch(s);
+    return DateTime.tryParse(hasZone ? s : '${s}Z')?.toLocal() ??
+        DateTime.now();
   }
 
   String get displayName => name ?? 'Anonymous';

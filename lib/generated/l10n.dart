@@ -1469,6 +1469,16 @@ class S {
     );
   }
 
+  /// `Write a review`
+  String get writeReview {
+    return Intl.message(
+      'Write a review',
+      name: 'writeReview',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Layouts`
   String get layout {
     return Intl.message(
