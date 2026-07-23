@@ -1,4 +1,3 @@
-import 'package:country_pickers/country_pickers.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -11,17 +10,6 @@ import '../../index.dart';
 
 class OrderListItem extends StatelessWidget {
   const OrderListItem({super.key});
-
-  /// Magento stores the country as an ISO-2 code; render the display name and
-  /// fall back to whatever we were given if it is not a code we recognise.
-  static String _countryName(String? country) {
-    if (country == null || country.isEmpty) return '';
-    try {
-      return CountryPickerUtils.getCountryByIsoCode(country).name;
-    } catch (_) {
-      return country;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +31,7 @@ class OrderListItem extends StatelessWidget {
           },
           child: Container(
             width: size.width,
-            height: 240,
+            height: 120,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(15.0),
               boxShadow: const [
@@ -55,169 +43,60 @@ class OrderListItem extends StatelessWidget {
               ],
             ),
             margin: const EdgeInsets.only(
-              top: 15.0,
+              top: 12.0,
               left: 15.0,
               right: 15.0,
-              bottom: 10.0,
+              bottom: 8.0,
             ),
             child: Column(
               children: [
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    padding: const EdgeInsets.only(
-                        left: 10.0, top: 10.0, right: 15.0),
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(14.0),
-                        topRight: Radius.circular(14.0),
+                // Compact order-summary header: date and order number only.
+                // The product image, product name and customer/address line
+                // were removed (86d3tkhgz #5) — a summary card shouldn't pose as
+                // a single product — and the card was shortened so the empty
+                // space they used to occupy is gone. Every product is still
+                // listed on the detail screen this card opens.
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(14.0, 12.0, 14.0, 8.0),
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(14.0),
+                      topRight: Radius.circular(14.0),
+                    ),
+                    color: Theme.of(context).colorScheme.background,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          S.of(context).createdOn +
+                              DateFormat('d MMM, HH:mm')
+                                  .format(order.createdAt!),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.bodySmall!.copyWith(
+                                    fontSize: 12.0,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .secondary
+                                        .withOpacity(0.8),
+                                  ),
+                        ),
                       ),
-                      color: Theme.of(context).colorScheme.background,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (order.lineItems.isNotEmpty &&
-                            order.lineItems[0].featuredImage != null)
-                          Stack(
-                            children: [
-                              const SizedBox(width: 92, height: 86),
-                              if (order.lineItems.length > 1)
-                                Positioned(
-                                  right: 0,
-                                  bottom: 0,
-                                  child: Opacity(
-                                    opacity: 0.6,
-                                    child: Hero(
-                                      tag:
-                                          'image-${order.id!}${order.lineItems[1].productId!}',
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(8.0),
-                                          color: Theme.of(context)
-                                              .primaryColorLight,
-                                        ),
-                                        width: 80,
-                                        height: 75,
-                                        child: ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(8.0),
-                                          child: ImageResize(
-                                            url: order.lineItems[1]
-                                                    .featuredImage ??
-                                                kDefaultImage,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              Positioned(
-                                left: 0,
-                                top: 0,
-                                child: Hero(
-                                  tag:
-                                      'image-${order.id!}${order.lineItems[0].productId!}',
-                                  child: Container(
-                                    width: 85,
-                                    height: 80,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(10.0),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Colors.black12,
-                                          offset: Offset(0, 2),
-                                          blurRadius: 2,
-                                        )
-                                      ],
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(10.0),
-                                      child: ImageResize(
-                                        url: order.lineItems[0].featuredImage ??
-                                            kDefaultImage,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              )
-                            ],
-                          ),
-                        const SizedBox(width: 10),
-                        if (order.lineItems.isNotEmpty)
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 2),
-                                // The first-product name was removed from the
-                                // order-history summary card (86d3tkhgz #5): an
-                                // order can hold several items, so showing only
-                                // lineItems[0] misrepresented multi-item orders.
-                                // Every product is still listed on the detail
-                                // screen this card opens.
-                                // Display empty box if Order Address is null
-                                order.billing != null
-                                    ? Text(
-                                        // Address.country holds the ISO-2 code
-                                        // ('EG'), so print the country NAME here
-                                        // the way the detail screen does —
-                                        // otherwise this line reads
-                                        // "… Cairo, EG" (it read "… Cairo, null"
-                                        // before country_id was parsed at all).
-                                        '${order.billing?.firstName ?? ''} | ${order.billing?.city ?? ''}, ${_countryName(order.billing?.country)}',
-                                        style: const TextStyle(fontSize: 14.0),
-                                      )
-                                    : const SizedBox(),
-                                const Expanded(
-                                  child: SizedBox(height: 1),
-                                ),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        S.of(context).createdOn +
-                                            DateFormat('d MMM, HH:mm')
-                                                .format(order.createdAt!),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall!
-                                            .copyWith(
-                                              fontSize: 12.0,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .secondary
-                                                  .withOpacity(0.8),
-                                            ),
-                                      ),
-                                    ),
-                                    Text(
-                                      S.of(context).orderNo +
-                                          order.number.toString(),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall!
-                                          .copyWith(
-                                            fontSize: 12.0,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .secondary
-                                                .withOpacity(0.8),
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 5),
-                              ],
+                      Text(
+                        S.of(context).orderNo + order.number.toString(),
+                        maxLines: 1,
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                              fontSize: 12.0,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .secondary
+                                  .withOpacity(0.8),
                             ),
-                          ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
                 // Divider(

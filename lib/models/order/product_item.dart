@@ -21,6 +21,13 @@ class ProductItem {
   /// the base name (86d3tkhgz #3). Null for simple products and whenever it
   /// cannot be isolated cleanly; see [deriveVariantFromChildName].
   String? variant;
+
+  /// Raw configurable-option ids from the order line — each `{'attr': <id>,
+  /// 'value': <id>}` (Magento's attribute_id + option_value_id). Resolved to
+  /// localized "label: value" pairs for display (86d3tkhgz #3); empty for
+  /// simple products. [variant] is the value-only fallback when these can't be
+  /// resolved to labels.
+  List<Map<String, dynamic>> configurableOptionIds = [];
   String? variationId;
   String? name;
   int? quantity;
@@ -236,6 +243,23 @@ class ProductItem {
       name = parsedJson['name'];
       quantity = parsedJson['qty_ordered'];
       total = parsedJson['base_row_total'].toString();
+      // Configurable lines carry the chosen options here as id pairs
+      // (attribute_id + option_value_id); resolved to labels for display.
+      final productOption = parsedJson['product_option'];
+      final ext =
+          productOption is Map ? productOption['extension_attributes'] : null;
+      final itemOptions =
+          ext is Map ? ext['configurable_item_options'] : null;
+      if (itemOptions is List) {
+        for (final opt in itemOptions) {
+          if (opt is Map &&
+              opt['option_id'] != null &&
+              opt['option_value'] != null) {
+            configurableOptionIds
+                .add({'attr': opt['option_id'], 'value': opt['option_value']});
+          }
+        }
+      }
     } catch (e, trace) {
       printLog(e.toString());
       printLog(trace.toString());

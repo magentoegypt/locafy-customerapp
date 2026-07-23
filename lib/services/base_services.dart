@@ -735,6 +735,15 @@ abstract class BaseServices {
     return const <String>[];
   }
 
+  /// Resolve a configurable order line's option ids (each `{'attr': <id>,
+  /// 'value': <id>}`) to localized display pairs `{'name': <attribute label>,
+  /// 'value': <option label>}`. Default is empty; only Magento implements it
+  /// (86d3tkhgz #3).
+  Future<List<Map<String, dynamic>>> resolveConfigurableOptions(
+      List<Map<String, dynamic>> options) async {
+    return const <Map<String, dynamic>>[];
+  }
+
   Future<bool> checkProductPermission(String productId, String? cookie) async {
     return true;
   }

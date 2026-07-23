@@ -69,6 +69,28 @@ void main() {
     });
   });
 
+  group('ProductItem.fromMagentoJson configurable option ids', () {
+    test('captures attribute_id + option_value_id pairs', () {
+      final item = ProductItem.fromMagentoJson(jsonDecode('''
+        {"product_id": 40000, "sku": "s", "name": "Ruffle pants Set",
+         "qty_ordered": 1, "base_row_total": 975, "product_type": "configurable",
+         "product_option": {"extension_attributes": {"configurable_item_options":
+           [{"option_id": "476", "option_value": 754},
+            {"option_id": "479", "option_value": 845}]}}}
+      '''));
+      expect(item.configurableOptionIds, [
+        {'attr': '476', 'value': 754},
+        {'attr': '479', 'value': 845},
+      ]);
+    });
+
+    test('is empty for a simple line with no product_option', () {
+      final item = ProductItem.fromMagentoJson(jsonDecode(
+          '{"product_id": 5, "sku": "5555", "name": "x", "qty_ordered": 1, "base_row_total": 10}'));
+      expect(item.configurableOptionIds, isEmpty);
+    });
+  });
+
   group('Order.fromJson (magento) configurable line', () {
     setUpAll(() => ServerConfig().setConfig({'type': 'magento'}));
 

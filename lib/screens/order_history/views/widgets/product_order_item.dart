@@ -44,9 +44,26 @@ class _StateProductOrderItem extends BaseScreen<ProductOrderItem> {
   late String imageFeatured = kDefaultImage;
   bool isLoading = true;
   String? deliveryDate = null;
+
+  /// Ordered configurable options as localized {'name': label, 'value': label}
+  /// pairs (86d3tkhgz #3), resolved from widget.product.configurableOptionIds.
+  List<Map<String, dynamic>> _resolvedOptions = [];
+
   @override
   void afterFirstLayout(BuildContext context) async {
     super.afterFirstLayout(context);
+
+    // Resolve the ordered configurable options to localized "label: value"
+    // pairs (e.g. "Size: 10 yrs"). Falls back to the value-only variant when
+    // this yields nothing (86d3tkhgz #3).
+    if (widget.product.configurableOptionIds.isNotEmpty) {
+      final resolved = await Services()
+          .api
+          .resolveConfigurableOptions(widget.product.configurableOptionIds);
+      if (mounted && resolved.isNotEmpty) {
+        setState(() => _resolvedOptions = resolved);
+      }
+    }
 
     // Fetch the full product when we need its image OR its canonical review
     // sku. A completed order's review must target the configurable PARENT, but
@@ -197,11 +214,17 @@ class _StateProductOrderItem extends BaseScreen<ProductOrderItem> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    // Selected configurable variant (e.g. "10 yrs", "Red"),
-                    // derived from the order's hidden child line so the buyer
-                    // sees which option was ordered, like the website
-                    // (86d3tkhgz #3).
-                    if (widget.product.variant?.isNotEmpty ?? false)
+                    // Selected configurable options as "label: value" (e.g.
+                    // "Size: 10 yrs", "Color: Green"), resolved from the order's
+                    // option ids and localized like the website (86d3tkhgz #3).
+                    // Falls back to the value-only variant derived from the
+                    // child line when the labels could not be resolved.
+                    if (_resolvedOptions.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6.0),
+                        child: ProductOptions(prodOptions: _resolvedOptions),
+                      )
+                    else if (widget.product.variant?.isNotEmpty ?? false)
                       Padding(
                         padding: const EdgeInsets.only(top: 4.0),
                         child: Text(

@@ -495,6 +495,106 @@ class MagentoService extends BaseServices {
     return result;
   }
 
+  // attribute_id -> {'label': <store label>, 'options': {value_id: label}},
+  // filled lazily as configurable order lines are resolved and cleared on a
+  // language change so labels re-fetch localized (86d3tkhgz #3).
+  final Map<int, Map<String, dynamic>> _configurableAttrById = {};
+  String? _configurableAttrLang;
+
+  @override
+  Future<List<Map<String, dynamic>>> resolveConfigurableOptions(
+      List<Map<String, dynamic>> options) async {
+    if (options.isEmpty) return const [];
+    final langCode = (SettingsBox().languageCode ?? 'en').toLowerCase();
+    if (_configurableAttrLang != langCode) {
+      _configurableAttrById.clear();
+      _configurableAttrLang = langCode;
+    }
+    final missing = <int>{};
+    for (final o in options) {
+      final id = int.tryParse('${o['attr']}');
+      if (id != null && !_configurableAttrById.containsKey(id)) missing.add(id);
+    }
+    if (missing.isNotEmpty) await _fetchConfigurableAttrs(missing, langCode);
+
+    final result = <Map<String, dynamic>>[];
+    for (final o in options) {
+      final id = int.tryParse('${o['attr']}');
+      final attr = id != null ? _configurableAttrById[id] : null;
+      if (attr == null) continue;
+      final name = (attr['label'] as String?)?.trim() ?? '';
+      final value =
+          (attr['options'] as Map?)?['${o['value']}']?.toString().trim() ?? '';
+      if (name.isNotEmpty && value.isNotEmpty) {
+        result.add({'name': name, 'value': value});
+      }
+    }
+    return result;
+  }
+
+  Future<void> _fetchConfigurableAttrs(Set<int> ids, String langCode) async {
+    try {
+      // Store-scoped path so the option labels and the per-store attribute
+      // label both come back localized.
+      final storePath = langCode == 'ar' ? 'eg-ar' : 'eg-en';
+      final storeId = await _storeViewIdForCode(storePath.replaceAll('-', '_'));
+      final url = '$domain/$storePath/rest/V1/products/attributes?'
+          'searchCriteria[filter_groups][0][filters][0][field]=attribute_id'
+          '&searchCriteria[filter_groups][0][filters][0][value]=${ids.join(',')}'
+          '&searchCriteria[filter_groups][0][filters][0][condition_type]=in'
+          '&fields=items[attribute_id,default_frontend_label,frontend_labels,options[label,value]]';
+      final res = await httpGet(url.toUri()!,
+          headers: {'Authorization': 'Bearer $accessToken'});
+      final body = convert.jsonDecode(res.body);
+      if (res.statusCode == 200 && body is Map && body['items'] is List) {
+        for (final item in body['items']) {
+          final id = int.tryParse('${item['attribute_id']}');
+          if (id == null) continue;
+          // Prefer the current store view's label ("Color"/"اللون") over the
+          // raw default_frontend_label, which on this store is the admin code
+          // (e.g. "all_color").
+          String? label;
+          final storeLabels = item['frontend_labels'];
+          if (storeId != null && storeLabels is List) {
+            final match = storeLabels.firstWhere(
+                (l) => l is Map && l['store_id'] == storeId,
+                orElse: () => null);
+            if (match != null && match['label'] is String) {
+              label = match['label'];
+            }
+          }
+          if (label == null && item['default_frontend_label'] is String) {
+            label = item['default_frontend_label'];
+          }
+          final optionsMap = <String, String>{};
+          if (item['options'] is List) {
+            for (final option in item['options']) {
+              final value = '${option['value'] ?? ''}'.trim();
+              final optionLabel = option['label'];
+              if (value.isNotEmpty &&
+                  optionLabel is String &&
+                  optionLabel.trim().isNotEmpty) {
+                optionsMap[value] = optionLabel.trim();
+              }
+            }
+          }
+          _configurableAttrById[id] = {
+            'label': (label ?? '').trim(),
+            'options': optionsMap,
+          };
+        }
+      }
+    } catch (e) {
+      printLog('resolveConfigurableOptions error: $e');
+    }
+    // Cache negative lookups too so a missing/failed attribute is not refetched
+    // on every rebuild.
+    for (final id in ids) {
+      _configurableAttrById.putIfAbsent(
+          id, () => {'label': '', 'options': <String, String>{}});
+    }
+  }
+
   /// Fetch just the configurable swatches for a SKU. Used to backfill
   /// product.swatches on PDPs whose product came from a source that doesn't
   /// carry them (e.g. live-search results), so color swatches render there too.
@@ -1252,16 +1352,27 @@ class MagentoService extends BaseServices {
 
       var list = <Product>[];
       if (response.statusCode == 200) {
+        // TEMP-PROFILE (revert): measure PLP parse on a --profile build.
+        final _sw = Stopwatch()..start();
         final decoded = convert.jsonDecode(response.body);
+        final _decodeMs = _sw.elapsedMicroseconds / 1000.0;
         final total = decoded is Map ? decoded['total_count'] : null;
         lastCategoryProductsTotal =
             total is int ? total : int.tryParse('$total');
         final brandLabels = await getBrandLabels();
+        final _swMap = Stopwatch()..start();
         for (var item
             in (decoded is Map ? decoded['items'] : null) ?? const []) {
           var product = parseProductFromJson(item, brandLabels: brandLabels);
           list.add(product);
         }
+        final _mapMs = _swMap.elapsedMicroseconds / 1000.0;
+        // ignore: avoid_print
+        print('[PLPPROF] items=${list.length} '
+            'body=${(response.body.length / 1024).toStringAsFixed(1)}kb '
+            'jsonDecode=${_decodeMs.toStringAsFixed(1)}ms '
+            'map=${_mapMs.toStringAsFixed(1)}ms '
+            'parseTotal=${(_sw.elapsedMicroseconds / 1000.0).toStringAsFixed(1)}ms');
       }
       return list;
     } catch (e) {
