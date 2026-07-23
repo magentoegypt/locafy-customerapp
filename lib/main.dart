@@ -42,19 +42,25 @@ Widget _globalErrorWidget(FlutterErrorDetails details) {
   if (!foundation.kReleaseMode) {
     return ErrorWidget(details.exception);
   }
+  // TEMP-DIAGNOSTIC (revert after capture): surface the real exception on
+  // release QA builds so an iOS-only build error can be read from a screenshot
+  // (ClickUp 86d3g53f8 — payment step "Something went wrong"). Restore the
+  // friendly message below once the cause is identified and fixed.
+  final appFrames = (details.stack?.toString() ?? '')
+      .split('\n')
+      .where((l) => l.contains('package:magentoegypt'))
+      .take(5)
+      .join('\n');
   return Directionality(
     textDirection: TextDirection.ltr,
     child: Container(
-      color: Colors.white,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.all(24),
-      child: const Text(
-        'Something went wrong.\nPlease go back and try again.',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: Colors.black54,
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
+      color: const Color(0xFFFFF3F3),
+      padding: const EdgeInsets.all(8),
+      child: Text(
+        'DIAG ⚠️ ${details.exceptionAsString()}\n$appFrames',
+        style: const TextStyle(
+          color: Color(0xFFB00020),
+          fontSize: 11,
           decoration: TextDecoration.none,
         ),
       ),
