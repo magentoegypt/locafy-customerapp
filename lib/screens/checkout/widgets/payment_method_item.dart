@@ -100,18 +100,16 @@ class PaymentMethodItem extends StatelessWidget {
     switch (id) {
       case 'online': // Secure online payment by Visa / MasterCard
         return [
-          Image.asset('assets/icons/credit_cards/visa.png', height: 22),
-          const SizedBox(width: 4),
-          Image.asset('assets/icons/credit_cards/mastercard.png', height: 22),
+          Image.asset('assets/icons/payment/visa-master.png', height: 24),
+          gap,
+        ];
+      case 'sympl': // Pay later in installments with Sympl
+        return [
+          Image.asset('assets/icons/payment/sympl.png', height: 22),
           gap,
         ];
       case 'cashondelivery':
         return [Icon(Icons.payments_outlined, size: 24, color: color), gap];
-      case 'sympl': // Pay later in installments
-        return [
-          Icon(Icons.calendar_month_outlined, size: 24, color: color),
-          gap
-        ];
       case 'aman':
         return [
           Icon(Icons.account_balance_wallet_outlined, size: 24, color: color),
