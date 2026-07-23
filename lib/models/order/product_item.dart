@@ -15,6 +15,12 @@ class ProductItem {
   /// a review from Order History with the id 404s (86d3rytm0). Null on backends
   /// whose order payload carries no sku; callers fall back to [productId].
   String? sku;
+
+  /// The ordered options of a configurable product (e.g. "10 yrs", "Red",
+  /// "Green-3 yrs"), so the order shows which variant was bought and not just
+  /// the base name (86d3tkhgz #3). Null for simple products and whenever it
+  /// cannot be isolated cleanly; see [deriveVariantFromChildName].
+  String? variant;
   String? variationId;
   String? name;
   int? quantity;
@@ -234,6 +240,33 @@ class ProductItem {
       printLog(e.toString());
       printLog(trace.toString());
     }
+  }
+
+  /// A configurable Magento order line ships with a hidden child (simple) line
+  /// whose name is this parent's name with the ordered options appended, e.g.
+  /// "Boys Panel Detail Wide Leg Jeans-10 yrs" for parent "Boys Panel Detail
+  /// Wide Leg Jeans". Strip the parent prefix to leave just the variant
+  /// ("10 yrs") and store it in [variant] (86d3tkhgz #3).
+  ///
+  /// Only a clean prefix match sets [variant]: if the child name does not start
+  /// with the parent name — a simple product missing its localized name falls
+  /// back to another store view's — no variant is shown rather than text in the
+  /// wrong language. The order line already carries the ordered child [sku], so
+  /// nothing here changes the SKU.
+  void deriveVariantFromChildName(String? childName) {
+    final child = childName?.trim() ?? '';
+    final parent = name?.trim() ?? '';
+    if (child.isEmpty || parent.isEmpty) return;
+    if (child.length <= parent.length || !child.startsWith(parent)) return;
+    final remainder = child.substring(parent.length);
+    // The parent name must end at a separator (the hyphen/dash Magento inserts
+    // before the options, sometimes spaced). This boundary check stops a parent
+    // that is only a prefix of a longer word ("Top" vs "Topaz") being read as a
+    // variant.
+    if (!RegExp(r'^[\s\-–—]').hasMatch(remainder)) return;
+    final rest =
+        remainder.replaceFirst(RegExp(r'^[\s\-–—]+'), '').trim();
+    if (rest.isNotEmpty) variant = rest;
   }
 
   ProductItem.fromShopifyJson(Map parsedJson) {

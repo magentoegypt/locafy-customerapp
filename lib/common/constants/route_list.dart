@@ -43,6 +43,11 @@ class RouteList {
   static const String orders = 'orders';
   static const String orderDetail = 'order-detail';
 
+  // Returns (RMA)
+  static const String returns = 'returns';
+  static const String returnDetail = 'return-detail';
+  static const String returnCreate = 'return-create';
+
   // Customer's own reviews (My Account)
   static const String myReviews = 'my-reviews';
 

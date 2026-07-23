@@ -25,6 +25,7 @@ import '../screens/dynamic/dynamic_scrollable_screen.dart';
 import '../screens/dynamic/dynamic_tabmenu_screen.dart';
 import '../screens/index.dart';
 import '../screens/order_history/index.dart';
+import '../screens/returns/index.dart';
 import '../screens/page_tab_screen.dart';
 import '../screens/reviews/my_reviews_screen.dart';
 import '../screens/subcategories/models/subcategory_model.dart';
@@ -264,6 +265,37 @@ class Routes {
             child: ListOrderHistoryScreen(),
           ),
         );
+      case RouteList.returns:
+        final returnsArg = settings.arguments;
+        return _buildRoute(
+          settings,
+          (_) => ChangeNotifierProvider<ListReturnsModel>(
+            create: (_) => ListReturnsModel(
+              user: returnsArg is User ? returnsArg : User(),
+            ),
+            child: const ListReturnsScreen(),
+          ),
+        );
+      case RouteList.returnCreate:
+        return _buildRoute(
+          settings,
+          (_) => ChangeNotifierProvider<CreateReturnModel>(
+            create: (_) => CreateReturnModel(),
+            child: const CreateReturnScreen(),
+          ),
+        );
+      case RouteList.returnDetail:
+        final returnDetailArg = settings.arguments;
+        if (returnDetailArg is ReturnDetailArguments) {
+          return _buildRoute(
+            settings,
+            (_) => ChangeNotifierProvider<ReturnDetailModel>.value(
+              value: returnDetailArg.model,
+              child: const ReturnDetailScreen(),
+            ),
+          );
+        }
+        return _errorRoute();
       case RouteList.myReviews:
         return _buildRoute(settings, (_) => const MyReviewsScreen());
       case RouteList.search:

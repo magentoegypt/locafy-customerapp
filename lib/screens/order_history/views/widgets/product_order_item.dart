@@ -197,6 +197,42 @@ class _StateProductOrderItem extends BaseScreen<ProductOrderItem> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    // Selected configurable variant (e.g. "10 yrs", "Red"),
+                    // derived from the order's hidden child line so the buyer
+                    // sees which option was ordered, like the website
+                    // (86d3tkhgz #3).
+                    if (widget.product.variant?.isNotEmpty ?? false)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          widget.product.variant!,
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .secondary
+                                        .withOpacity(0.75),
+                                  ),
+                        ),
+                      ),
+                    // SKU of the ordered product, shown like the website's order
+                    // view (86d3tkhgz #4). On a configurable line this is the
+                    // ordered child sku the order carries.
+                    if (widget.product.sku?.isNotEmpty ?? false)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          '${S.of(context).sku}: ${widget.product.sku}',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .secondary
+                                        .withOpacity(0.6),
+                                  ),
+                        ),
+                      ),
                     const SizedBox(height: 5),
                     Row(
                       children: [

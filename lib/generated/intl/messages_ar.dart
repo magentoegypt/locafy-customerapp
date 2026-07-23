@@ -344,7 +344,7 @@ class MessageLookup extends MessageLookupByLibrary {
         "createProduct": MessageLookupByLibrary.simpleMessage("إضافة منتج"),
         "createVariants":
             MessageLookupByLibrary.simpleMessage("إنشاء جميع التخصيصات"),
-        "createdOn": MessageLookupByLibrary.simpleMessage("تم إنشاؤها على:"),
+        "createdOn": MessageLookupByLibrary.simpleMessage("تم إنشاؤها في:"),
         "currencies": MessageLookupByLibrary.simpleMessage("العملات"),
         "currencyIsNotSupported": m5,
         "currentPassword":
@@ -1368,6 +1368,40 @@ class MessageLookup extends MessageLookupByLibrary {
     "zone": MessageLookupByLibrary.simpleMessage("المنطقة"),
     "languageAndRegion": MessageLookupByLibrary.simpleMessage("اللغة والمنطقة"),
     "myOrders": MessageLookupByLibrary.simpleMessage("طلباتي"),
+    "myReturns": MessageLookupByLibrary.simpleMessage("مرتجعاتي"),
+    "startReturn": MessageLookupByLibrary.simpleMessage("بدء طلب إرجاع"),
+    "noReturnsYet": MessageLookupByLibrary.simpleMessage(
+        "ليس لديك أي مرتجعات حتى الآن."),
+    "returnsNotAvailable": MessageLookupByLibrary.simpleMessage(
+        "خدمة الإرجاع غير متاحة حالياً."),
+    "returnDetails": MessageLookupByLibrary.simpleMessage("تفاصيل الإرجاع"),
+    "returnedItems": MessageLookupByLibrary.simpleMessage("المنتجات المرتجعة"),
+    "returnReason": MessageLookupByLibrary.simpleMessage("السبب"),
+    "resolution": MessageLookupByLibrary.simpleMessage("الحل المطلوب"),
+    "returnHistory": MessageLookupByLibrary.simpleMessage("السجل"),
+    "cancelReturn": MessageLookupByLibrary.simpleMessage("إلغاء الإرجاع"),
+    "cancelReturnConfirm": MessageLookupByLibrary.simpleMessage(
+        "هل أنت متأكد أنك تريد إلغاء هذا الإرجاع؟"),
+    "addTracking": MessageLookupByLibrary.simpleMessage("إضافة تتبع الشحنة"),
+    "carrier": MessageLookupByLibrary.simpleMessage("شركة الشحن"),
+    "trackingNumber": MessageLookupByLibrary.simpleMessage("رقم التتبع"),
+    "selectItemsToReturn": MessageLookupByLibrary.simpleMessage(
+        "اختر المنتجات التي تريد إرجاعها"),
+    "noItemsEligibleForReturn": MessageLookupByLibrary.simpleMessage(
+        "لا توجد لديك منتجات مؤهلة للإرجاع حالياً."),
+    "howToResolve": MessageLookupByLibrary.simpleMessage(
+        "كيف تريد حل هذا الطلب؟"),
+    "submitReturn": MessageLookupByLibrary.simpleMessage("إرسال طلب الإرجاع"),
+    "selectReason": MessageLookupByLibrary.simpleMessage("اختر السبب"),
+    "selectCarrier": MessageLookupByLibrary.simpleMessage("اختر شركة الشحن"),
+    "awaitingYourReply": MessageLookupByLibrary.simpleMessage(
+        "هذا الإرجاع في انتظار ردك."),
+    "optionalComment": MessageLookupByLibrary.simpleMessage("تعليق (اختياري)"),
+    "returnAddress": MessageLookupByLibrary.simpleMessage("عنوان الإرجاع"),
+    "refundAmount": MessageLookupByLibrary.simpleMessage("مبلغ الاسترداد"),
+    "reply": MessageLookupByLibrary.simpleMessage("رد"),
+    "returnSubmitted": MessageLookupByLibrary.simpleMessage(
+        "تم إرسال طلب الإرجاع الخاص بك."),
     "addressBook": MessageLookupByLibrary.simpleMessage("دفتر العناوين"),
     "accountInformation": MessageLookupByLibrary.simpleMessage("معلومات الحساب"),
     "storedPaymentMethods": MessageLookupByLibrary.simpleMessage("طرق الدفع المحفوظة"),

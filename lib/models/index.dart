@@ -16,6 +16,7 @@ export 'point_model.dart';
 export 'product_model.dart';
 export 'product_wish_list_model.dart';
 export 'recent_product_model.dart';
+export 'returns/index.dart';
 export 'search_model.dart';
 export 'shipping_method_model.dart';
 export 'tag_model.dart';

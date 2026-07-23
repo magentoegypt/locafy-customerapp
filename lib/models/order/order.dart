@@ -471,16 +471,31 @@ class Order {
       totalTax = parsedJson['tax_amount'] != null
           ? double.parse("${parsedJson['tax_amount']}")
           : 0.0;
+      // A configurable (or bundle/grouped) order line comes back as TWO rows:
+      // the visible parent, and a child row pointing at it via parent_item_id.
+      // The child repeats the product name with price and row_total 0, so it
+      // rendered as a second, detail-less card in the order and its qty was
+      // added again — one unit ordered showed as 2 (86d3rrauf #2). Skip the
+      // child below; the parent carries the real price.
+      //
+      // The child's name is the parent name with the ordered options appended
+      // ("… Jeans-10 yrs"), so index children by their parent's item_id first
+      // and hand each parent its child to surface the selected variant
+      // (86d3tkhgz #3).
+      final childByParentId = <String, dynamic>{};
+      for (final item in (parsedJson['items'] ?? [])) {
+        final parentId = item['parent_item_id'];
+        if (parentId != null) childByParentId['$parentId'] = item;
+      }
       parsedJson['items']?.forEach((item) {
-        // A configurable (or bundle/grouped) order line comes back as TWO rows:
-        // the visible parent, and a child row pointing at it via
-        // parent_item_id. The child repeats the product name with price and
-        // row_total 0, so it rendered as a second, detail-less card in the
-        // order and its qty was added again — one unit ordered showed as 2
-        // (86d3rrauf #2). Skip the child; the parent carries the real price.
         if (item['parent_item_id'] != null) return;
         quantity += int.parse('${item['qty_ordered']}');
-        lineItems.add(ProductItem.fromMagentoJson(item));
+        final lineItem = ProductItem.fromMagentoJson(item);
+        final child = childByParentId['${item['item_id']}'];
+        if (child != null) {
+          lineItem.deriveVariantFromChildName(child['name']?.toString());
+        }
+        lineItems.add(lineItem);
       });
       billing = Address.fromMagentoJson(parsedJson['billing_address']);
       shipping = billing;

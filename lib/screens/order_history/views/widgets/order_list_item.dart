@@ -155,18 +155,12 @@ class OrderListItem extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const SizedBox(height: 2),
-                                Text(
-                                  Bidi.stripHtmlIfNeeded(
-                                    order.lineItems[0].name.toString(),
-                                  ),
-                                  style: const TextStyle(
-                                    fontSize: 18.0,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 5),
+                                // The first-product name was removed from the
+                                // order-history summary card (86d3tkhgz #5): an
+                                // order can hold several items, so showing only
+                                // lineItems[0] misrepresented multi-item orders.
+                                // Every product is still listed on the detail
+                                // screen this card opens.
                                 // Display empty box if Order Address is null
                                 order.billing != null
                                     ? Text(

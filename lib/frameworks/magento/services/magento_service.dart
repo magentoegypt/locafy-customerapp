@@ -17,6 +17,7 @@ import '../../../common/extensions.dart';
 import '../../../generated/l10n.dart';
 import '../../../models/entities/ProdcutOptionAttribute.dart';
 import '../../../models/entities/home_section.dart';
+import '../../../models/returns/index.dart';
 import '../../../models/index.dart'
     show
         CartModel,
@@ -1448,6 +1449,219 @@ class MagentoService extends BaseServices {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Customer Returns (RMA)
+  //
+  // Eight `self`-scoped REST endpoints under `customers/me/...`, authed with the
+  // customer's own bearer token (from UserBox) — never the app's integration
+  // token. URLs carry the store-view code so labels come localized. Passive
+  // fetches degrade to null/empty so the feature self-hides when the backend
+  // module is off or a store-view rejects the token; explicit actions throw the
+  // server's shopper-ready `message` (via getErrorMessage).
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<ReturnPolicy?> getReturnPolicy() async {
+    try {
+      final authToken = UserBox().userInfo?.cookie;
+      if (authToken == null || authToken.isEmpty) return null;
+      final res = await httpGet(
+        MagentoHelper.buildUrl(
+            domain, 'customers/me/return-policy', SettingsBox().languageCode)!,
+        headers: {'Authorization': 'Bearer $authToken'},
+      );
+      final body = res.body.isNotEmpty ? convert.jsonDecode(res.body) : null;
+      // 401 / disabled / unexpected → treat as unavailable so the UI hides it.
+      if (body is Map && body['message'] != null) return null;
+      if (res.statusCode == 200 && body is Map) {
+        return ReturnPolicy.fromJson(body);
+      }
+      return null;
+    } catch (e) {
+      // A 404 (module not installed) throws from the transport layer — swallow
+      // it: returns simply isn't available on this store.
+      printLog('getReturnPolicy error: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<List<ReturnableOrder>> getReturnableOrders() async {
+    try {
+      final authToken = UserBox().userInfo?.cookie;
+      if (authToken == null || authToken.isEmpty) {
+        return const <ReturnableOrder>[];
+      }
+      final res = await httpGet(
+        MagentoHelper.buildUrl(domain, 'customers/me/returnable-orders',
+            SettingsBox().languageCode)!,
+        headers: {'Authorization': 'Bearer $authToken'},
+      );
+      if (res.statusCode == 200) {
+        final decoded = convert.jsonDecode(res.body);
+        if (decoded is List) {
+          return decoded
+              .whereType<Map>()
+              .map((e) => ReturnableOrder.fromJson(e))
+              .toList();
+        }
+      }
+      return const <ReturnableOrder>[];
+    } catch (e) {
+      printLog('getReturnableOrders error: $e');
+      return const <ReturnableOrder>[];
+    }
+  }
+
+  @override
+  Future<ReturnRequest> createReturn({
+    required int orderId,
+    required List<ReturnLineInput> items,
+    required String resolution,
+    String? comment,
+  }) async {
+    final authToken = UserBox().userInfo?.cookie;
+    if (authToken == null || authToken.isEmpty) {
+      throw Exception(S.current.somethingWrong);
+    }
+    // The typed parameter is wrapped in `request`; inner keys are camelCase.
+    final payload = {
+      'request': {
+        'orderId': orderId,
+        'items': [for (final it in items) it.toJson()],
+        'resolution': resolution,
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+      },
+    };
+    final res = await httpPost(
+      MagentoHelper.buildUrl(
+          domain, 'customers/me/returns', SettingsBox().languageCode)!,
+      headers: {
+        'Authorization': 'Bearer $authToken',
+        'content-type': 'application/json',
+      },
+      body: convert.jsonEncode(payload),
+    );
+    final body = res.body.isNotEmpty ? convert.jsonDecode(res.body) : null;
+    if (body is Map && body['message'] != null) {
+      throw Exception(MagentoHelper.getErrorMessage(body));
+    }
+    if (res.statusCode == 200 && body is Map) {
+      return ReturnRequest.fromJson(body);
+    }
+    throw Exception(S.current.somethingWrong);
+  }
+
+  @override
+  Future<PagingResponse<ReturnRequest>> getMyReturns({
+    User? user,
+    dynamic cursor,
+  }) async {
+    // The returns list endpoint returns the whole list in one response, so only
+    // serve it on the first page; later pages return empty to end pagination
+    // (mirrors ListOrderRepository.getLocalOrders).
+    if (cursor != null && cursor != 1) {
+      return const PagingResponse(data: <ReturnRequest>[]);
+    }
+    try {
+      final authToken = user?.cookie ?? UserBox().userInfo?.cookie;
+      if (authToken == null || authToken.isEmpty) {
+        return const PagingResponse(data: <ReturnRequest>[]);
+      }
+      final res = await httpGet(
+        MagentoHelper.buildUrl(
+            domain, 'customers/me/returns', SettingsBox().languageCode)!,
+        headers: {'Authorization': 'Bearer $authToken'},
+      );
+      if (res.statusCode == 200) {
+        final decoded = convert.jsonDecode(res.body);
+        if (decoded is List) {
+          final list = decoded
+              .whereType<Map>()
+              .map((e) => ReturnRequest.fromJson(e))
+              .toList();
+          return PagingResponse(data: list);
+        }
+      }
+      return const PagingResponse(data: <ReturnRequest>[]);
+    } catch (e) {
+      printLog('getMyReturns error: $e');
+      return const PagingResponse(data: <ReturnRequest>[]);
+    }
+  }
+
+  @override
+  Future<ReturnRequest> getReturnDetail(int id) async {
+    final authToken = UserBox().userInfo?.cookie;
+    if (authToken == null || authToken.isEmpty) {
+      throw Exception(S.current.somethingWrong);
+    }
+    final res = await httpGet(
+      MagentoHelper.buildUrl(
+          domain, 'customers/me/returns/$id', SettingsBox().languageCode)!,
+      headers: {'Authorization': 'Bearer $authToken'},
+    );
+    final body = res.body.isNotEmpty ? convert.jsonDecode(res.body) : null;
+    if (body is Map && body['message'] != null) {
+      throw Exception(MagentoHelper.getErrorMessage(body));
+    }
+    if (res.statusCode == 200 && body is Map) {
+      return ReturnRequest.fromJson(body);
+    }
+    throw Exception(S.current.somethingWrong);
+  }
+
+  @override
+  Future<String> cancelReturn(int id, {String? comment}) async {
+    return _returnAction('customers/me/returns/$id/cancel', {
+      if (comment != null && comment.isNotEmpty) 'comment': comment,
+    });
+  }
+
+  @override
+  Future<String> addReturnComment(int id, String comment) async {
+    return _returnAction(
+        'customers/me/returns/$id/comments', {'comment': comment});
+  }
+
+  @override
+  Future<String> addReturnTracking(
+    int id, {
+    required String carrierCode,
+    required String trackNumber,
+  }) async {
+    // Tracking payload is wrapped in `tracking`; inner keys are camelCase.
+    return _returnAction('customers/me/returns/$id/tracking', {
+      'tracking': {'carrierCode': carrierCode, 'trackNumber': trackNumber},
+    });
+  }
+
+  /// Shared POST for the small write-actions on a return (cancel / comment /
+  /// tracking). Each returns `{success, ..., message}` on 200; anything with a
+  /// `message` and no success is surfaced as the server's shopper-ready error.
+  Future<String> _returnAction(String endpoint, Map<String, dynamic> body) async {
+    final authToken = UserBox().userInfo?.cookie;
+    if (authToken == null || authToken.isEmpty) {
+      throw Exception(S.current.somethingWrong);
+    }
+    final res = await httpPost(
+      MagentoHelper.buildUrl(domain, endpoint, SettingsBox().languageCode)!,
+      headers: {
+        'Authorization': 'Bearer $authToken',
+        'content-type': 'application/json',
+      },
+      body: convert.jsonEncode(body),
+    );
+    final decoded = res.body.isNotEmpty ? convert.jsonDecode(res.body) : null;
+    if (decoded is Map && decoded['success'] == true) {
+      return decoded['message']?.toString() ?? '';
+    }
+    if (decoded is Map && decoded['message'] != null) {
+      throw Exception(MagentoHelper.getErrorMessage(decoded));
+    }
+    throw Exception(S.current.somethingWrong);
+  }
+
   @override
   Future<Map<String, ({String name, String? image})>> getReviewedProductInfo(
       List<String> skus) async {
@@ -1937,9 +2151,16 @@ class MagentoService extends BaseServices {
   Future<PagingResponse<Order>> getMyOrders({User? user, dynamic cursor, String? cartId,}) async {
     try {
       //${cursor - 1}
+      // Scope to the logged-in customer_id, exactly like the website's
+      // "My Orders". Filtering by customer_email instead also matched GUEST
+      // orders placed with the same email (customer_id null, is_guest 1) — which
+      // the website never lists — so the app showed orders the site did not, and
+      // an account whose only orders were guest checkouts saw a list where the
+      // website showed none (86d3tkhgz #1). customer_id additionally drops any
+      // same-email order that belongs to a different account.
       var endPoint = '?';
       endPoint +=
-          'searchCriteria[filter_groups][0][filters][0][field]=customer_email&searchCriteria[filter_groups][0][filters][0][value]=${user!.email}&searchCriteria[filter_groups][0][filters][0][condition_type]=eq';
+          'searchCriteria[filter_groups][0][filters][0][field]=customer_id&searchCriteria[filter_groups][0][filters][0][value]=${user!.id}&searchCriteria[filter_groups][0][filters][0][condition_type]=eq';
       endPoint += '&searchCriteria[currentPage]=${cursor}';
       endPoint += '&searchCriteria[sortOrders][1][field]=created_at';
       endPoint += '&searchCriteria[pageSize]=$apiPageSize';

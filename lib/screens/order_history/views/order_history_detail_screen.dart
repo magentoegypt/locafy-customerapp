@@ -565,6 +565,48 @@ class _OrderHistoryDetailScreenState
                     ),
                     Expanded(
                       child: Text(
+                        // City = governorate (Magento region, billing.state),
+                        // the same mapping the checkout summary and the website
+                        // use. This row used to show billing.city — the district
+                        // — under the City label, and the governorate appeared
+                        // nowhere (86d3tkhgz #2).
+                        order.billing!.state ?? '',
+                        style: Theme.of(context).textTheme.titleMedium!.copyWith(
+
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.0,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],),
+                // Zone (المنطقة) = the district (Magento city, billing.city) —
+                // the separate "Region" field the ticket asked to add. Same
+                // label the checkout summary uses for this value (86d3tkhgz #2).
+                Row(
+                  children: [
+                    const SizedBox(
+                      height: 10.0,
+                    ),
+                    Expanded(
+                      child: Text(
+                        S.of(context).zone,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall!
+                            .copyWith(
+                          fontSize: 14.0,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .secondary
+                              .withOpacity(0.7),
+                          fontWeight: FontWeight.w700,
+                        )
+                            .apply(fontSizeFactor: 0.9),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
                         order.billing!.city ?? '',
                         style: Theme.of(context).textTheme.titleMedium!.copyWith(
 

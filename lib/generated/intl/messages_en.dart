@@ -1397,6 +1397,41 @@ class MessageLookup extends MessageLookupByLibrary {
     "zone": MessageLookupByLibrary.simpleMessage("Zone"),
     "languageAndRegion": MessageLookupByLibrary.simpleMessage("Language and region"),
     "myOrders": MessageLookupByLibrary.simpleMessage("My Orders"),
+    "myReturns": MessageLookupByLibrary.simpleMessage("My Returns"),
+    "startReturn": MessageLookupByLibrary.simpleMessage("Start a Return"),
+    "noReturnsYet": MessageLookupByLibrary.simpleMessage(
+        "You don\'t have any returns yet."),
+    "returnsNotAvailable": MessageLookupByLibrary.simpleMessage(
+        "Returns aren\'t available right now."),
+    "returnDetails": MessageLookupByLibrary.simpleMessage("Return Details"),
+    "returnedItems": MessageLookupByLibrary.simpleMessage("Returned Items"),
+    "returnReason": MessageLookupByLibrary.simpleMessage("Reason"),
+    "resolution": MessageLookupByLibrary.simpleMessage("Resolution"),
+    "returnHistory": MessageLookupByLibrary.simpleMessage("History"),
+    "cancelReturn": MessageLookupByLibrary.simpleMessage("Cancel Return"),
+    "cancelReturnConfirm": MessageLookupByLibrary.simpleMessage(
+        "Are you sure you want to cancel this return?"),
+    "addTracking": MessageLookupByLibrary.simpleMessage("Add Tracking"),
+    "carrier": MessageLookupByLibrary.simpleMessage("Carrier"),
+    "trackingNumber": MessageLookupByLibrary.simpleMessage("Tracking Number"),
+    "selectItemsToReturn": MessageLookupByLibrary.simpleMessage(
+        "Select the items you want to return"),
+    "noItemsEligibleForReturn": MessageLookupByLibrary.simpleMessage(
+        "You have no items eligible for return right now."),
+    "howToResolve": MessageLookupByLibrary.simpleMessage(
+        "How would you like this resolved?"),
+    "submitReturn": MessageLookupByLibrary.simpleMessage("Submit Return"),
+    "selectReason": MessageLookupByLibrary.simpleMessage("Select a reason"),
+    "selectCarrier": MessageLookupByLibrary.simpleMessage("Select a carrier"),
+    "awaitingYourReply": MessageLookupByLibrary.simpleMessage(
+        "This return is waiting for your reply."),
+    "optionalComment":
+        MessageLookupByLibrary.simpleMessage("Comment (optional)"),
+    "returnAddress": MessageLookupByLibrary.simpleMessage("Return Address"),
+    "refundAmount": MessageLookupByLibrary.simpleMessage("Refund Amount"),
+    "reply": MessageLookupByLibrary.simpleMessage("Reply"),
+    "returnSubmitted": MessageLookupByLibrary.simpleMessage(
+        "Your return request has been submitted."),
     "addressBook": MessageLookupByLibrary.simpleMessage("Address Book"),
     "accountInformation": MessageLookupByLibrary.simpleMessage("Account Information"),
     "storedPaymentMethods": MessageLookupByLibrary.simpleMessage("Stored Payment Methods"),

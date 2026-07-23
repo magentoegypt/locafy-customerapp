@@ -9355,6 +9355,266 @@ class S {
     );
   }
 
+  /// `My Returns`
+  String get myReturns {
+    return Intl.message(
+      'My Returns',
+      name: 'myReturns',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Start a Return`
+  String get startReturn {
+    return Intl.message(
+      'Start a Return',
+      name: 'startReturn',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You don't have any returns yet.`
+  String get noReturnsYet {
+    return Intl.message(
+      'You don\'t have any returns yet.',
+      name: 'noReturnsYet',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Returns aren't available right now.`
+  String get returnsNotAvailable {
+    return Intl.message(
+      'Returns aren\'t available right now.',
+      name: 'returnsNotAvailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Return Details`
+  String get returnDetails {
+    return Intl.message(
+      'Return Details',
+      name: 'returnDetails',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Returned Items`
+  String get returnedItems {
+    return Intl.message(
+      'Returned Items',
+      name: 'returnedItems',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Reason`
+  String get returnReason {
+    return Intl.message(
+      'Reason',
+      name: 'returnReason',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Resolution`
+  String get resolution {
+    return Intl.message(
+      'Resolution',
+      name: 'resolution',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `History`
+  String get returnHistory {
+    return Intl.message(
+      'History',
+      name: 'returnHistory',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Cancel Return`
+  String get cancelReturn {
+    return Intl.message(
+      'Cancel Return',
+      name: 'cancelReturn',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Are you sure you want to cancel this return?`
+  String get cancelReturnConfirm {
+    return Intl.message(
+      'Are you sure you want to cancel this return?',
+      name: 'cancelReturnConfirm',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Add Tracking`
+  String get addTracking {
+    return Intl.message(
+      'Add Tracking',
+      name: 'addTracking',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Carrier`
+  String get carrier {
+    return Intl.message(
+      'Carrier',
+      name: 'carrier',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Tracking Number`
+  String get trackingNumber {
+    return Intl.message(
+      'Tracking Number',
+      name: 'trackingNumber',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Select the items you want to return`
+  String get selectItemsToReturn {
+    return Intl.message(
+      'Select the items you want to return',
+      name: 'selectItemsToReturn',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `You have no items eligible for return right now.`
+  String get noItemsEligibleForReturn {
+    return Intl.message(
+      'You have no items eligible for return right now.',
+      name: 'noItemsEligibleForReturn',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `How would you like this resolved?`
+  String get howToResolve {
+    return Intl.message(
+      'How would you like this resolved?',
+      name: 'howToResolve',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Submit Return`
+  String get submitReturn {
+    return Intl.message(
+      'Submit Return',
+      name: 'submitReturn',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Select a reason`
+  String get selectReason {
+    return Intl.message(
+      'Select a reason',
+      name: 'selectReason',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Select a carrier`
+  String get selectCarrier {
+    return Intl.message(
+      'Select a carrier',
+      name: 'selectCarrier',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `This return is waiting for your reply.`
+  String get awaitingYourReply {
+    return Intl.message(
+      'This return is waiting for your reply.',
+      name: 'awaitingYourReply',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Comment (optional)`
+  String get optionalComment {
+    return Intl.message(
+      'Comment (optional)',
+      name: 'optionalComment',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Return Address`
+  String get returnAddress {
+    return Intl.message(
+      'Return Address',
+      name: 'returnAddress',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Refund Amount`
+  String get refundAmount {
+    return Intl.message(
+      'Refund Amount',
+      name: 'refundAmount',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Reply`
+  String get reply {
+    return Intl.message(
+      'Reply',
+      name: 'reply',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Your return request has been submitted.`
+  String get returnSubmitted {
+    return Intl.message(
+      'Your return request has been submitted.',
+      name: 'returnSubmitted',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Zone`
   String get zone {
     return Intl.message(

@@ -88,6 +88,7 @@ class SettingScreenState extends State<SettingScreen>
   // language that was active when the screen first built.
   List<SectionItem> get myAccountItems => [
     SectionItem(title: S.of(context).myOrders, url: "myOrders"),
+    SectionItem(title: S.of(context).myReturns, url: "myReturns"),
     SectionItem(title: S.of(context).myWishList, url: "myWishList"),
     SectionItem(title: S.of(context).addressBook, url: "addressBook"),
     SectionItem(title: S.of(context).accountInformation, url: "accountInformation"),
@@ -1556,6 +1557,12 @@ class SettingScreenState extends State<SettingScreen>
       case 'myOrders':
         FluxNavigate.pushNamed(
           RouteList.orders,
+          arguments: user,
+        );
+        break;
+      case 'myReturns':
+        FluxNavigate.pushNamed(
+          RouteList.returns,
           arguments: user,
         );
         break;

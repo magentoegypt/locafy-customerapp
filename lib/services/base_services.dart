@@ -147,6 +147,50 @@ abstract class BaseServices {
   }) =>
       null;
 
+  // ---- Customer Returns (RMA) ----
+
+  /// Store-wide returns config. Null means the feature is unavailable, so
+  /// callers can hide returns entirely.
+  Future<ReturnPolicy?> getReturnPolicy() async => null;
+
+  /// Orders (with their eligible line items) the customer may open a return
+  /// against.
+  Future<List<ReturnableOrder>> getReturnableOrders() async =>
+      const <ReturnableOrder>[];
+
+  /// Opens a return; returns the full return detail (status `pending`).
+  Future<ReturnRequest>? createReturn({
+    required int orderId,
+    required List<ReturnLineInput> items,
+    required String resolution,
+    String? comment,
+  }) =>
+      null;
+
+  /// The customer's returns, newest first (list summaries).
+  Future<PagingResponse<ReturnRequest>>? getMyReturns({
+    User? user,
+    dynamic cursor,
+  }) =>
+      null;
+
+  /// One return in full.
+  Future<ReturnRequest>? getReturnDetail(int id) => null;
+
+  /// Withdraws a return; returns a confirmation message.
+  Future<String> cancelReturn(int id, {String? comment}) async => '';
+
+  /// Adds a message to a return; returns a confirmation message.
+  Future<String> addReturnComment(int id, String comment) async => '';
+
+  /// Attaches return-shipment tracking; returns a confirmation message.
+  Future<String> addReturnTracking(
+    int id, {
+    required String carrierCode,
+    required String trackNumber,
+  }) async =>
+      '';
+
   Future<PagingResponse<Product>>? searchProducts({
     name,
     categoryId,
