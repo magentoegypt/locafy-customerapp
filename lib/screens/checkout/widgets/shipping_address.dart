@@ -100,12 +100,14 @@ class _ShippingAddressState extends State<ShippingAddress> {
     /// Init field positions.
     if(widget.isFromCheckout && UserBox().isLoggedIn){
       getDataFromLocal();
-    }else{
-      for (var config in Configurations.addressFields) {
-        final index = _fieldPosition.values.length;
-        _configs[index] = config;
-        _fieldPosition[index] = config.type;
+      // No saved address: initialise the entry form so the shopper adds their
+      // first address inline instead of seeing an empty list (86d3tmxra #1).
+      if (listAddress.isEmpty) {
+        _initFieldConfigs();
+        _prefillNewAddressForm();
       }
+    }else{
+      _initFieldConfigs();
       if(widget.isFromAddrssHistory){
         address = Address();
         if(widget.address != null) {
@@ -131,114 +133,112 @@ class _ShippingAddressState extends State<ShippingAddress> {
         loadCountry();
         refresh();
       }else{
-        /// Pre-fill the address fields.
-        WidgetsBinding.instance.endOfFrame.then(
-              (_) async {
-            /// Load saved addresses.
-            final addressValue =
-            await Provider.of<CartModel>(context, listen: false).getAddress();
-            if (addressValue != null) {
-              updateAddress(addressValue);
-            } else {
-              var user = Provider.of<UserModel>(context, listen: false).user;
-              setState(() {
-                // No default region: address.state is filled with the
-                // governorate the user picks in the City dropdown. Seeding it
-                // with DefaultStateISOCode made the summary show "SG".
-                address = Address(country: kPaymentConfig.defaultCountryISOCode);
-                _textControllers[AddressFieldType.country]?.text =
-                address!.country!;
-                _textControllers[AddressFieldType.state]?.text =
-                    address!.state ?? '';
-                if (user != null) {
-                  address!.firstName = user.firstName;
-                  address!.lastName = user.lastName;
-                  address!.email = user.email;
-                  loadUserInfoFromAddress(address);
-                }
-              });
-            }
-
-            /// Init default fields.
-            for (var field in _configs.values) {
-              if ([
-                AddressFieldType.searchAddress,
-                AddressFieldType.selectAddress,
-                AddressFieldType.country,
-                AddressFieldType.state,
-              ].contains(field.type)) {
-                /// Not support default value.
-                continue;
-              }
-
-              /// Replace current value with default value.
-              /// Force to use default value for non-editable field.
-              if (field.defaultValue.isNotEmpty && !field.editable) {
-                _textControllers[field.type]?.text = field.defaultValue;
-                onTextFieldSaved(field.defaultValue, field.type);
-              }
-
-              /// When the field is editable, replacing only when it's empty.
-              if (field.defaultValue.isNotEmpty &&
-                  field.editable &&
-                  (_textControllers[field.type]?.text.isEmpty ?? false)) {
-                _textControllers[field.type]?.text = field.defaultValue;
-                onTextFieldSaved(field.defaultValue, field.type);
-              }
-            }
-
-            /// Load country list.
-            countries = await Services().widget.loadCountries();
-            var country = countries!.firstWhereOrNull((element) =>
-            element.id == address?.country || element.code == address?.country);
-            if (country == null) {
-              if (countries!.isNotEmpty) {
-                country = countries![0];
-                address!.country = countries![0].code;
-              } else {
-                country = Country.fromConfig(address!.country, null, null, []);
-              }
-            } else {
-              address!.country = country.code;
-              address!.countryId = country.id;
-            }
-            _textControllers[AddressFieldType.country]?.text = country.code!;
-            refresh();
-
-            /// Load states.
-            // states = await Services().widget.loadStates(country);
-            // refresh();
-
-            /// Load cities.
-            // var state = states?.firstWhereOrNull(
-            //       (element) =>
-            //   element.id == address?.state || element.code == address?.state,
-            // );
-
-            cities = await Services().widget.loadCitiesWithCountry(country);
-            // The city list holds the governorates (Magento regions); the
-            // current selection lives in address.state. Same rule as
-            // loadCountry(): never guess a governorate the shopper did not pick.
-            var city = _resolveGovernorate(cities, address?.state);
-            if (city == null && (address?.state?.trim().isEmpty ?? true)) {
-              city = cities?.firstOrNull;
-            }
-
-            /// Load zipCode
-            if (city != null) {
-               zones =
-              await Services().widget.loadZones(city);
-              // if (zipCode != null) {
-              //   /// Override the default value with this value
-              //   address!.zipCode = zipCode;
-              //   _textControllers[AddressFieldType.zipCode]?.text = zipCode;
-              // }
-            }
-            refresh();
-                    },
-        );
+        _prefillNewAddressForm();
       }
     }
+  }
+
+  void _initFieldConfigs() {
+    for (var config in Configurations.addressFields) {
+      final index = _fieldPosition.values.length;
+      _configs[index] = config;
+      _fieldPosition[index] = config.type;
+    }
+  }
+
+  /// Initialise a blank address and load the country / governorate / district
+  /// lists for the add-address form. Shared by the address-book "add" flow and
+  /// the checkout step when the account has no saved address (86d3tmxra #1).
+  void _prefillNewAddressForm() {
+    /// Pre-fill the address fields.
+    WidgetsBinding.instance.endOfFrame.then(
+          (_) async {
+        /// Load saved addresses.
+        final addressValue =
+            await Provider.of<CartModel>(context, listen: false).getAddress();
+        if (addressValue != null) {
+          updateAddress(addressValue);
+        } else {
+          var user = Provider.of<UserModel>(context, listen: false).user;
+          setState(() {
+            // No default region: address.state is filled with the
+            // governorate the user picks in the City dropdown. Seeding it
+            // with DefaultStateISOCode made the summary show "SG".
+            address = Address(country: kPaymentConfig.defaultCountryISOCode);
+            _textControllers[AddressFieldType.country]?.text =
+                address!.country!;
+            _textControllers[AddressFieldType.state]?.text =
+                address!.state ?? '';
+            if (user != null) {
+              address!.firstName = user.firstName;
+              address!.lastName = user.lastName;
+              address!.email = user.email;
+              loadUserInfoFromAddress(address);
+            }
+          });
+        }
+
+        /// Init default fields.
+        for (var field in _configs.values) {
+          if ([
+            AddressFieldType.searchAddress,
+            AddressFieldType.selectAddress,
+            AddressFieldType.country,
+            AddressFieldType.state,
+          ].contains(field.type)) {
+            /// Not support default value.
+            continue;
+          }
+
+          /// Replace current value with default value.
+          /// Force to use default value for non-editable field.
+          if (field.defaultValue.isNotEmpty && !field.editable) {
+            _textControllers[field.type]?.text = field.defaultValue;
+            onTextFieldSaved(field.defaultValue, field.type);
+          }
+
+          /// When the field is editable, replacing only when it's empty.
+          if (field.defaultValue.isNotEmpty &&
+              field.editable &&
+              (_textControllers[field.type]?.text.isEmpty ?? false)) {
+            _textControllers[field.type]?.text = field.defaultValue;
+            onTextFieldSaved(field.defaultValue, field.type);
+          }
+        }
+
+        /// Load country list.
+        countries = await Services().widget.loadCountries();
+        var country = countries!.firstWhereOrNull((element) =>
+            element.id == address?.country || element.code == address?.country);
+        if (country == null) {
+          if (countries!.isNotEmpty) {
+            country = countries![0];
+            address!.country = countries![0].code;
+          } else {
+            country = Country.fromConfig(address!.country, null, null, []);
+          }
+        } else {
+          address!.country = country.code;
+          address!.countryId = country.id;
+        }
+        _textControllers[AddressFieldType.country]?.text = country.code!;
+        refresh();
+
+        cities = await Services().widget.loadCitiesWithCountry(country);
+        // The city list holds the governorates (Magento regions); the
+        // current selection lives in address.state. Same rule as
+        // loadCountry(): never guess a governorate the shopper did not pick.
+        var city = _resolveGovernorate(cities, address?.state);
+        if (city == null && (address?.state?.trim().isEmpty ?? true)) {
+          city = cities?.firstOrNull;
+        }
+
+        if (city != null) {
+          zones = await Services().widget.loadZones(city);
+        }
+        refresh();
+      },
+    );
   }
 
   Future<void> loadCountry() async {
@@ -312,6 +312,9 @@ class _ShippingAddressState extends State<ShippingAddress> {
   @override
   Widget build(BuildContext context) {
     if(widget.isFromCheckout && UserBox().isLoggedIn){
+      // No saved address → show the add-address form directly instead of an
+      // empty list, so the shopper can enter their first address (86d3tmxra #1).
+      if (listAddress.isEmpty) return addressForm();
       return listViewAddress();
     }else{
       if(widget.isFromAddrssHistory){

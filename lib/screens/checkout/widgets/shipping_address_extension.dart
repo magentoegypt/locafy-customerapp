@@ -135,7 +135,20 @@ extension on _ShippingAddressState {
   void _onNext() {
     {
       if(UserBox().isLoggedIn){
-        if(selectIndex == -1)
+        // No saved address: the inline add-address form is showing
+        // (86d3tmxra #1). Validate it and proceed with the entered address —
+        // same as a guest; the order save persists it to the address book.
+        if(listAddress.isEmpty){
+          final phoneError = phoneValidationError();
+          if (phoneError != null) {
+            _showMessage(phoneError);
+          } else if (_formKey.currentState!.validate()) {
+            _formKey.currentState!.save();
+            Provider.of<CartModel>(context, listen: false).setAddress(address);
+            _loadShipping(beforehand: false);
+            widget.onNext!();
+          }
+        }else if(selectIndex == -1)
         {
           FlashHelper.errorMessage(
             context,
@@ -562,7 +575,11 @@ extension on _ShippingAddressState {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if(UserBox().isLoggedIn)
+          // Hidden while the inline add-address form is shown (no saved
+          // address): "Continue" already submits that form, so a second
+          // "Add delivery address" button would be redundant (86d3tmxra #1).
+          if(UserBox().isLoggedIn &&
+              !(widget.isFromCheckout && listAddress.isEmpty))
           Container(
             decoration: BoxDecoration(
               border: Border.all(
