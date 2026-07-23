@@ -49,6 +49,29 @@ class MagentoHelper {
     return phone;
   }
 
+  /// The 10-digit Egyptian national number, with the dial code (`+20` / `20`)
+  /// and the local leading `0` removed. `+201147375697`, `201147375697`,
+  /// `01147375697` and `1147375697` all collapse to `1147375697` — the same
+  /// subscriber. The checkout phone check uses this so a saved or pasted number
+  /// in any of those forms isn't falsely rejected as "10 digits, no leading 0"
+  /// (86d3tmxra) — a saved address stores the local `0…` form, the widget hands
+  /// back the `+20…` form. Returns the bare digits for anything it can't map;
+  /// callers still length-check.
+  static String egyptianNationalNumber(String? phone) {
+    var digits = (phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+    final dial =
+        kPhoneNumberConfig.dialCodeDefault.replaceAll(RegExp(r'[^0-9]'), '');
+    // Strip the dial code only when what's left is still a full national
+    // number, so a 10-digit number that merely starts with "20" is kept whole.
+    if (dial.isNotEmpty && digits.length > 10 && digits.startsWith(dial)) {
+      digits = digits.substring(dial.length);
+    }
+    if (digits.length == 11 && digits.startsWith('0')) {
+      digits = digits.substring(1);
+    }
+    return digits;
+  }
+
   static String? getCustomAttribute(customAttributes, attribute) {
     String? value;
     if (customAttributes != null && customAttributes.length > 0) {

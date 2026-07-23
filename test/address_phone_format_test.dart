@@ -68,4 +68,38 @@ void main() {
           'not a number');
     });
   });
+
+  // Regression test for ClickUp 86d3tmxra item 2: the checkout phone check
+  // rejected valid numbers stored in the local `01…` form (that's how a saved
+  // address arrives), showing "enter a 10-digit number with no leading 0" and
+  // blocking checkout. egyptianNationalNumber must treat every stored form as
+  // the same 10-digit subscriber so the check passes.
+  group('MagentoHelper.egyptianNationalNumber', () {
+    test('collapses every stored form to the same 10-digit national number',
+        () {
+      for (final input in [
+        '+201147375697',
+        '201147375697',
+        '01147375697', // the local form a saved address stores — was rejected
+        '1147375697',
+        '+20 114 737 5697',
+        '(+20) 114-737-5697',
+      ]) {
+        expect(MagentoHelper.egyptianNationalNumber(input), '1147375697',
+            reason: '$input should map to the national number');
+      }
+    });
+
+    test('keeps a 10-digit number that merely starts with 20', () {
+      // Only 10 digits remain, so "20" is data here, not the dial code.
+      expect(MagentoHelper.egyptianNationalNumber('2012345678'), '2012345678');
+    });
+
+    test('returns the bare digits for empty/unrecognised input', () {
+      // The caller still length-checks; this only normalises formatting.
+      expect(MagentoHelper.egyptianNationalNumber(''), '');
+      expect(MagentoHelper.egyptianNationalNumber(null), '');
+      expect(MagentoHelper.egyptianNationalNumber('12345'), '12345');
+    });
+  });
 }

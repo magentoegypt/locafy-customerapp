@@ -19,16 +19,13 @@ extension on _ShippingAddressState {
     phoneNumberWithoutCountryCode = _nationalNumber(address?.phoneNumber);
   }
 
-  /// The digits the user actually typed, without the dial code (e.g. +20).
-  String _nationalNumber(String? phone) {
-    var digits = (phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
-    final dial =
-        (kPhoneNumberConfig.dialCodeDefault).replaceAll(RegExp(r'[^0-9]'), '');
-    if (dial.isNotEmpty && digits.length > 10 && digits.startsWith(dial)) {
-      digits = digits.substring(dial.length);
-    }
-    return digits;
-  }
+  /// The 10-digit national number the shopper's phone maps to, with the dial
+  /// code (+20) AND the local leading 0 removed — a saved address stores the
+  /// number in the local `01…` form, so without stripping the 0 it was wrongly
+  /// rejected as "10 digits, no leading 0" and blocked checkout (86d3tmxra).
+  /// See [MagentoHelper.egyptianNationalNumber] (unit-tested).
+  String _nationalNumber(String? phone) =>
+      MagentoHelper.egyptianNationalNumber(phone);
 
   /// Website rule: the national number must be exactly 10 digits and must not
   /// start with 0. Returns the message to show, or null when the number is ok.

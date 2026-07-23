@@ -14,6 +14,7 @@ import '../../../common/tools/flash.dart';
 import '../../../core/colors.dart';
 import '../../../data/boxes.dart';
 import '../../../generated/l10n.dart';
+import '../../../frameworks/magento/services/magento_helper.dart';
 import '../../../models/index.dart'
     show Address, CartModel, City, Country, CountryState, UserModel;
 import '../../../services/index.dart';
@@ -803,7 +804,13 @@ class _ShippingAddressState extends State<ShippingAddress> {
         Expanded(child: SingleChildScrollView(
           child: Column(
             children: [
-              if (listAddress.isEmpty)
+              // A logged-in shopper with no saved address: the list is loaded
+              // synchronously from the local box, so an empty list means
+              // "none", not "still loading". Show the empty state and point at
+              // the "Add delivery address" button in the footer instead of a
+              // spinner that never resolves (86d3tmxra).
+              if (listAddress.isEmpty) ...[
+                const SizedBox(height: 32),
                 Center(
                   child: Image.asset(
                     kEmptySearch,
@@ -811,11 +818,21 @@ class _ShippingAddressState extends State<ShippingAddress> {
                     height: 120,
                   ),
                 ),
-              if (listAddress.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: kLoadingWidget(context),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Text(
+                    S.of(context).addDeliveryAddress,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .secondary
+                              .withOpacity(0.7),
+                        ),
+                  ),
                 ),
+              ],
               ...List.generate(listAddress.length, (index) {
                 return Padding(
                   padding: const EdgeInsets.all(10),
