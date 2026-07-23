@@ -9,7 +9,8 @@ import '../../common/config.dart';
 import '../../common/constants.dart';
 import '../../data/boxes.dart';
 import '../../generated/l10n.dart';
-import '../../models/index.dart' show Address, CartModel, User, UserModel;
+import '../../models/index.dart'
+    show Address, CartModel, City, Country, User, UserModel;
 import '../../services/index.dart';
 import '../index.dart' show BaseScreen;
 
@@ -29,9 +30,15 @@ class _StateChooseAddress extends BaseScreen<ChooseAddressScreen> {
   User? user;
   bool isLoading = true;
 
+  // Localization lookups so a saved address shows its governorate and country
+  // in the app language instead of the raw stored English (86d3tkj56 #3).
+  List<City> _governorates = [];
+  final Map<String, String> _countryNames = {};
+
   @override
   void afterFirstLayout(BuildContext context) {
     getDataFromLocal();
+    _loadLocalization();
     final loggedIn = Provider.of<UserModel>(context, listen: false).loggedIn;
     if (loggedIn) {
       getUserInfo().then((_) async {
@@ -101,6 +108,49 @@ class _StateChooseAddress extends BaseScreen<ChooseAddressScreen> {
     getDataFromLocal();
   }
 
+  /// Load the governorate list and localized country names used by
+  /// [convertToCard] so saved addresses render in the app language.
+  Future<void> _loadLocalization() async {
+    try {
+      final govs =
+          await Services().widget.loadCitiesWithCountry(Country(id: 'EG'));
+      if (mounted) setState(() => _governorates = govs ?? <City>[]);
+    } catch (e) {
+      printLog(e);
+    }
+    final codes = <String>{
+      'EG',
+      ...listAddress
+          .map((a) => a?.country)
+          .whereType<String>()
+          .where((c) => c.isNotEmpty),
+    };
+    for (final code in codes) {
+      final name = await Services().api.getLocalizedCountryName(code);
+      if (name != null && mounted) {
+        setState(() => _countryNames[code] = name);
+      }
+    }
+  }
+
+  /// The saved governorate (address.state) is a Magento region name — Arabic
+  /// for app-created addresses, English for website-created ones. Resolve it
+  /// against the governorate list and show the name in the current language
+  /// (86d3tkj56 #3). Falls back to the raw value if it cannot be resolved.
+  String? _localizeGovernorate(String? state) {
+    if (state == null || state.trim().isEmpty) return state;
+    final saved = state.trim().toLowerCase();
+    final isArabic =
+        (SettingsBox().languageCode ?? 'en').toLowerCase() == 'ar';
+    for (final g in _governorates) {
+      if ((g.name ?? '').trim().toLowerCase() == saved ||
+          (g.regionName ?? '').trim().toLowerCase() == saved) {
+        return isArabic ? (g.name ?? state) : (g.regionName ?? g.name ?? state);
+      }
+    }
+    return state;
+  }
+
   /// Mirrors ShippingAddress.convertToCard: every row is guarded, so a null or
   /// empty field disappears instead of printing the literal text "null".
   Widget convertToCard(BuildContext context, Address address) {
@@ -138,10 +188,12 @@ class _StateChooseAddress extends BaseScreen<ChooseAddressScreen> {
         // Zone = district (Magento city, held in address.city). These two were
         // swapped here, so the labels contradicted the form, the order summary
         // and the website.
-        row(s.city, address.state),
+        row(s.city, _localizeGovernorate(address.state)),
         row(s.zone, address.city),
-        // The country is stored as the ISO-2 code ("EG"); render the name.
-        row(s.country, _countryName(address.country)),
+        // The country is stored as the ISO-2 code ("EG"); render the localized
+        // name (مصر) when available, else the country_pickers English name.
+        row(s.country,
+            _countryNames[address.country] ?? _countryName(address.country)),
         // No zip-code row: checkout does not collect a postcode (it is
         // configured invisible), so it was only ever rendering "null".
         const SizedBox(height: 6.0),

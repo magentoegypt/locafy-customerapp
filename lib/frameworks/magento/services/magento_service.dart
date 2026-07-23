@@ -3358,6 +3358,44 @@ class MagentoService extends BaseServices {
     return body;
   }
 
+  final Map<String, String> _localizedCountryNames = {};
+  String? _localizedCountryLang;
+
+  @override
+  Future<String?> getLocalizedCountryName(String code) async {
+    if (code.isEmpty) return null;
+    final lang = (SettingsBox().languageCode ?? 'en').toLowerCase();
+    if (_localizedCountryLang != lang) {
+      _localizedCountryNames.clear();
+      _localizedCountryLang = lang;
+    }
+    if (_localizedCountryNames.containsKey(code)) {
+      return _localizedCountryNames[code];
+    }
+    try {
+      // directory/countries is public (getCountries above sends no token).
+      // Fetch over the app language so full_name_locale comes back localized
+      // (EG -> مصر / Egypt): the address book showed the country in English
+      // even in the Arabic view (86d3tkj56 #3).
+      final storePath = lang == 'ar' ? 'eg-ar' : 'eg-en';
+      final res = await httpGet(
+          '$domain/$storePath/rest/V1/directory/countries/$code'.toUri()!);
+      final body = convert.jsonDecode(res.body);
+      if (res.statusCode == 200 &&
+          body is Map &&
+          body['full_name_locale'] is String) {
+        final name = (body['full_name_locale'] as String).trim();
+        if (name.isNotEmpty) {
+          _localizedCountryNames[code] = name;
+          return name;
+        }
+      }
+    } catch (e) {
+      printLog('getLocalizedCountryName error: $e');
+    }
+    return null;
+  }
+
   @override
   Future getCitiesByStateId(countryId, stateId) async {
     try {

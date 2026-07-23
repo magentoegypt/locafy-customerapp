@@ -744,6 +744,11 @@ abstract class BaseServices {
     return const <Map<String, dynamic>>[];
   }
 
+  /// Localized country display name for an ISO-2 code (e.g. "EG" -> "مصر" in
+  /// Arabic), or null if unavailable — callers fall back to the English name.
+  /// Only Magento implements it (86d3tkj56 #3).
+  Future<String?> getLocalizedCountryName(String code) async => null;
+
   Future<bool> checkProductPermission(String productId, String? cookie) async {
     return true;
   }
