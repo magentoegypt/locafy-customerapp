@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../common/config.dart';
+import '../../../generated/l10n.dart';
 import '../../../models/index.dart' show PaymentMethod;
 import '../../../services/index.dart';
 import '../../../widgets/common/flux_image.dart';
@@ -58,19 +59,11 @@ class PaymentMethodItem extends StatelessWidget {
                                   // fall back to name only.
                                   ..._buildBrandMark(context, paymentMethod.id),
                                   Expanded(
-                                    // Never null-assert the title — a method
-                                    // with a missing title degrades to a plain
-                                    // name (its code) instead of throwing during
-                                    // build and tripping the global ErrorWidget
-                                    // (the red "Something went wrong" beside
-                                    // COD/Visa in the QA build, 86d3g53f8 #7).
                                     child: Services()
                                         .widget
                                         .renderShippingPaymentTitle(
                                           context,
-                                          paymentMethod.title ??
-                                              paymentMethod.id ??
-                                              '',
+                                          _localizedTitle(context),
                                         ),
                                   ),
                                 ],
@@ -87,6 +80,32 @@ class PaymentMethodItem extends StatelessWidget {
         const Divider(height: 1)
       ],
     );
+  }
+
+  /// The method name to show, in the APP's language.
+  ///
+  /// Magento returns `title` in the language of the CART's store view, not the
+  /// app's. A registered customer's quote keeps whatever store it was created
+  /// on, so switching the app to English left the names in Arabic, while guests
+  /// were fine because their cart is created fresh on the current store view
+  /// (86d3g53f8, retest). Verified against testing.locafy.market: the SAME
+  /// quote returns Arabic titles over both the eg-en and the eg-ar REST path,
+  /// so the store view in the request URL cannot fix this — the name has to be
+  /// resolved app-side.
+  ///
+  /// Only the store's known codes are mapped; anything else falls back to the
+  /// title the API sent (and then to the code), so a newly enabled method still
+  /// shows up rather than rendering blank.
+  String _localizedTitle(BuildContext context) {
+    switch (paymentMethod.id) {
+      case 'cashondelivery':
+        return S.of(context).paymentMethodCashOnDelivery;
+      case 'online':
+        return S.of(context).paymentMethodOnlineCard;
+      case 'sympl':
+        return S.of(context).paymentMethodSympl;
+    }
+    return paymentMethod.title ?? paymentMethod.id ?? '';
   }
 
   /// Leading brand mark(s) for a payment method, shown before its name so each

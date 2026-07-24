@@ -820,6 +820,11 @@ class MessageLookup extends MessageLookupByLibrary {
         "payNow": MessageLookupByLibrary.simpleMessage("ادفع الآن"),
         "payment": MessageLookupByLibrary.simpleMessage("الدفع"),
         "paymentMethod": MessageLookupByLibrary.simpleMessage("طريقة الدفع"),
+        "paymentMethodCashOnDelivery":
+            MessageLookupByLibrary.simpleMessage("دفع عند الاستلام"),
+        "paymentMethodOnlineCard": MessageLookupByLibrary.simpleMessage(
+            "دفع إلكتروني (فيزا-ماستر كارد)"),
+        "paymentMethodSympl": MessageLookupByLibrary.simpleMessage("سيمبل"),
         "paymentMethods": MessageLookupByLibrary.simpleMessage("طرق الدفع"),
         "paymentSuccessful":
             MessageLookupByLibrary.simpleMessage("تم الدفع بنجاح"),

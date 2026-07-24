@@ -826,6 +826,12 @@ class MessageLookup extends MessageLookupByLibrary {
         "payNow": MessageLookupByLibrary.simpleMessage("Pay Now"),
         "payment": MessageLookupByLibrary.simpleMessage("Payment"),
         "paymentMethod": MessageLookupByLibrary.simpleMessage("Payment Method"),
+        "paymentMethodCashOnDelivery":
+            MessageLookupByLibrary.simpleMessage("Cash On Delivery (COD)"),
+        "paymentMethodOnlineCard": MessageLookupByLibrary.simpleMessage(
+            "Secure online payment by Visa / MasterCard"),
+        "paymentMethodSympl": MessageLookupByLibrary.simpleMessage(
+            "Pay later in 3 installments with Sympl"),
         "paymentMethods":
             MessageLookupByLibrary.simpleMessage("Payment Methods"),
         "paymentSuccessful":

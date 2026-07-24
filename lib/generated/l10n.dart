@@ -839,6 +839,36 @@ class S {
     );
   }
 
+  /// `Cash On Delivery (COD)`
+  String get paymentMethodCashOnDelivery {
+    return Intl.message(
+      'Cash On Delivery (COD)',
+      name: 'paymentMethodCashOnDelivery',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Secure online payment by Visa / MasterCard`
+  String get paymentMethodOnlineCard {
+    return Intl.message(
+      'Secure online payment by Visa / MasterCard',
+      name: 'paymentMethodOnlineCard',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Pay later in 3 installments with Sympl`
+  String get paymentMethodSympl {
+    return Intl.message(
+      'Pay later in 3 installments with Sympl',
+      name: 'paymentMethodSympl',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Order History`
   String get orderHistory {
     return Intl.message(
