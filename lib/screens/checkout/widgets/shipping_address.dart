@@ -83,6 +83,15 @@ class _ShippingAddressState extends State<ShippingAddress> {
   var selectIndex = -1;
   String? phoneNumber,phoneNumberWithoutCountryCode;
 
+  /// Lookups so a saved address renders its governorate and country in the app
+  /// language. The address stores the governorate as a NAME — Arabic when it
+  /// was created in the app, English when it came from the website — so the
+  /// checkout list showed it in whichever language it happened to be saved in
+  /// (86d3tkj56 #3). The governorate list carries both (`states_name` /
+  /// `region_name`), which is what makes the swap possible.
+  List<City> _governorates = [];
+  final Map<String, String> _countryNames = {};
+
   @override
   void dispose() {
     for (var controller in _textControllers.values) {
@@ -924,9 +933,11 @@ class _ShippingAddressState extends State<ShippingAddress> {
         row(s.streetName, address.street),
         // Same wording as the form/website: City = governorate (region,
         // address.state), Zone = district (address.city).
-        row(s.city, address.state),
+        row(s.city, _localizeGovernorate(address.state)),
+        // Zone stays as saved: the backend has no English district name.
         row(s.zone, address.city),
-        row(s.country, address.country),
+        row(s.country,
+            _countryNames[address.country ?? ''] ?? address.country),
         row(s.zipCode, address.zipCode),
         const SizedBox(height: 6.0),
       ],
@@ -937,6 +948,51 @@ class _ShippingAddressState extends State<ShippingAddress> {
     var list = List<Address>.from(UserBox().addresses ?? <Address>[]);
     listAddress = list;
     setState(() {});
+    _loadAddressLocalization();
+  }
+
+  /// Governorate list + localized country names used by [convertToCard].
+  Future<void> _loadAddressLocalization() async {
+    try {
+      final govs =
+          await Services().widget.loadCitiesWithCountry(Country(id: 'EG'));
+      if (mounted) setState(() => _governorates = govs ?? <City>[]);
+    } catch (e) {
+      printLog(e);
+    }
+    final codes = <String>{
+      'EG',
+      ...listAddress
+          .map((a) => a?.country)
+          .whereType<String>()
+          .where((c) => c.isNotEmpty),
+    };
+    for (final code in codes) {
+      final name = await Services().api.getLocalizedCountryName(code);
+      if (name != null && mounted) {
+        setState(() => _countryNames[code] = name);
+      }
+    }
+  }
+
+  /// The stored governorate name rendered in the app language, falling back to
+  /// the raw value when it can't be matched.
+  ///
+  /// Only the governorate can be swapped: the City/Region-Manager zone list
+  /// ships `cities_name` in Arabic ONLY — verified byte-identical over the
+  /// eg-en and eg-ar store views — so there is no English district name to
+  /// show, and the Zone row keeps whatever was saved.
+  String? _localizeGovernorate(String? state) {
+    if (state == null || state.trim().isEmpty) return state;
+    final saved = state.trim().toLowerCase();
+    final isArabic = (SettingsBox().languageCode ?? 'en').toLowerCase() == 'ar';
+    for (final g in _governorates) {
+      if ((g.name ?? '').trim().toLowerCase() == saved ||
+          (g.regionName ?? '').trim().toLowerCase() == saved) {
+        return isArabic ? (g.name ?? state) : (g.regionName ?? g.name ?? state);
+      }
+    }
+    return state;
   }
 
   void refresh() {
