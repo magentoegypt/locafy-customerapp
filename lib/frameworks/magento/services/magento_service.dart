@@ -2071,8 +2071,14 @@ class MagentoService extends BaseServices {
       }
     };
     final res = await httpPost(
-      MagentoHelper.buildUrl(
-          domain, 'products/${Uri.encodeComponent(sku)}/reviews')!,
+      // Post to the ACTIVE store view. buildUrl falls back to eg-en when no
+      // locale is passed, so a review written on the Arabic view was stamped
+      // with the English store_id — reviews still show on every store view, but
+      // review_detail.store_id (and any "which view did this come from"
+      // reporting) was wrong. The read/browse calls already pass the locale.
+      MagentoHelper.buildUrl(domain,
+          'products/${Uri.encodeComponent(sku)}/reviews',
+          SettingsBox().languageCode)!,
       headers: {
         'Authorization': 'Bearer ${token ?? UserBox().userInfo?.cookie}',
         'content-type': 'application/json'
