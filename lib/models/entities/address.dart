@@ -185,9 +185,19 @@ class Address {
       ? email!
       : 'guest${(phoneNumber ?? '').replaceAll(RegExp(r'[^0-9]'), '')}@locafy.market';
 
-  Map<String, dynamic> toMagentoJson() {
+  /// [saveInAddressBook] must be true for exactly ONE of the two addresses a
+  /// checkout submits. On order placement Magento copies BOTH the quote's
+  /// billing and its shipping address into the customer's address book, so
+  /// posting the same address as both with the flag unset stored it twice —
+  /// one default_billing and one default_shipping — which is why a new
+  /// customer's first order left two identical entries (86d3tkj56 #1).
+  /// Defaults to false so every other caller (shipping estimate, tax lookup,
+  /// the order's billing_address) stays read-only; the checkout flags the
+  /// shipping address only.
+  Map<String, dynamic> toMagentoJson({bool saveInAddressBook = false}) {
     return {
       'address': {
+        'save_in_address_book': saveInAddressBook ? 1 : 0,
         'country_id': country,
         // 'region_id': state != null && int.tryParse(state!) != null
         //     ? int.parse(state!)

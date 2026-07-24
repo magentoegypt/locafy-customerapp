@@ -2217,7 +2217,12 @@ class MagentoService extends BaseServices {
       var address = cartModel!.address;
       final params = {
         'addressInformation': {
-          'shipping_address': address?.toMagentoJson()['address'],
+          // Flag ONLY the shipping address for the address book. Magento saves
+          // the quote's billing AND shipping addresses to the customer on order
+          // placement, so posting the same address twice unflagged left two
+          // identical entries after a new customer's first order (86d3tkj56 #1).
+          'shipping_address':
+              address?.toMagentoJson(saveInAddressBook: true)['address'],
           'billing_address': address?.toMagentoJson()['address'],
           'shipping_carrier_code': shippingMethod?.id,
           'shipping_method_code': shippingMethod?.methodId
