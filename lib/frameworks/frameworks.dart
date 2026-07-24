@@ -602,9 +602,27 @@ abstract class BaseFrameworks {
     );
   }
 
-  /// get country name
+  /// get country name, in the app's language where the backend can give it.
+  ///
+  /// The bundled country_pickers list is English-only, so on its own it left
+  /// the country in English in the Arabic view (86d3tkj56 #3). Magento's
+  /// directory/countries/{code} returns `full_name_locale` in the store view's
+  /// language (EG -> مصر / Egypt), so ask the API first and keep the packaged
+  /// list as the offline fallback — then the raw code, so a country that is
+  /// missing from either source still renders instead of throwing inside the
+  /// FutureBuilder that calls this.
   Future<String?> getCountryName(context, countryCode) async {
-    return CountryPickerUtils.getCountryByIsoCode(countryCode).name;
+    final code = countryCode?.toString() ?? '';
+    if (code.isEmpty) return null;
+
+    final localized = await Services().api.getLocalizedCountryName(code);
+    if (localized?.isNotEmpty ?? false) return localized;
+
+    try {
+      return CountryPickerUtils.getCountryByIsoCode(code).name;
+    } catch (_) {
+      return code;
+    }
   }
 
   /// get admin vendor url

@@ -49,11 +49,30 @@ class _OrderHistoryDetailScreenState
   OrderHistoryDetailModel get orderHistoryModel =>
       Provider.of<OrderHistoryDetailModel>(context, listen: false);
 
+  /// The order country in the app's language, once the API has resolved it.
+  /// Null until then (and when the lookup fails), which falls back to the
+  /// English-only packaged list — see [getCountryName].
+  String? _localizedCountryName;
+
   @override
   void afterFirstLayout(BuildContext context) {
     super.afterFirstLayout(context);
     // orderHistoryModel.getTracking();
     orderHistoryModel.getOrderNote();
+    _loadLocalizedCountryName();
+  }
+
+  /// Resolve the order's country name over the app language (86d3tkj56 #3:
+  /// the country stayed English in the Arabic view). Done once here rather
+  /// than in build because this screen renders the name inside a plain string.
+  Future<void> _loadLocalizedCountryName() async {
+    final code = orderHistoryModel.order.billing?.country;
+    if (code == null || code.isEmpty) return;
+
+    final name = await Services().api.getLocalizedCountryName(code);
+    if ((name?.isNotEmpty ?? false) && mounted) {
+      setState(() => _localizedCountryName = name);
+    }
   }
 
   void cancelOrder() {
@@ -773,6 +792,9 @@ class _OrderHistoryDetailScreenState
   }
 
   String getCountryName(country) {
+    if (_localizedCountryName?.isNotEmpty ?? false) {
+      return _localizedCountryName!;
+    }
     try {
       return CountryPickerUtils.getCountryByIsoCode(country).name;
     } catch (err) {
