@@ -113,7 +113,9 @@ class _ShippingAddressState extends State<ShippingAddress> {
       // first address inline instead of seeing an empty list (86d3tmxra #1).
       if (listAddress.isEmpty) {
         _initFieldConfigs();
-        _prefillNewAddressForm();
+        // Open clean: never inherit a left-over address from an earlier guest
+        // order on this device (86d3tmxra retest).
+        _prefillNewAddressForm(reuseSavedAddress: false);
       }
     }else{
       _initFieldConfigs();
@@ -158,13 +160,21 @@ class _ShippingAddressState extends State<ShippingAddress> {
   /// Initialise a blank address and load the country / governorate / district
   /// lists for the add-address form. Shared by the address-book "add" flow and
   /// the checkout step when the account has no saved address (86d3tmxra #1).
-  void _prefillNewAddressForm() {
+  ///
+  /// [reuseSavedAddress] seeds the form from CartModel.getAddress(), which falls
+  /// back to the PERSISTED UserBox().shippingAddress. That is right for a guest
+  /// resuming their own checkout, but wrong for a signed-in shopper adding their
+  /// first address: a left-over address from an earlier guest order on the same
+  /// device was read straight back and pre-filled into the form (86d3tmxra
+  /// retest). Pass false there so the form opens clean.
+  void _prefillNewAddressForm({bool reuseSavedAddress = true}) {
     /// Pre-fill the address fields.
     WidgetsBinding.instance.endOfFrame.then(
           (_) async {
         /// Load saved addresses.
-        final addressValue =
-            await Provider.of<CartModel>(context, listen: false).getAddress();
+        final addressValue = reuseSavedAddress
+            ? await Provider.of<CartModel>(context, listen: false).getAddress()
+            : null;
         if (addressValue != null) {
           updateAddress(addressValue);
         } else {
