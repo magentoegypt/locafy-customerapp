@@ -19,6 +19,21 @@ import 'package:html/parser.dart' as html;
 
 const _defaultId = '0';
 
+/// Decode the HTML entities Magento sends inside product names.
+///
+/// Names come back escaped ("Cotton Vest &amp; Boxer Set for Boys") but the app
+/// renders them as plain text, so the raw entity was visible on screen — first
+/// reported in the cart. Decoding at parse time fixes every surface at once
+/// (cart, listing, search, wishlist, order lines) instead of per widget, and
+/// matches what the older parsers here already do inline.
+///
+/// Null/empty tolerant on purpose: several feeds omit the field entirely.
+String? _decodeName(dynamic value) {
+  if (value == null) return null;
+  final text = value is String ? value : value.toString();
+  return text.isEmpty ? text : HtmlUnescape().convert(text);
+}
+
 class Product {
   String id;
   String? itemID;
@@ -762,7 +777,7 @@ class Product {
   Product.fromMagentoJson(Map parsedJson) : id = "${parsedJson["id"]}" {
     try {
       sku = parsedJson['sku'];
-      name = parsedJson['name'];
+      name = _decodeName(parsedJson['name']);
       permalink = parsedJson['permalink'];
       inStock = parsedJson['status'] == 1;
       averageRating = 0.0;
@@ -1089,7 +1104,7 @@ class Product {
   Product.fromLocalJson(Map json) : id = json['id'].toString() {
     try {
       sku = json['sku'];
-      name = json['name'];
+      name = _decodeName(json['name']);
       description = json['description'];
       permalink = json['permalink'];
       price = json['price'];
@@ -1616,7 +1631,7 @@ class Product {
     size_chart = productJson['size_chart'];
     minPrice = productJson['min_price'];
     maxPrice = productJson['max_price'];
-    name = productJson['product_name'];
+    name = _decodeName(productJson['product_name']);
     var list = <String>[];
     list.add( MagentoHelper.getProductImageUrlByName(domain, productJson['thumbnail']));
     list.add(MagentoHelper.getProductImageUrlByName(domain, productJson['small_image']));
@@ -1633,7 +1648,7 @@ class Product {
     itemID = productJson['item_id'].toString();
     shopQuantity = productJson['qty'];
     sku = productJson['sku'];
-    name = productJson['name'];
+    name = _decodeName(productJson['name']);
     price = productJson['price'].toString();
      minimalPrice = productJson['minimal_price'];
     if (minimalPrice != null) {
@@ -1827,7 +1842,7 @@ class Product {
 
   Product.fromSearchJson(Map<String, dynamic> json): id = json['entity_id'].toString() {
     try{
-      name = json['name'];
+      name = _decodeName(json['name']);
       sku = json['sku'];
       imageFeature = json['image'];
      // reviewsRating =  json['reviews_rating'];
