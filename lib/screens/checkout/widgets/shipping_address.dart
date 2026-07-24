@@ -113,9 +113,10 @@ class _ShippingAddressState extends State<ShippingAddress> {
       // first address inline instead of seeing an empty list (86d3tmxra #1).
       if (listAddress.isEmpty) {
         _initFieldConfigs();
-        // Open clean: never inherit a left-over address from an earlier guest
-        // order on this device (86d3tmxra retest).
-        _prefillNewAddressForm(reuseSavedAddress: false);
+        // Open empty: never inherit a left-over address from an earlier guest
+        // order on this device, nor the account's own name/email — QA asked for
+        // a blank page here (86d3tmxra retest).
+        _prefillNewAddressForm(prefillExisting: false);
       }
     }else{
       _initFieldConfigs();
@@ -164,24 +165,29 @@ class _ShippingAddressState extends State<ShippingAddress> {
   /// lists for the add-address form. Shared by the address-book "add" flow and
   /// the checkout step when the account has no saved address (86d3tmxra #1).
   ///
-  /// [reuseSavedAddress] seeds the form from CartModel.getAddress(), which falls
-  /// back to the PERSISTED UserBox().shippingAddress. That is right for a guest
-  /// resuming their own checkout, but wrong for a signed-in shopper adding their
-  /// first address: a left-over address from an earlier guest order on the same
-  /// device was read straight back and pre-filled into the form (86d3tmxra
-  /// retest). Pass false there so the form opens clean.
-  void _prefillNewAddressForm({bool reuseSavedAddress = true}) {
+  /// [prefillExisting] seeds the form with data already held on the device: the
+  /// address from CartModel.getAddress() (which falls back to the PERSISTED
+  /// UserBox().shippingAddress) and, failing that, the signed-in account's
+  /// name/email. That is right for a guest resuming their own checkout, but
+  /// wrong for a signed-in shopper adding their FIRST address — a left-over
+  /// address from an earlier guest order on the same device was read straight
+  /// back into the form (86d3tmxra retest). Pass false there so the page opens
+  /// empty; only the country is seeded, because the governorate and district
+  /// lists are loaded from it.
+  void _prefillNewAddressForm({bool prefillExisting = true}) {
     /// Pre-fill the address fields.
     WidgetsBinding.instance.endOfFrame.then(
           (_) async {
         /// Load saved addresses.
-        final addressValue = reuseSavedAddress
+        final addressValue = prefillExisting
             ? await Provider.of<CartModel>(context, listen: false).getAddress()
             : null;
         if (addressValue != null) {
           updateAddress(addressValue);
         } else {
-          var user = Provider.of<UserModel>(context, listen: false).user;
+          var user = prefillExisting
+              ? Provider.of<UserModel>(context, listen: false).user
+              : null;
           setState(() {
             // No default region: address.state is filled with the
             // governorate the user picks in the City dropdown. Seeding it
