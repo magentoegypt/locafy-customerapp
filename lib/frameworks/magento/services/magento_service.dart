@@ -3670,7 +3670,20 @@ class MagentoService extends BaseServices {
         // the fetch succeeds so a network error never blanks a cart that still
         // exists on the server. Default (login path) keeps the original merge
         // behaviour untouched.
+        // Preserve the variant context across the refresh. The server cart line
+        // carries only option IDs and Product.fromShopJson leaves `attributes`
+        // empty, so a plain rebuild drops the selected variant and the cart row
+        // stops showing it after the cart is reopened/updated (86d3tntae).
+        // Snapshot what this device already knows — keyed by the cart key,
+        // which is the child SKU on both the local and the rebuilt path — and
+        // re-attach it below for lines that are still in the cart.
+        var savedVariations = <String, dynamic>{};
+        var savedOptions = <String, dynamic>{};
+        var savedItems = <String, dynamic>{};
         if (replace) {
+          savedVariations = Map<String, dynamic>.from(model.productVariationInCart);
+          savedOptions = Map<String, dynamic>.from(model.productsMetaDataInCart);
+          savedItems = Map<String, dynamic>.from(model.item);
           model.productsInCart.clear();
           model.item.clear();
           model.productVariationInCart.clear();
@@ -3680,6 +3693,29 @@ class MagentoService extends BaseServices {
         list.forEach((product){
           model.addProductToCart(product: product,quantity: product.shopQuantity,isFromApi: true);
         });
+        if (replace) {
+          for (final key in model.productsInCart.keys) {
+            final variation = savedVariations[key];
+            if (variation is ProductVariation) {
+              model.productVariationInCart[key] = variation;
+            }
+            final options = savedOptions[key];
+            if (options != null) {
+              model.productsMetaDataInCart[key] = options;
+            }
+            // The rebuilt product ships no attributes; carry over the ones the
+            // locally added product had, since the variant label is resolved
+            // from them (option value id -> label).
+            final saved = savedItems[key];
+            final rebuilt = model.item[key];
+            if (saved is Product &&
+                rebuilt != null &&
+                (saved.attributes?.isNotEmpty ?? false) &&
+                (rebuilt.attributes?.isEmpty ?? true)) {
+              rebuilt.attributes = saved.attributes;
+            }
+          }
+        }
       }else if (response.statusCode == 401) {
         _onLogout();
         throw Exception('Token expired. Please logout then login again');
