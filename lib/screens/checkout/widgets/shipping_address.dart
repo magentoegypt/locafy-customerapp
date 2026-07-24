@@ -119,6 +119,9 @@ class _ShippingAddressState extends State<ShippingAddress> {
       }
     }else{
       _initFieldConfigs();
+      // These paths skip getDataFromLocal, which is what normally seeds the
+      // localized country names the form renders — load them here too.
+      _loadAddressLocalization();
       if(widget.isFromAddrssHistory){
         address = Address();
         if(widget.address != null) {
@@ -362,17 +365,8 @@ class _ShippingAddressState extends State<ShippingAddress> {
   }
 
   Widget addressForm(){
-    var countryName = S.of(context).country;
-    final currentCountry =
-        _textControllers[AddressFieldType.country]?.text ?? '';
-    if (currentCountry.isNotEmpty) {
-      try {
-        countryName =
-            picker.CountryPickerUtils.getCountryByIsoCode(currentCountry).name;
-      } catch (e) {
-        countryName = S.of(context).country;
-      }
-    }
+    final countryName =
+        _displayCountryName(_textControllers[AddressFieldType.country]?.text);
 
     if (address == null) {
       return SizedBox(height: 100, child: kLoadingWidget(context));
@@ -417,12 +411,13 @@ class _ShippingAddressState extends State<ShippingAddress> {
                                     fontWeight: FontWeight.w300,
                                     color: Colors.grey),
                               ),
+                              // Single-destination stores (this one ships only
+                              // to Egypt) render a plain label instead of the
+                              // picker — it needs the same localized name, or
+                              // the Arabic view reads "Egypt" (86d3tkj56 #3).
                               (countries!.length == 1)
                                   ? Text(
-                                picker.CountryPickerUtils
-                                    .getCountryByIsoCode(
-                                    countries![0].code!)
-                                    .name,
+                                _displayCountryName(countries![0].code),
                                 style: const TextStyle(fontSize: 18),
                               )
                                   : GestureDetector(
@@ -947,7 +942,8 @@ class _ShippingAddressState extends State<ShippingAddress> {
         // Zone stays as saved: the backend has no English district name.
         row(s.zone, address.city),
         row(s.country,
-            _countryNames[address.country ?? ''] ?? address.country),
+            _countryNames[(address.country ?? '').toUpperCase()] ??
+                address.country),
         row(s.zipCode, address.zipCode),
         const SizedBox(height: 6.0),
       ],
@@ -961,8 +957,42 @@ class _ShippingAddressState extends State<ShippingAddress> {
     _loadAddressLocalization();
   }
 
-  /// Governorate list + localized country names used by [convertToCard].
-  Future<void> _loadAddressLocalization() async {
+  /// Governorate list + localized country names used by [convertToCard] and
+  /// the address form's Country field.
+  ///
+  /// The two run independently on purpose. They used to share one method with
+  /// the governorate fetch awaited first, so whenever that call stalled or
+  /// failed — which it does on some store views, the same failure that leaves
+  /// the City/Zone dropdowns empty — the country names were never requested
+  /// and the form fell back to the English packaged list (86d3tkj56 #3).
+  /// Neither should be able to hold the other up.
+  void _loadAddressLocalization() {
+    _loadGovernorates();
+    _loadCountryNames();
+  }
+
+  /// A country code rendered in the app's language.
+  ///
+  /// Prefers the API's localized name (EG -> مصر / Egypt) collected by
+  /// [_loadCountryNames]. The packaged country_pickers list is English-only,
+  /// so on its own it left every Country field reading "Egypt" in the Arabic
+  /// view (86d3tkj56 #3); it stays as the offline fallback, then the generic
+  /// label so the field is never blank.
+  String _displayCountryName(String? code) {
+    final trimmed = code?.trim() ?? '';
+    if (trimmed.isEmpty) return S.of(context).country;
+
+    final localized = _countryNames[trimmed.toUpperCase()];
+    if (localized?.isNotEmpty ?? false) return localized!;
+
+    try {
+      return picker.CountryPickerUtils.getCountryByIsoCode(trimmed).name;
+    } catch (_) {
+      return S.of(context).country;
+    }
+  }
+
+  Future<void> _loadGovernorates() async {
     try {
       final govs =
           await Services().widget.loadCitiesWithCountry(Country(id: 'EG'));
@@ -970,6 +1000,9 @@ class _ShippingAddressState extends State<ShippingAddress> {
     } catch (e) {
       printLog(e);
     }
+  }
+
+  Future<void> _loadCountryNames() async {
     final codes = <String>{
       'EG',
       ...listAddress
@@ -978,9 +1011,13 @@ class _ShippingAddressState extends State<ShippingAddress> {
           .where((c) => c.isNotEmpty),
     };
     for (final code in codes) {
-      final name = await Services().api.getLocalizedCountryName(code);
-      if (name != null && mounted) {
-        setState(() => _countryNames[code] = name);
+      try {
+        final name = await Services().api.getLocalizedCountryName(code);
+        if ((name?.isNotEmpty ?? false) && mounted) {
+          setState(() => _countryNames[code.toUpperCase()] = name!);
+        }
+      } catch (e) {
+        printLog(e);
       }
     }
   }
