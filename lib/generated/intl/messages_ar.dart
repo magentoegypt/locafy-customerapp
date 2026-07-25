@@ -960,7 +960,8 @@ class MessageLookup extends MessageLookupByLibrary {
         "ratingFirst": MessageLookupByLibrary.simpleMessage(
             "يرجى التقييم قبل إرسال تعليقك"),
         "reOrder": MessageLookupByLibrary.simpleMessage("إعادة الطلب"),
-        "readLess": MessageLookupByLibrary.simpleMessage("عرض أقل"),
+        "hideDetails":
+            MessageLookupByLibrary.simpleMessage("إخفاء التفاصيل"),
         "readMore": MessageLookupByLibrary.simpleMessage("اقرأ المزيد"),
         "readReviews": MessageLookupByLibrary.simpleMessage("قراءة التعليقات"),
         "receivedMoney":

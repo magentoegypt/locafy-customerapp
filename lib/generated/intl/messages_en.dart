@@ -971,8 +971,8 @@ class MessageLookup extends MessageLookupByLibrary {
         "ratingFirst": MessageLookupByLibrary.simpleMessage(
             "Please rating before you send your comment"),
         "reOrder": MessageLookupByLibrary.simpleMessage("Re-Order"),
-        "readLess": MessageLookupByLibrary.simpleMessage("Read less"),
-        "readMore": MessageLookupByLibrary.simpleMessage("Read more"),
+        "hideDetails": MessageLookupByLibrary.simpleMessage("Hide Details"),
+        "readMore": MessageLookupByLibrary.simpleMessage("Read More"),
         "readReviews": MessageLookupByLibrary.simpleMessage("Reviews"),
         "receivedMoney": MessageLookupByLibrary.simpleMessage("Received money"),
         "receiver": MessageLookupByLibrary.simpleMessage("Receiver"),

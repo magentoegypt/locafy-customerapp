@@ -160,21 +160,21 @@ class S {
     );
   }
 
-  /// `Read more`
+  /// `Read More`
   String get readMore {
     return Intl.message(
-      'Read more',
+      'Read More',
       name: 'readMore',
       desc: '',
       args: [],
     );
   }
 
-  /// `Read less`
-  String get readLess {
+  /// `Hide Details`
+  String get hideDetails {
     return Intl.message(
-      'Read less',
-      name: 'readLess',
+      'Hide Details',
+      name: 'hideDetails',
       desc: '',
       args: [],
     );
