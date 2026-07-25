@@ -7,8 +7,10 @@ import '../../../common/tools.dart';
 import '../../../frameworks/magento/services/magento_service.dart';
 import '../../../generated/l10n.dart';
 import '../../../models/app_model.dart';
+import '../../../models/entities/back_drop_arguments.dart';
 import '../../../services/index.dart';
 import '../../../widgets/common/flux_image.dart';
+import '../../../widgets/common/webview.dart';
 import 'category_description_model.dart';
 
 export 'category_description_model.dart';
@@ -109,15 +111,96 @@ class _CategoryDescriptionState extends State<CategoryDescription> {
         }
       }
     }
+    _resolvingLinks = _resolveLinks(api, sections, lang);
     setState(() => _sections = sections);
   }
 
-  /// The copy and the cards link to storefront pages
-  /// (`/eg-en/kidswear.html`, `/eg-ar/why-sell-on-locafy-ar`). There is no
-  /// in-app route for a CMS page and no url_path on the category tree to
-  /// match the rest against, so these open the website rather than pretending
-  /// to be app navigation.
-  void _openLink(String href) => Tools.launchURL(_absolute(href));
+  /// Category links in the copy, keyed by href, once resolved.
+  Map<String, CategoryUrlTarget> _linkTargets = const {};
+  Future<void>? _resolvingLinks;
+
+  /// Most links in the copy point at categories the app can open itself
+  /// (`/eg-en/kidswear/boys.html`). Resolve them all in one lookup as soon as
+  /// the description lands, so a tap navigates in-app instead of leaving for
+  /// the browser. Whatever doesn't resolve — CMS pages like
+  /// "why-sell-on-locafy" — still opens as a page.
+  Future<void> _resolveLinks(
+    MagentoService api,
+    List<CategoryDescriptionSection> sections,
+    String? lang,
+  ) async {
+    final byPath = <String, List<String>>{};
+    void collect(String? href) {
+      if (href == null) return;
+      final path = storefrontPathOf(href, host: kMediaDomain);
+      if (path == null) return;
+      byPath.putIfAbsent(path, () => []).add(href);
+    }
+
+    for (final section in sections) {
+      for (final block in section.blocks) {
+        for (final span in block.spans) {
+          collect(span.href);
+        }
+      }
+      for (final card in section.cards) {
+        collect(card.href);
+      }
+    }
+    if (byPath.isEmpty) return;
+
+    final resolved = await api.resolveCategoryUrls(
+      byPath.keys,
+      lang: lang,
+      // A link in this category's own copy points into its own subtree, which
+      // is what tells "kidswear/boys/pants" from the seven other "pants".
+      preferUnder: widget.categoryId,
+    );
+    if (!mounted) return;
+    final targets = <String, CategoryUrlTarget>{};
+    resolved.forEach((path, target) {
+      for (final href in byPath[path] ?? const <String>[]) {
+        targets[href] = target;
+      }
+    });
+    _linkTargets = targets;
+  }
+
+  /// Open a link from the copy or a card: the app's own category page when
+  /// the URL is one of ours, otherwise the page itself (CMS content such as
+  /// "why sell on Locafy" has no in-app equivalent).
+  Future<void> _openLink(String href) async {
+    // A tap can land before the lookup returns; it is one request and it
+    // started with the description, so waiting on it beats guessing.
+    try {
+      await _resolvingLinks;
+    } catch (_) {
+      // Resolution failed — fall through and open the page.
+    }
+    if (!mounted) return;
+
+    final target = _linkTargets[href];
+    if (target != null) {
+      Navigator.of(context).pushNamed(
+        RouteList.backdrop,
+        arguments: BackDropArguments(
+          cateId: target.id,
+          cateName: target.name,
+        ),
+      );
+      return;
+    }
+
+    final url = _absolute(href);
+    if (storefrontPathOf(href, host: kMediaDomain) == null) {
+      // Somewhere else entirely — hand it to the system.
+      Tools.launchURL(url);
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => WebView(url: url)),
+    );
+  }
 
   String _absolute(String path) => path.startsWith('http')
       ? path
@@ -569,8 +652,11 @@ class _CategoryDescriptionState extends State<CategoryDescription> {
   /// Round subcategory tiles in a horizontal scroller.
   Widget _buildTileStrip(List<CategoryDescriptionCard> cards) {
     const size = 92.0;
+    // Circle + gap + two lines of label (12px at 1.3) + the list's own
+    // vertical padding. A caption like "TSHIRT & SHIRTS" wraps, so the row has
+    // to be tall enough for two lines or the column overflows.
     return SizedBox(
-      height: size + 52,
+      height: size + 8 + (12 * 1.3 * 2) + 16 + 4,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

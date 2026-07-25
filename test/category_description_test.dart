@@ -215,6 +215,47 @@ const _threeBlocks = '''
 ''';
 
 void main() {
+  group('description links resolve to a category path', () {
+    const host = 'https://testing.locafy.market';
+
+    test('a storefront link loses its store view and .html', () {
+      // What the copy actually contains.
+      expect(storefrontPathOf('/eg-en/kidswear.html', host: host), 'kidswear');
+      expect(
+          storefrontPathOf('/eg-ar/kidswear/boys/t-shirts-shirts.html',
+              host: host),
+          'kidswear/boys/t-shirts-shirts');
+      // A CMS page has no .html and still yields a path — it simply won't
+      // match a category, and the caller opens the page.
+      expect(storefrontPathOf('/eg-en/why-sell-on-locafy-en', host: host),
+          'why-sell-on-locafy-en');
+    });
+
+    test('absolute URLs on our own host resolve the same way', () {
+      expect(
+          storefrontPathOf('$host/eg-en/kidswear/discover/boys-summer.html?utm=x#top',
+              host: host),
+          'kidswear/discover/boys-summer');
+    });
+
+    test('anything not ours is left to open as a link', () {
+      expect(storefrontPathOf('https://instagram.com/locafy', host: host), isNull);
+      expect(storefrontPathOf('mailto:hi@locafy.market', host: host), isNull);
+      expect(storefrontPathOf('tel:+201000000000', host: host), isNull);
+      expect(storefrontPathOf('/eg-en/', host: host), isNull);
+      expect(storefrontPathOf('   ', host: host), isNull);
+    });
+
+    test('a path without a store view prefix is kept whole', () {
+      // Only an xx-yy segment is treated as the store view, so a real
+      // top-level category is not mistaken for one and eaten.
+      expect(storefrontPathOf('/kidswear/boys.html', host: host),
+          'kidswear/boys');
+      expect(storefrontPathOf('/t-shirts-shirts.html', host: host),
+          't-shirts-shirts');
+    });
+  });
+
   group('all three description blocks', () {
     final sections = parseCategoryDescription(_threeBlocks);
 

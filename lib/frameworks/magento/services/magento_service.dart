@@ -957,6 +957,125 @@ class MagentoService extends BaseServices {
     }
   }
 
+  /// Cache for [resolveCategoryUrls], keyed by `lang|url path`. A null value
+  /// records "asked, and this path is not a category" (a CMS page), so a
+  /// second tap doesn't repeat the lookup.
+  final Map<String, CategoryUrlTarget?> _categoryUrlCache = {};
+
+  /// Resolve storefront category paths (`kidswear/boys/t-shirts-shirts`) to
+  /// the categories behind them, so links authored in CMS copy can open the
+  /// app's own category page instead of the website.
+  ///
+  /// One request for the whole set: `GET V1/categories/list` filtered by
+  /// `url_path in (…)`. Paths that match nothing come back absent — the
+  /// caller falls back to opening the page.
+  Future<Map<String, CategoryUrlTarget>> resolveCategoryUrls(
+    Iterable<String> paths, {
+    String? lang,
+    String? preferUnder,
+  }) async {
+    final resolved = <String, CategoryUrlTarget>{};
+    final missing = <String>{};
+    for (final path in paths.where((p) => p.isNotEmpty).toSet()) {
+      final key = '$lang|$path';
+      if (_categoryUrlCache.containsKey(key)) {
+        final hit = _categoryUrlCache[key];
+        if (hit != null) resolved[path] = hit;
+      } else {
+        missing.add(path);
+      }
+    }
+    if (missing.isEmpty) return resolved;
+
+    try {
+      final byPath = await _fetchCategoriesBy('url_path', missing, lang);
+      for (final path in missing.toList()) {
+        final hit = byPath[path];
+        if (hit == null) continue;
+        resolved[path] = hit;
+        _categoryUrlCache['$lang|$path'] = hit;
+        missing.remove(path);
+      }
+
+      // Copy is authored by hand and its ancestors go stale
+      // ("kidswear/kids-3-12-years/boys/t-shirts-shirts" for what is now
+      // "kidswear/boys/t-shirts-shirts"), so fall back to the last segment.
+      // That key is rarely unique — every section has a "pants" — which is
+      // what [preferUnder] settles: a link in a category's own copy points at
+      // that category's subtree.
+      final keys = {for (final path in missing) path.split('/').last: path};
+      if (keys.isNotEmpty) {
+        final byKey = await _fetchCategoriesBy('url_key', keys.keys, lang,
+            preferUnder: preferUnder);
+        keys.forEach((key, path) {
+          final hit = byKey[key];
+          if (hit != null) resolved[path] = hit;
+          _categoryUrlCache['$lang|$path'] = hit;
+        });
+      }
+    } catch (_) {
+      // Leave the unresolved paths out; they open on the web.
+    }
+    return resolved;
+  }
+
+  /// `categories/list` filtered by [field] `in` [values], keyed by that
+  /// field's value.
+  ///
+  /// When a value matches several categories, the one inside [preferUnder]'s
+  /// subtree wins (Magento's `path` is `1/2/192/270/287`, so containment is a
+  /// substring test on the id). Still ambiguous after that means the value is
+  /// left out — opening the page beats opening the wrong category.
+  Future<Map<String, CategoryUrlTarget>> _fetchCategoriesBy(
+    String field,
+    Iterable<String> values,
+    String? lang, {
+    String? preferUnder,
+  }) async {
+    final url = MagentoHelper.buildUrl(domain, 'categories/list', lang)!
+        .replace(queryParameters: {
+      'searchCriteria[filter_groups][0][filters][0][field]': field,
+      'searchCriteria[filter_groups][0][filters][0][value]': values.join(','),
+      'searchCriteria[filter_groups][0][filters][0][condition_type]': 'in',
+      'searchCriteria[pageSize]': '100',
+      'fields': 'items[id,name,custom_attributes]',
+    });
+    final response =
+        await httpCache(url, headers: {'Authorization': 'Bearer $accessToken'});
+    if (response.statusCode != 200) return {};
+
+    final body = convert.jsonDecode(response.body);
+    final items = (body is Map ? body['items'] : null);
+    if (items is! List) return {};
+
+    final candidates = <String, List<Map>>{};
+    for (final item in items.whereType<Map>()) {
+      final value =
+          MagentoHelper.getCustomAttribute(item['custom_attributes'], field);
+      if (value == null || item['id'] == null) continue;
+      candidates.putIfAbsent(value, () => []).add(item);
+    }
+
+    final found = <String, CategoryUrlTarget>{};
+    candidates.forEach((value, matches) {
+      var match = matches.length == 1 ? matches.first : null;
+      if (match == null && preferUnder != null) {
+        final inSubtree = matches.where((item) {
+          final path =
+              MagentoHelper.getCustomAttribute(item['custom_attributes'], 'path');
+          return path != null && path.contains('/$preferUnder/');
+        }).toList();
+        if (inSubtree.length == 1) match = inSubtree.first;
+      }
+      if (match == null) return;
+      found[value] = CategoryUrlTarget(
+        id: match['id'].toString(),
+        name: match['name']?.toString(),
+      );
+    });
+    return found;
+  }
+
   /// A category's own `description` — the SEO box the website renders right
   /// under the category title (e.g. loca-men/clothing/jackets.html). Locafy
   /// authors it on the deepest (L3) categories: a heading, a tagline, body
@@ -3931,6 +4050,15 @@ class MagentoService extends BaseServices {
     }
   }
 
+}
+
+/// The category behind a storefront URL, as resolved by
+/// [MagentoService.resolveCategoryUrls].
+class CategoryUrlTarget {
+  final String id;
+  final String? name;
+
+  const CategoryUrlTarget({required this.id, this.name});
 }
 //We'll email you a link to reset your password.
 //https://stg.locafy.market/eg-en/rest/V1/mstore/brands

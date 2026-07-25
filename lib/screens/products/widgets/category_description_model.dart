@@ -133,6 +133,45 @@ class CategoryDescriptionBlock {
   bool get isQuestion => kind == CategoryDescriptionKind.question;
 }
 
+/// The storefront path a description link points at, stripped down to the
+/// `url_path` a category would be stored under — `/eg-en/kidswear/boys.html`
+/// and `https://locafy.market/eg-ar/kidswear/boys.html?x=1#top` both become
+/// `kidswear/boys`.
+///
+/// Returns null when the link can't be a category on this store: another
+/// host, a mailto/tel, or an empty path. [host] is the store's own origin;
+/// pass null to accept any absolute URL's path.
+String? storefrontPathOf(String href, {String? host}) {
+  final trimmed = href.trim();
+  if (trimmed.isEmpty) return null;
+
+  Uri? uri;
+  try {
+    uri = Uri.parse(trimmed);
+  } catch (_) {
+    return null;
+  }
+  if (uri.hasScheme && uri.scheme != 'http' && uri.scheme != 'https') {
+    return null;
+  }
+  if (uri.host.isNotEmpty && host != null) {
+    final storeHost = Uri.tryParse(host)?.host ?? host;
+    if (uri.host != storeHost) return null;
+  }
+
+  var path = uri.path;
+  if (path.endsWith('.html')) {
+    path = path.substring(0, path.length - '.html'.length);
+  }
+  final segments = path.split('/').where((s) => s.isNotEmpty).toList();
+  // Drop the store-view prefix the website puts on every URL (eg-en, eg-ar).
+  if (segments.isNotEmpty && RegExp(r'^[a-z]{2}-[a-z]{2}$').hasMatch(segments.first)) {
+    segments.removeAt(0);
+  }
+  if (segments.isEmpty) return null;
+  return segments.join('/');
+}
+
 /// Split the stored category HTML into renderable sections.
 ///
 /// PageBuilder keeps some of the authored markup HTML-escaped inside a
