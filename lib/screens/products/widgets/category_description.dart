@@ -1,18 +1,20 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:html/dom.dart' as dom;
-import 'package:html/parser.dart' as html_parser;
 import 'package:provider/provider.dart';
 
+import '../../../common/constants.dart';
 import '../../../common/tools.dart';
 import '../../../frameworks/magento/services/magento_service.dart';
 import '../../../generated/l10n.dart';
 import '../../../models/app_model.dart';
 import '../../../services/index.dart';
-import '../../../services/service_config.dart';
+import '../../../widgets/common/flux_image.dart';
+import 'category_description_model.dart';
 
-/// Palette lifted from the authored SEO box so the app card matches the
-/// website's rendering of the same content.
+export 'category_description_model.dart';
+
+/// Palette lifted from the authored SEO box so the app matches the website's
+/// rendering of the same content.
 const _kAccent = Color(0xFF004AFF);
 const _kAccentLight = Color(0xFF4F7CFF);
 const _kCalloutBg = Color(0xFFF3F6FF);
@@ -20,15 +22,18 @@ const _kBorder = Color(0xFFE5E7EB);
 const _kHeadingText = Color(0xFF111827);
 const _kBodyText = Color(0xFF374151);
 const _kMutedText = Color(0xFF6B7280);
+const _kKicker = Color(0xFF4B5563);
+const _kTileLabel = Color(0xFF0F172A);
 
-/// The category's own description — the SEO box the website renders under the
-/// category title on an L3 page (`category.level == 3`): a heading, a tagline,
-/// and a pill that expands the body copy, links and FAQ.
+/// The category's own description, as the website builds it on an L3 page
+/// (`category.level == 3`): a card of SEO copy, a promo section of image
+/// cards, and a strip of round subcategory tiles — three PageBuilder blocks,
+/// rendered here in the order the catalogue stores them.
 ///
-/// The stored HTML is PageBuilder markup — inline-styled, sometimes escaped
-/// inside a `data-content-type="html"` node, and driven by a `<script>` the
-/// app can't run — so it is reduced to typed blocks here and re-rendered with
-/// Flutter widgets styled to match the website's card.
+/// The markup is inline-styled and class-named per category, and its
+/// expander is driven by a `<script>` the app can't run, so it is parsed into
+/// typed sections (see [parseCategoryDescription]) and re-rendered with
+/// Flutter widgets styled to match.
 class CategoryDescription extends StatefulWidget {
   final String? categoryId;
 
@@ -39,11 +44,11 @@ class CategoryDescription extends StatefulWidget {
 }
 
 class _CategoryDescriptionState extends State<CategoryDescription> {
-  List<CategoryDescriptionBlock> _blocks = const [];
+  List<CategoryDescriptionSection> _sections = const [];
   bool _expanded = false;
 
-  /// One recognizer per distinct link, built with the blocks and disposed with
-  /// the state — building them per frame would leak a recognizer a frame.
+  /// One recognizer per distinct link, built with the sections and disposed
+  /// with the state — building them per frame would leak one a frame.
   final Map<String, TapGestureRecognizer> _linkTaps = {};
 
   /// Guards against a slow response for a category the user has already
@@ -83,7 +88,7 @@ class _CategoryDescriptionState extends State<CategoryDescription> {
     _pendingId = id;
     // A rebuild always follows the call sites (first build / category switch),
     // so reset in place rather than asking for another one.
-    _blocks = const [];
+    _sections = const [];
     _expanded = false;
     _disposeLinkTaps();
 
@@ -93,37 +98,53 @@ class _CategoryDescriptionState extends State<CategoryDescription> {
     final lang = Provider.of<AppModel>(context, listen: false).langCode;
     final html = await api.fetchCategoryDescription(id, lang: lang);
     if (!mounted || _pendingId != id || html == null) return;
-    final blocks = parseCategoryDescription(html);
-    for (final block in blocks) {
-      for (final span in block.spans) {
-        final href = span.href;
-        if (href == null || _linkTaps.containsKey(href)) continue;
-        _linkTaps[href] = TapGestureRecognizer()..onTap = () => _openLink(href);
+    final sections = parseCategoryDescription(html);
+    for (final section in sections) {
+      for (final block in section.blocks) {
+        for (final span in block.spans) {
+          final href = span.href;
+          if (href == null || _linkTaps.containsKey(href)) continue;
+          _linkTaps[href] =
+              TapGestureRecognizer()..onTap = () => _openLink(href);
+        }
       }
     }
-    setState(() => _blocks = blocks);
+    setState(() => _sections = sections);
   }
 
-  /// The copy links to storefront pages (`/eg-en/kidswear.html`,
-  /// `/eg-ar/why-sell-on-locafy-ar`). There is no in-app route for a CMS page
-  /// and no url_path on the category tree to match the rest against, so these
-  /// open the website rather than pretending to be app navigation.
-  void _openLink(String href) {
-    final url = href.startsWith('http')
-        ? href
-        : '${ServerConfig().url}${href.startsWith('/') ? '' : '/'}$href';
-    Tools.launchURL(url);
-  }
+  /// The copy and the cards link to storefront pages
+  /// (`/eg-en/kidswear.html`, `/eg-ar/why-sell-on-locafy-ar`). There is no
+  /// in-app route for a CMS page and no url_path on the category tree to
+  /// match the rest against, so these open the website rather than pretending
+  /// to be app navigation.
+  void _openLink(String href) => Tools.launchURL(_absolute(href));
+
+  String _absolute(String path) => path.startsWith('http')
+      ? path
+      : '$kMediaDomain${path.startsWith('/') ? '' : '/'}$path';
 
   @override
   Widget build(BuildContext context) {
-    if (_blocks.isEmpty) return const SizedBox.shrink();
+    if (_sections.isEmpty) return const SizedBox.shrink();
 
-    final title = _blocks.first;
-    final rest = _blocks.skip(1).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final section in _sections)
+          section.isTextOnly ? _buildCopyCard(section) : _buildMedia(section),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------- copy card
+
+  Widget _buildCopyCard(CategoryDescriptionSection section) {
+    final blocks = section.blocks;
+    final title = blocks.first;
+    final rest = blocks.skip(1).toList();
     // The tagline sits with the title above the toggle, like the website; the
     // body starts after it.
-    final hasTagline = rest.isNotEmpty && rest.first.kind == CategoryDescriptionKind.tagline;
+    final hasTagline = rest.isNotEmpty && rest.first.isTagline;
     final tagline = hasTagline ? rest.first : null;
     final body = hasTagline ? rest.skip(1).toList() : rest;
 
@@ -199,7 +220,8 @@ class _CategoryDescriptionState extends State<CategoryDescription> {
       case CategoryDescriptionKind.title:
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
-          child: _text(block,
+          child: _text(
+              block,
               const TextStyle(
                 fontSize: 22,
                 height: 1.25,
@@ -210,7 +232,8 @@ class _CategoryDescriptionState extends State<CategoryDescription> {
       case CategoryDescriptionKind.tagline:
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
-          child: _text(block,
+          child: _text(
+              block,
               const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -221,7 +244,8 @@ class _CategoryDescriptionState extends State<CategoryDescription> {
       case CategoryDescriptionKind.heading:
         return Padding(
           padding: const EdgeInsets.only(top: 22, bottom: 8),
-          child: _text(block,
+          child: _text(
+              block,
               const TextStyle(
                 fontSize: 18,
                 height: 1.35,
@@ -232,7 +256,8 @@ class _CategoryDescriptionState extends State<CategoryDescription> {
       case CategoryDescriptionKind.question:
         return Padding(
           padding: const EdgeInsets.only(bottom: 4),
-          child: _text(block,
+          child: _text(
+              block,
               const TextStyle(
                 fontSize: 15,
                 height: 1.5,
@@ -305,9 +330,9 @@ class _CategoryDescriptionState extends State<CategoryDescription> {
   /// [plain] keeps the link styling but drops the inline tap target, for a
   /// block that is itself one big link.
   Widget _text(CategoryDescriptionBlock block, TextStyle style,
-      {bool plain = false}) {
+      {bool plain = false, TextAlign? align}) {
     if (block.spans.length == 1 && block.spans.first.href == null) {
-      return Text(block.spans.first.text, style: style);
+      return Text(block.spans.first.text, style: style, textAlign: align);
     }
     return Text.rich(
       TextSpan(
@@ -327,208 +352,285 @@ class _CategoryDescriptionState extends State<CategoryDescription> {
         ],
       ),
       style: style,
+      textAlign: align,
     );
   }
 
-}
+  // ------------------------------------------------------------- media blocks
 
-enum CategoryDescriptionKind { title, tagline, heading, paragraph, question, callout, divider, bullet }
-
-/// A run of text inside a block; [href] marks it as a link.
-class CategoryDescriptionSpan {
-  final String text;
-  final String? href;
-
-  const CategoryDescriptionSpan(this.text, {this.href});
-}
-
-class CategoryDescriptionBlock {
-  final CategoryDescriptionKind kind;
-  final List<CategoryDescriptionSpan> spans;
-
-  const CategoryDescriptionBlock(this.kind, this.spans);
-
-  /// The block's text with the link runs folded back in — used by tests and
-  /// anything that only needs the words.
-  String get text => spans.map((s) => s.text).join();
-
-  bool get isTitle => kind == CategoryDescriptionKind.title;
-  bool get isTagline => kind == CategoryDescriptionKind.tagline;
-  bool get isHeading => kind == CategoryDescriptionKind.heading;
-  bool get isCallout => kind == CategoryDescriptionKind.callout;
-  bool get isDivider => kind == CategoryDescriptionKind.divider;
-  bool get isQuestion => kind == CategoryDescriptionKind.question;
-}
-
-/// Reduce the stored category HTML to renderable blocks.
-///
-/// PageBuilder keeps the authored markup HTML-escaped inside a
-/// `data-content-type="html"` node, so the first parse yields the real markup
-/// as *text* — parse that again to get elements.
-///
-/// The copy lives in a `locafy-seo-box…` wrapper, which is what the website
-/// renders as the category description. An L3 description usually leads with
-/// a PageBuilder tile grid linking its subcategories — the app already has
-/// that strip, and the tile labels would otherwise come through as a list of
-/// shouty one-word paragraphs — so when the wrapper is there, only its
-/// contents are read.
-List<CategoryDescriptionBlock> parseCategoryDescription(String html) {
-  try {
-    final outer = html_parser.parse(html);
-    final inner = outer.body?.text ?? '';
-    final blocks = _collect(outer);
-    if (inner.contains('<') && inner.contains('>')) {
-      final nested = _collect(html_parser.parse(inner));
-      if (nested.isNotEmpty) return nested;
-    }
-    return blocks;
-  } catch (_) {
-    return const [];
-  }
-}
-
-List<CategoryDescriptionBlock> _collect(dom.Document document) {
-  document.querySelectorAll('style, script').forEach((e) => e.remove());
-  // `locafy-seo-box`, `locafy-seo-box-3`, `locafy-seo-box-kboys`, … — the
-  // suffix varies per category, the prefix doesn't.
-  final scope = document.querySelector('[id^="locafy-seo-box"]') ??
-      document.documentElement;
-  final blocks = <CategoryDescriptionBlock>[];
-  if (scope != null) _walk(scope, blocks);
-
-  if (blocks.isEmpty) return blocks;
-  // The first heading is the card title; a text-only <div> ahead of the body
-  // copy is the tagline that sits under it.
-  final first = blocks.first;
-  if (first.kind == CategoryDescriptionKind.heading) {
-    blocks[0] = CategoryDescriptionBlock(CategoryDescriptionKind.title, first.spans);
-  }
-  return blocks;
-}
-
-void _walk(dom.Element element, List<CategoryDescriptionBlock> blocks) {
-  for (final child in element.children) {
-    final tag = child.localName;
-    final style = child.attributes['style'] ?? '';
-    final id = child.id;
-
-    // The website's own expander — this card supplies its own.
-    if (tag == 'button' || id.contains('readmore')) continue;
-
-    switch (tag) {
-      case 'h1':
-      case 'h2':
-      case 'h3':
-      case 'h4':
-        _add(blocks, CategoryDescriptionKind.heading, child);
-        continue;
-      case 'p':
-        _add(blocks, _paragraphKind(child), child);
-        continue;
-      case 'li':
-        _add(blocks, CategoryDescriptionKind.bullet, child);
-        continue;
-      case 'div':
-        // The FAQ block is wrapped in a div with a top rule.
-        if (style.contains('border-top')) {
-          blocks.add(const CategoryDescriptionBlock(CategoryDescriptionKind.divider, []));
-        }
-        // A div with no element children is a text line: the tagline above
-        // the body, or a stray line of copy further down.
-        if (child.children.isEmpty) {
-          final hasBody = blocks.any((b) => b.kind != CategoryDescriptionKind.heading);
-          _add(blocks, hasBody ? CategoryDescriptionKind.paragraph : CategoryDescriptionKind.tagline, child);
-          continue;
-        }
-        _walk(child, blocks);
-        continue;
-      default:
-        _walk(child, blocks);
-    }
-  }
-}
-
-/// A paragraph whose whole content is one boxed link is the "learn more"
-/// callout; one set in bold is an FAQ question.
-CategoryDescriptionKind _paragraphKind(dom.Element p) {
-  final links = p.querySelectorAll('a');
-  if (links.length == 1 &&
-      (links.first.attributes['style'] ?? '').contains('background') &&
-      p.text.trim() == links.first.text.trim()) {
-    return CategoryDescriptionKind.callout;
-  }
-  final weight = RegExp(r'font-weight:\s*(\d+)')
-      .firstMatch(p.attributes['style'] ?? '')
-      ?.group(1);
-  if (weight != null && (int.tryParse(weight) ?? 400) >= 600) {
-    return CategoryDescriptionKind.question;
-  }
-  return CategoryDescriptionKind.paragraph;
-}
-
-void _add(
-    List<CategoryDescriptionBlock> blocks, CategoryDescriptionKind kind, dom.Element element) {
-  final spans = _spans(element);
-  if (spans.isEmpty) return;
-  // A leftover CSS fragment from a truncated PageBuilder style block — not
-  // prose, and not something to show a shopper.
-  final text = spans.map((s) => s.text).join();
-  if (text.contains('{') || text.contains('}')) return;
-  blocks.add(CategoryDescriptionBlock(kind, spans));
-}
-
-/// Flatten an element into text runs, keeping `<a>` runs separate so they can
-/// be styled and tapped.
-List<CategoryDescriptionSpan> _spans(dom.Element element) {
-  final spans = <CategoryDescriptionSpan>[];
-
-  void visit(dom.Node node, String? href) {
-    if (node is dom.Text) {
-      final text = node.text.replaceAll(RegExp(r'\s+'), ' ');
-      if (text.trim().isEmpty && spans.isEmpty) return;
-      spans.add(CategoryDescriptionSpan(text, href: href));
-      return;
-    }
-    if (node is! dom.Element) return;
-    final tag = node.localName;
-    if (tag == 'style' || tag == 'script' || tag == 'button') return;
-    final linkHref = tag == 'a' ? (node.attributes['href'] ?? href) : href;
-    for (final child in node.nodes) {
-      visit(child, linkHref);
-    }
+  Widget _buildMedia(CategoryDescriptionSection section) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 18, bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (section.blocks.isNotEmpty) _buildSectionHead(section.blocks),
+          if (section.isTileStrip)
+            _buildTileStrip(section.cards)
+          else
+            ...section.cards.map(_buildPromoCard),
+        ],
+      ),
+    );
   }
 
-  for (final node in element.nodes) {
-    visit(node, null);
+  /// The centred kicker / headline / subtitle that introduces a promo row.
+  Widget _buildSectionHead(List<CategoryDescriptionBlock> blocks) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          for (final block in blocks)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: block.isHeading
+                  ? _text(
+                      block,
+                      const TextStyle(
+                        fontSize: 24,
+                        height: 1.15,
+                        fontWeight: FontWeight.w800,
+                        color: _kHeadingText,
+                      ),
+                      align: TextAlign.center)
+                  : block.isTagline
+                      ? _text(
+                          block,
+                          const TextStyle(
+                            fontSize: 12,
+                            letterSpacing: 3,
+                            fontWeight: FontWeight.w700,
+                            color: _kKicker,
+                          ),
+                          align: TextAlign.center)
+                      : _text(
+                          block,
+                          const TextStyle(
+                            fontSize: 14,
+                            height: 1.7,
+                            color: _kMutedText,
+                          ),
+                          align: TextAlign.center),
+            ),
+        ],
+      ),
+    );
   }
 
-  // Merge neighbouring runs that share a destination, then trim the ends.
-  final merged = <CategoryDescriptionSpan>[];
-  for (final span in spans) {
-    if (merged.isNotEmpty && merged.last.href == span.href) {
-      merged[merged.length - 1] = CategoryDescriptionSpan(
-        merged.last.text + span.text,
-        href: span.href,
-      );
-    } else {
-      merged.add(span);
-    }
+  /// Full-bleed image card with the copy laid over the bottom — the website's
+  /// seasonal/promo split.
+  Widget _buildPromoCard(CategoryDescriptionCard card) {
+    final href = card.href;
+    final badge = card.badge;
+    final body = card.body;
+    final actions = card.actions;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: href == null ? null : () => _openLink(href),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: SizedBox(
+            height: 380,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (card.image != null)
+                  FluxImage(
+                    imageUrl: _absolute(card.image!),
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                  ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: const [0.0, 0.46, 1.0],
+                      colors: [
+                        Colors.black.withOpacity(0.08),
+                        Colors.black.withOpacity(0.26),
+                        Colors.black.withOpacity(0.72),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned.directional(
+                  textDirection: Directionality.of(context),
+                  start: 18,
+                  end: 18,
+                  bottom: 18,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (badge != null) _buildBadge(badge),
+                      if (card.title != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Text(
+                            card.title!,
+                            style: const TextStyle(
+                              fontSize: 30,
+                              height: 1.04,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      if (body != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Text(
+                            body,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.7,
+                              color: Colors.white.withOpacity(0.88),
+                            ),
+                          ),
+                        ),
+                      if (actions.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            children: [
+                              for (var i = 0; i < actions.length; i++)
+                                _buildPill(actions[i], primary: i == 0),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
-  if (merged.isNotEmpty) {
-    merged[0] = CategoryDescriptionSpan(merged.first.text.trimLeft(),
-        href: merged.first.href);
-    merged[merged.length - 1] = CategoryDescriptionSpan(
-        merged.last.text.trimRight(),
-        href: merged.last.href);
+
+  Widget _buildBadge(String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 26,
+          height: 2,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.72),
+            borderRadius: BorderRadius.circular(99),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Text(
+            text.toUpperCase(),
+            style: TextStyle(
+              fontSize: 11,
+              letterSpacing: 3,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withOpacity(0.86),
+            ),
+          ),
+        ),
+      ],
+    );
   }
-  merged.removeWhere((s) => s.text.isEmpty);
-  // Links carry their own padding in the source ("\n  t-shirts\n"); tighten
-  // them so the sentence reads as one line.
-  for (var i = 0; i < merged.length; i++) {
-    if (merged[i].href != null) {
-      merged[i] =
-          CategoryDescriptionSpan(merged[i].text.trim(), href: merged[i].href);
-    }
+
+  /// The translucent "Shop Now →" button and the chip beside it.
+  Widget _buildPill(String text, {required bool primary}) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: primary ? 18 : 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(primary ? 0.12 : 0.10),
+        border: Border.all(color: Colors.white.withOpacity(primary ? 0.18 : 0.14)),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: primary ? 15 : 13,
+          fontWeight: primary ? FontWeight.w700 : FontWeight.w600,
+          color: Colors.white.withOpacity(primary ? 1 : 0.90),
+        ),
+      ),
+    );
   }
-  return merged.where((s) => s.text.isNotEmpty).toList();
+
+  /// Round subcategory tiles in a horizontal scroller.
+  Widget _buildTileStrip(List<CategoryDescriptionCard> cards) {
+    const size = 92.0;
+    return SizedBox(
+      height: size + 52,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        itemCount: cards.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 18),
+        itemBuilder: (context, index) {
+          final card = cards[index];
+          final href = card.href;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: href == null ? null : () => _openLink(href),
+            child: SizedBox(
+              width: size,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: size,
+                    height: size,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      border: Border.all(color: Colors.white, width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.10),
+                          blurRadius: 28,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: card.image == null
+                          ? const SizedBox()
+                          : FluxImage(
+                              imageUrl: _absolute(card.image!),
+                              fit: BoxFit.cover,
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    (card.title ?? '').toUpperCase(),
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      height: 1.3,
+                      letterSpacing: 0.4,
+                      fontWeight: FontWeight.w800,
+                      color: _kTileLabel,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

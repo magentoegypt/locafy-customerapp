@@ -139,9 +139,137 @@ const _currentTemplate = '''
 </div>
 ''';
 
+/// What an L3 description actually holds (category 270, KIDSWEAR > BOYS):
+/// THREE PageBuilder blocks — the SEO copy box, a seasonal promo split, and a
+/// strip of round subcategory tiles. Class names are per category, so the
+/// parser has to recognise these by shape.
+const _threeBlocks = '''
+<div data-content-type="html" data-element="main">
+  <div id="locafy-seo-box-kboys">
+    <div id="locafy-wrapper-kboys">
+      <h2>Boys' Clothing on Locafy !!!</h2>
+      <div>Practical Wear • School • Playtime</div>
+      <button id="locafy-readmore-kboys">Read More</button>
+      <div id="locafy-content-kboys"><p>Building your child's wardrobe is easier.</p></div>
+    </div>
+  </div>
+</div>
+<div data-content-type="html" data-element="main">
+  <section class="locafy-boys-season-split">
+    <div class="locafy-boys-season-wrap">
+      <div class="locafy-boys-season-head">
+        <div class="locafy-boys-season-kicker">Boys Seasonal Collection</div>
+        <h2 class="locafy-boys-season-heading">Discover Boys Summer &amp; Winter Styles</h2>
+        <p class="locafy-boys-season-subtitle">Shop standout seasonal looks for boys.</p>
+      </div>
+      <div class="locafy-boys-season-grid">
+        <div class="locafy-boys-season-card">
+          <a href="/eg-en/kidswear/discover/boys-summer.html" class="locafy-boys-season-link" aria-label="Shop Boys Summer"></a>
+          <img src="/media/wysiwyg/boyssummer.jpeg" alt="Boys Summer Collection" />
+          <div class="locafy-boys-season-overlay">
+            <div class="locafy-boys-season-content">
+              <div class="locafy-boys-season-badge">New Season</div>
+              <h2 class="locafy-boys-season-title">Boys Summer</h2>
+              <p class="locafy-boys-season-text">Fresh shirts and lightweight styles.</p>
+              <div class="locafy-boys-season-actions">
+                <div class="locafy-boys-season-cta">Shop Now <span>→</span></div>
+                <div class="locafy-boys-season-chip">Light &amp; Breathable</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="locafy-boys-season-card">
+          <a href="/eg-en/kidswear/discover/boys-winter.html" class="locafy-boys-season-link"></a>
+          <img src="/media/wysiwyg/winterboy.jpg" alt="Winter Boys Collection" />
+          <div class="locafy-boys-season-overlay">
+            <div class="locafy-boys-season-content">
+              <div class="locafy-boys-season-badge">Cold Weather Edit</div>
+              <h2 class="locafy-boys-season-title">Winter Boys</h2>
+              <p class="locafy-boys-season-text">Layered looks and cozy essentials.</p>
+              <div class="locafy-boys-season-actions">
+                <div class="locafy-boys-season-cta">Explore Now <span>→</span></div>
+                <div class="locafy-boys-season-chip">Warm &amp; Stylish</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+<div data-content-type="html" data-element="main">
+  <div class="subcategories-section">
+    <div class="subcategories-scroll">
+      <div class="subcategory-scroll-item">
+        <a href="/eg-en/kidswear/discover/outwear-boy.html"><img src="/media/wysiwyg/outwearboy.jpg" alt="Outwear"><p>Outwear</p></a>
+      </div>
+      <div class="subcategory-scroll-item">
+        <a href="/eg-en/kidswear/discover/homewear-boy.html"><img src="/media/wysiwyg/homewearboy.jpg" alt="Homewear"><p>Homewear</p></a>
+      </div>
+      <div class="subcategory-scroll-item">
+        <a href="/eg-en/kidswear/discover/footwear-boy.html"><img src="/media/wysiwyg/footwearboy.jpg" alt="Footwear"><p>Footwear</p></a>
+      </div>
+    </div>
+  </div>
+</div>
+''';
+
 void main() {
+  group('all three description blocks', () {
+    final sections = parseCategoryDescription(_threeBlocks);
+
+    test('every block becomes a section, in the order the store holds them',
+        () {
+      expect(sections, hasLength(3));
+      expect(sections[0].isTextOnly, isTrue);
+      expect(sections[0].blocks.first.text, "Boys' Clothing on Locafy !!!");
+      expect(sections[1].cards, hasLength(2));
+      expect(sections[2].cards, hasLength(3));
+    });
+
+    test('the promo section keeps the heading that introduces it', () {
+      final head = sections[1].blocks.map((b) => b.text).toList();
+
+      expect(head, contains('Boys Seasonal Collection'));
+      expect(head, contains('Discover Boys Summer & Winter Styles'));
+      expect(head, contains('Shop standout seasonal looks for boys.'));
+      // That heading belongs to the promo row, not to the copy card above it.
+      expect(sections[0].blocks.map((b) => b.text),
+          isNot(contains('Discover Boys Summer & Winter Styles')));
+    });
+
+    test('a promo card splits into badge, title, blurb and buttons', () {
+      final summer = sections[1].cards.first;
+
+      expect(summer.image, '/media/wysiwyg/boyssummer.jpeg');
+      expect(summer.href, '/eg-en/kidswear/discover/boys-summer.html');
+      expect(summer.badge, 'New Season');
+      expect(summer.title, 'Boys Summer');
+      expect(summer.body, 'Fresh shirts and lightweight styles.');
+      // "Shop Now <span>→</span>" is one button, not two lines.
+      expect(summer.actions, ['Shop Now →', 'Light & Breathable']);
+    });
+
+    test('image-with-caption cards are the round tile strip', () {
+      expect(sections[1].isTileStrip, isFalse);
+      expect(sections[2].isTileStrip, isTrue);
+
+      final tile = sections[2].cards.first;
+      expect(tile.title, 'Outwear');
+      expect(tile.image, '/media/wysiwyg/outwearboy.jpg');
+      expect(tile.href, '/eg-en/kidswear/discover/outwear-boy.html');
+    });
+
+    test('a description with only copy yields just the one section', () {
+      final sections = parseCategoryDescription(_seoBox);
+
+      expect(sections, hasLength(1));
+      expect(sections.single.cards, isEmpty);
+    });
+  });
+
   group('category description card parts', () {
-    final blocks = parseCategoryDescription(_currentTemplate);
+    final blocks = parseCategoryDescriptionCopy(_currentTemplate);
 
     test('title and tagline lead the card, above the toggle', () {
       expect(blocks.first.isTitle, isTrue);
@@ -188,7 +316,7 @@ void main() {
 
   group('category description parsing', () {
     test('an L3 description starts at the SEO box, not the tile grid', () {
-      final blocks = parseCategoryDescription(_l3TileGridThenSeoBox);
+      final blocks = parseCategoryDescriptionCopy(_l3TileGridThenSeoBox);
 
       // The tile labels are the subcategory strip the page already shows; as
       // paragraphs they would read as a stray list of shouty one-word lines.
@@ -202,7 +330,7 @@ void main() {
     });
 
     test('digs the prose out of the escaped PageBuilder wrapper', () {
-      final blocks = parseCategoryDescription(_seoBox);
+      final blocks = parseCategoryDescriptionCopy(_seoBox);
 
       expect(blocks, isNotEmpty);
       expect(blocks.first.isTitle, isTrue);
@@ -222,7 +350,7 @@ void main() {
     });
 
     test('drops the JS-driven read-more trigger and the script behind it', () {
-      final texts = parseCategoryDescription(_seoBox).map((b) => b.text);
+      final texts = parseCategoryDescriptionCopy(_seoBox).map((b) => b.text);
 
       // The trigger is a <div> the app replaces with its own expander, and the
       // <script> would otherwise render as a wall of code.
@@ -233,11 +361,11 @@ void main() {
     test('a banner-only description renders nothing rather than raw CSS', () {
       // The whole widget hides on an empty result, which is what should happen
       // on the L1/L2 nodes that carry a banner instead of copy.
-      expect(parseCategoryDescription(_bannerOnly), isEmpty);
+      expect(parseCategoryDescriptionCopy(_bannerOnly), isEmpty);
     });
 
     test('plain HTML with no PageBuilder wrapper still parses', () {
-      final blocks = parseCategoryDescription(
+      final blocks = parseCategoryDescriptionCopy(
           '<h2>Sneakers</h2><p>Shop local Egyptian brands.</p>');
 
       expect(blocks.map((b) => b.text).toList(),
@@ -245,9 +373,9 @@ void main() {
     });
 
     test('an empty or broken description is not an error', () {
-      expect(parseCategoryDescription(''), isEmpty);
-      expect(parseCategoryDescription('   '), isEmpty);
-      expect(parseCategoryDescription('<p></p><div></div>'), isEmpty);
+      expect(parseCategoryDescriptionCopy(''), isEmpty);
+      expect(parseCategoryDescriptionCopy('   '), isEmpty);
+      expect(parseCategoryDescriptionCopy('<p></p><div></div>'), isEmpty);
     });
   });
 }
