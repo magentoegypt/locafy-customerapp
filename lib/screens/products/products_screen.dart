@@ -124,6 +124,15 @@ class ProductsScreenState extends State<ProductsScreen>
   String get currentTitle =>
       search != null ? S.of(context).results : _currentTitle;
 
+  /// "202 items" beside the title — empty while the count for *this* category
+  /// is still unknown. The product model is shared between product pages, so
+  /// a number shown before the fetch lands is the previous category's.
+  String productCountLabel(ProductModel model) {
+    final count = model.totalCount ??
+        (model.isFetching ? null : model.productsList?.length);
+    return count == null ? '' : '$count ${S.of(context).items}';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -308,8 +317,10 @@ class ProductsScreenState extends State<ProductsScreen>
                         autoFocusSearch: widget.autoFocusSearch,
                         enableSearchHistory: widget.enableSearchHistory,
                         currentTitle: currentTitle,
-                        productCount:
-                            '${model.totalCount ?? model.productsList?.length ?? 0} ${S.of(context).items}',
+                        // Blank until this category's own count is known —
+                        // "0 items" beside a loading grid reads as an empty
+                        // category.
+                        productCount: productCountLabel(model),
                         builder: layout.isListView
                             ? Consumer<CategoryFilterModel>(
                                 builder: (context, filterModel, _) =>

@@ -145,6 +145,10 @@ class ProductModel with ChangeNotifier {
     this.categoryId = categoryId;
     this.categoryName = categoryName;
     this.listingLocationId = listingLocationId;
+    // The model is shared across product pages, so the previous category's
+    // total would otherwise be read as this one's — a freshly opened
+    // category showing "28 items" under its own name until its fetch lands.
+    totalCount = null;
     if (notify) notifyListeners();
   }
 
@@ -179,6 +183,12 @@ class ProductModel with ChangeNotifier {
       }
 
       isFetching = true;
+
+      // A fresh query has no total yet; only pagination keeps the one it is
+      // already counting through.
+      if (page == 0 || page == 1) {
+        totalCount = null;
+      }
 
       if (categoryId != null) {
         this.categoryId = categoryId;
