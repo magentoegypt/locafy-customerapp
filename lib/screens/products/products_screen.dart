@@ -29,6 +29,7 @@ import 'filter_mixin/products_filter_mixin.dart';
 import 'products_backdrop.dart';
 import 'products_flatview.dart';
 import 'products_mixin.dart';
+import 'widgets/category_description.dart';
 import 'widgets/category_menu.dart';
 
 class ProductsScreen extends StatefulWidget {
@@ -366,6 +367,12 @@ class ProductsScreenState extends State<ProductsScreen>
                                       onFilter(categoryId: categoryId);
                                     },
                                   ),
+                                  // The category's own SEO copy, which the
+                                  // website shows right under the category
+                                  // title. Only the deepest (L3) categories
+                                  // have one, so this collapses to nothing
+                                  // everywhere else.
+                                  CategoryDescription(categoryId: categoryId),
                                   // Only render the header block when there's
                                   // countdown content. Previously this padded
                                   // Column was always present, so its top:25 /

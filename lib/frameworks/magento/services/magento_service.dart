@@ -957,6 +957,43 @@ class MagentoService extends BaseServices {
     }
   }
 
+  /// A category's own `description` — the SEO box the website renders right
+  /// under the category title (e.g. loca-men/clothing/jackets.html). Locafy
+  /// authors it on the deepest (L3) categories: a heading, a tagline, body
+  /// copy and an FAQ. The value is store-view localized, so [lang] decides
+  /// whether the Arabic or the English copy comes back.
+  ///
+  /// Cached on disk like the category tree — the copy changes rarely and the
+  /// page shouldn't wait for it on every re-entry.
+  ///
+  /// Returns null unless the category is a LEAF: a parent node's description
+  /// is a PageBuilder banner / tile list duplicating its subcategories, not
+  /// copy about the products below it. `children_count` on the response is the
+  /// authority here, so this doesn't depend on the category tree being loaded.
+  Future<String?> fetchCategoryDescription(
+    String categoryId, {
+    String? lang,
+  }) async {
+    try {
+      final response = await httpCache(
+        MagentoHelper.buildUrl(domain, 'categories/$categoryId', lang)!,
+        headers: {'Authorization': 'Bearer $accessToken'},
+      );
+      if (response.statusCode != 200) return null;
+      final body = convert.jsonDecode(response.body);
+      if (body is! Map) return null;
+      final attributes = body['custom_attributes'];
+      final childrenCount = int.tryParse(
+          MagentoHelper.getCustomAttribute(attributes, 'children_count') ?? '');
+      if (childrenCount != 0) return null;
+      final description =
+          MagentoHelper.getCustomAttribute(attributes, 'description');
+      return (description?.isNotEmpty ?? false) ? description : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Backend-curated sections for a MAIN category's landing page
   /// (86d3g36q4). `GET mstore/sections/{categoryId}` returns
   /// `[ { "sections": [ { "label": "...", "sub_category": "id" | "id,id,..." }, ... ] } ]`.

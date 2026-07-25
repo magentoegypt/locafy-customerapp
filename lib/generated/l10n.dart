@@ -160,6 +160,26 @@ class S {
     );
   }
 
+  /// `Read more`
+  String get readMore {
+    return Intl.message(
+      'Read more',
+      name: 'readMore',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Read less`
+  String get readLess {
+    return Intl.message(
+      'Read less',
+      name: 'readLess',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Reviews`
   String get readReviews {
     return Intl.message(
