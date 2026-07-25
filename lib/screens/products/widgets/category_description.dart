@@ -170,6 +170,13 @@ class CategoryDescriptionBlock {
 /// as *text* — parse that again to get elements. `<style>`/`<script>` and any
 /// leftover CSS fragment are dropped so a category whose description is a
 /// styled banner renders nothing rather than raw code.
+///
+/// The copy itself lives in a `locafy-seo-box…` wrapper, which is what the
+/// website renders as the category description. An L3 description usually
+/// leads with a PageBuilder tile grid linking its subcategories — the app
+/// already has that strip, and the tile labels would otherwise come through
+/// as a list of shouty one-word paragraphs — so when the wrapper is there,
+/// only its contents are read.
 List<CategoryDescriptionBlock> parseCategoryDescription(String html) {
   try {
     final outer = html_parser.parse(html);
@@ -187,8 +194,12 @@ List<CategoryDescriptionBlock> parseCategoryDescription(String html) {
 
 List<CategoryDescriptionBlock> _collect(dom.Document document) {
   document.querySelectorAll('style, script').forEach((e) => e.remove());
+  // `locafy-seo-box`, `locafy-seo-box-3`, `locafy-seo-box-tshirts-ar`, … —
+  // the suffix varies per category, the prefix doesn't.
+  final dom.Element scope =
+      document.querySelector('[id^="locafy-seo-box"]') ?? document.documentElement!;
   final blocks = <CategoryDescriptionBlock>[];
-  for (final element in document.querySelectorAll('h1, h2, h3, h4, p, li')) {
+  for (final element in scope.querySelectorAll('h1, h2, h3, h4, p, li')) {
     final text = element.text.replaceAll(RegExp(r'\s+'), ' ').trim();
     // A truncated PageBuilder <style> block or stray markup — not prose.
     if (text.isEmpty || text.contains('{') || text.contains('}')) continue;

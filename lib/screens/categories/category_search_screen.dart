@@ -20,6 +20,7 @@ import '../../services/services.dart';
 import '../../widgets/common/tree_view.dart';
 import '../common/app_bar_mixin.dart';
 import '../index.dart' show SearchBox, SubItem, CartScreenArgument;
+import '../products/widgets/category_description.dart';
 import '../products/widgets/category_menu.dart';
 
 class CategorySearch extends StatefulWidget {
@@ -216,7 +217,13 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
                   ),
                 ],
               ),
-              if(widget.selectedId.isNotEmpty)
+              if(widget.selectedId.isNotEmpty)...[
+                // Drilled into a category (its subcategories are listed
+                // below). This is the L3 category screen, so it carries the
+                // same search entry point as the level above — it used to
+                // disappear on the way down — and the category's own
+                // description, like the website shows under the title.
+                _buildSearchPill(),
                 Expanded(
                   child: Align(
                     alignment: Alignment.topCenter,
@@ -226,46 +233,19 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
                       // child: buildResult(),
                       child: SingleChildScrollView(
                         scrollDirection: Axis.vertical,
-                        child: getChildCategoryList(widget.selectedId),),
-                    ),
-                  ),
-                )
-              else if(widget.isComingFrom == "categogies")...[
-                InkWell(
-                  borderRadius: BorderRadius.circular(30),
-                  onTap: () {
-                    // Navigate to next screen when tapped
-                    //Navigator.of(context).pushNamed(RouteList.categorySearch);
-                    // MainTabControlDelegate.getInstance().tabAnimateTo(
-                    //   1,
-                    // );
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CategorySearch(isNavigation: true,isComingFrom: "homeSearch"),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    margin: EdgeInsets.all(15),
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.search, color: Colors.grey),
-                        const SizedBox(width: 10),
-                        Text(
-                          S.of(context).search,
-                          style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                        ),
-                      ],
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            CategoryDescription(categoryId: widget.selectedId),
+                            getChildCategoryList(widget.selectedId),
+                          ],
+                        ),),
                     ),
                   ),
                 ),
+              ]
+              else if(widget.isComingFrom == "categogies")...[
+                _buildSearchPill(),
                 Expanded(child: ProductCategoryMenu(
                   imageLayout: true,
                   enableSearchHistory:false,
@@ -397,6 +377,42 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
                 ]
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Rounded "Search" entry point — tapping it opens the full search screen.
+  /// Shown both on the category list and after drilling into a category.
+  Widget _buildSearchPill() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(30),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                CategorySearch(isNavigation: true, isComingFrom: "homeSearch"),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.all(15),
+        height: 50,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(30),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            const Icon(Icons.search, color: Colors.grey),
+            const SizedBox(width: 10),
+            Text(
+              S.of(context).search,
+              style: TextStyle(color: Colors.grey[600], fontSize: 16),
+            ),
+          ],
         ),
       ),
     );

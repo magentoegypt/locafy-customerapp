@@ -964,12 +964,8 @@ class MagentoService extends BaseServices {
   /// whether the Arabic or the English copy comes back.
   ///
   /// Cached on disk like the category tree — the copy changes rarely and the
-  /// page shouldn't wait for it on every re-entry.
-  ///
-  /// Returns null unless the category is a LEAF: a parent node's description
-  /// is a PageBuilder banner / tile list duplicating its subcategories, not
-  /// copy about the products below it. `children_count` on the response is the
-  /// authority here, so this doesn't depend on the category tree being loaded.
+  /// page shouldn't wait for it on every re-entry. Returns null when the
+  /// category has no description.
   Future<String?> fetchCategoryDescription(
     String categoryId, {
     String? lang,
@@ -982,12 +978,8 @@ class MagentoService extends BaseServices {
       if (response.statusCode != 200) return null;
       final body = convert.jsonDecode(response.body);
       if (body is! Map) return null;
-      final attributes = body['custom_attributes'];
-      final childrenCount = int.tryParse(
-          MagentoHelper.getCustomAttribute(attributes, 'children_count') ?? '');
-      if (childrenCount != 0) return null;
-      final description =
-          MagentoHelper.getCustomAttribute(attributes, 'description');
+      final description = MagentoHelper.getCustomAttribute(
+          body['custom_attributes'], 'description');
       return (description?.isNotEmpty ?? false) ? description : null;
     } catch (_) {
       return null;

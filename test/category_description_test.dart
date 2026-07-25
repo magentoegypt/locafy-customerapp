@@ -73,8 +73,48 @@ const _bannerOnly = r'''
 </div>
 ''';
 
+/// The L3 shape (category 144, Menswear > Clothing): a PageBuilder tile grid
+/// linking the subcategories, and only *then* the SEO box. Stored unescaped
+/// here — both variants occur in the catalogue.
+const _l3TileGridThenSeoBox = '''
+<div data-content-type="html" data-element="main">
+  <style>#html-body [data-pb-style=JKQKXKN]{display:none}</style>
+  <div class="category-tiles">
+    <a href="/eg-en/loca-men/clothing/t-shirt.html"><img src="/media/a.jpg" alt="" /><p>SHIRTS & T-SHIRTS</p></a>
+    <a href="/eg-en/loca-men/clothing/pants.html"><img src="/media/b.jpg" alt="" /><p>PANTS</p></a>
+    <a href="/eg-en/loca-men/clothing/jeans.html"><img src="/media/c.jpg" alt="" /><p>JEANS</p></a>
+  </div>
+</div>
+<div data-content-type="html" data-element="main">
+  <div id="locafy-seo-box" style="max-width:900px;">
+    <div id="locafy-wrapper" style="background:#ececec;">
+      <h2 style="font-size:20px;">Menswear Clothing on Locafy</h2>
+      <div style="font-size:14px;">Quality • Local Brands • Everyday Essentials</div>
+      <div id="locafy-readmore">Read More</div>
+      <div id="locafy-content" style="display:none;">
+        <p>Locafy brings together everyday menswear from trusted Egyptian brands.</p>
+      </div>
+    </div>
+  </div>
+</div>
+''';
+
 void main() {
   group('category description parsing', () {
+    test('an L3 description starts at the SEO box, not the tile grid', () {
+      final blocks = parseCategoryDescription(_l3TileGridThenSeoBox);
+
+      // The tile labels are the subcategory strip the page already shows; as
+      // paragraphs they would read as a stray list of shouty one-word lines.
+      expect(blocks.map((b) => b.text), isNot(contains('PANTS')));
+      expect(blocks.map((b) => b.text), isNot(contains('SHIRTS & T-SHIRTS')));
+
+      expect(blocks.first.tag, 'h2');
+      expect(blocks.first.text, 'Menswear Clothing on Locafy');
+      expect(blocks.last.text,
+          'Locafy brings together everyday menswear from trusted Egyptian brands.');
+    });
+
     test('digs the prose out of the escaped PageBuilder wrapper', () {
       final blocks = parseCategoryDescription(_seoBox);
 
