@@ -48,6 +48,11 @@ class ProductsScreen extends StatefulWidget {
   /// Null for Search and direct category taps, which keep the child strip.
   final String? siblingParentId;
 
+  /// Hides the category description card. Set when the page is opened from
+  /// the Search screen's category menu, where browsing straight to the
+  /// products is the point.
+  final bool hideDescription;
+
   const ProductsScreen({
     super.key,
     this.products,
@@ -58,6 +63,7 @@ class ProductsScreen extends StatefulWidget {
     this.routeName,
     this.autoFocusSearch = true,
     this.siblingParentId,
+    this.hideDescription = false,
   });
 
   @override
@@ -369,10 +375,11 @@ class ProductsScreenState extends State<ProductsScreen>
                                   ),
                                   // The category's own SEO copy, which the
                                   // website shows right under the category
-                                  // title. Only the deepest (L3) categories
-                                  // have one, so this collapses to nothing
-                                  // everywhere else.
-                                  CategoryDescription(categoryId: categoryId),
+                                  // title. Collapses to nothing on a category
+                                  // that has none, and is skipped outright
+                                  // when the page came from the Search menu.
+                                  if (!widget.hideDescription)
+                                    CategoryDescription(categoryId: categoryId),
                                   // Only render the header block when there's
                                   // countdown content. Previously this padded
                                   // Column was always present, so its top:25 /

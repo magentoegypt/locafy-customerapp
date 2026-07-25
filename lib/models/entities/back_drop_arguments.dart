@@ -18,6 +18,13 @@ class BackDropArguments {
   /// direct category taps, which keep the child-category strip / flat list
   /// (ClickUp 86d3g3mea item 1).
   final String? siblingParentId;
+
+  /// Suppresses the category's description card on the products page. Set by
+  /// the Search screen: browsing the category menu there is navigation, so a
+  /// category opened from it goes straight to the products. Reached any other
+  /// way — a home banner, a landing page, a link in the copy — the page shows
+  /// the description like the website does.
+  final bool hideDescription;
   Duration countdownDuration = Duration.zero;
 
   BackDropArguments({
@@ -32,6 +39,7 @@ class BackDropArguments {
     this.searchText,
     this.showCountdown = false,
     this.siblingParentId,
+    this.hideDescription = false,
     this.countdownDuration = Duration.zero,
   });
 }

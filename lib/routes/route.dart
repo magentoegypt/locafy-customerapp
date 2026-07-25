@@ -162,6 +162,7 @@ class Routes {
                   listingLocation: listingLocationId,
                   countdownDuration: countdownDuration,
                   siblingParentId: arguments.siblingParentId,
+                  hideDescription: arguments.hideDescription,
                 );
               }
 
@@ -175,6 +176,7 @@ class Routes {
                 countdownDuration: countdownDuration,
                 listingLocation: listingLocationId,
                 siblingParentId: arguments.siblingParentId,
+                hideDescription: arguments.hideDescription,
               );
             } catch (e, trace) {
               printError(e, trace);

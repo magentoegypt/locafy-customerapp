@@ -20,7 +20,6 @@ import '../../services/services.dart';
 import '../../widgets/common/tree_view.dart';
 import '../common/app_bar_mixin.dart';
 import '../index.dart' show SearchBox, SubItem, CartScreenArgument;
-import '../products/widgets/category_description.dart';
 import '../products/widgets/category_menu.dart';
 
 class CategorySearch extends StatefulWidget {
@@ -219,10 +218,10 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
               ),
               if(widget.selectedId.isNotEmpty)...[
                 // Drilled into a category (its subcategories are listed
-                // below). This is the L3 category screen, so it carries the
-                // same search entry point as the level above — it used to
-                // disappear on the way down — and the category's own
-                // description, like the website shows under the title.
+                // below). This menu stays a plain list of subcategories — the
+                // category's description belongs on its product page, not
+                // here — but it keeps the search entry point from the level
+                // above, which used to disappear on the way down.
                 _buildSearchPill(),
                 Expanded(
                   child: Align(
@@ -233,13 +232,7 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
                       // child: buildResult(),
                       child: SingleChildScrollView(
                         scrollDirection: Axis.vertical,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            CategoryDescription(categoryId: widget.selectedId),
-                            getChildCategoryList(widget.selectedId),
-                          ],
-                        ),),
+                        child: getChildCategoryList(widget.selectedId),),
                     ),
                   ),
                 ),
@@ -258,6 +251,7 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
                         arguments: BackDropArguments(
                           cateId:categoryId,
                           cateName: categoryName,
+                          hideDescription: true,
                         ),
                       );
                     });
@@ -457,6 +451,7 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
       arguments: BackDropArguments(
         cateId: category.id,
         cateName: category.name,
+        hideDescription: true,
       ),
     );
   }
@@ -548,6 +543,7 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
                   arguments: BackDropArguments(
                     cateId: item.category.id,
                     cateName: item.category.name,
+                    hideDescription: true,
                   ),
                 );
               }
@@ -598,6 +594,7 @@ class _CategorySearchState<T> extends State<CategorySearch> with AppBarMixin {
                 arguments: BackDropArguments(
                   cateId: cate.id,
                   cateName: cate.name,
+                  hideDescription: true,
                 ),
               );
             }
@@ -629,6 +626,7 @@ class _SearchCategoryItem extends StatelessWidget {
         arguments: BackDropArguments(
           cateId: category.id,
           cateName: category.name,
+          hideDescription: true,
         ),
       ),
       child: Container(
