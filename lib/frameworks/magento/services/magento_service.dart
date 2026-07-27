@@ -3788,8 +3788,13 @@ class MagentoService extends BaseServices {
           }
         }
       }else if (response.statusCode == 401) {
-        _onLogout();
-        throw Exception('Token expired. Please logout then login again');
+        // This endpoint authenticates with the *integration* token, not the
+        // customer's — a 401 here means the backend integration is missing the
+        // MageNative (`magenative_oauth`) resource, which says nothing about
+        // the customer's session. Logging the customer out on it signed people
+        // straight back out of a successful login, because the login screen
+        // refreshes the wishlist as soon as login succeeds.
+        throw Exception(S.current.somethingWrong);
       }else{
         if (body['message'] != null) {
           throw Exception(body['message']);
@@ -3804,7 +3809,7 @@ class MagentoService extends BaseServices {
     }
   }
 
-  //calling for cart list 
+  //calling for cart list
   @override
   Future<List<Product>?>? getShoppingList(CartModel model,
       {bool replace = false}) async {
@@ -3916,8 +3921,8 @@ class MagentoService extends BaseServices {
         }
         return "";
       }else if (response.statusCode == 401) {
-        _onLogout();
-        return 'Token expired. Please logout then login again';
+        // Integration-token 401 — not the customer's session. See getWishList.
+        return S.current.somethingWrong;
       }else{
         if (body['message'] != null) {
           return body['message'];
@@ -3953,8 +3958,8 @@ class MagentoService extends BaseServices {
       if (response.statusCode == 200) {
          return "";
       }else if (response.statusCode == 401) {
-        _onLogout();
-        return 'Token expired. Please logout then login again';
+        // Integration-token 401 — not the customer's session. See getWishList.
+        return S.current.somethingWrong;
       }else{
         if (body['message'] != null) {
           return body['message'];
