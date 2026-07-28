@@ -508,6 +508,18 @@ extension TabBarMenuExtention on MainTabsState {
     if (currentTabIndex == index) {
       navigators[tabController.index]!.currentState!.popUntil((r) => r.isFirst);
     }
+    // Reload the wishlist whenever its footer icon is tapped. Tapping the tab
+    // that is already open doesn't flip TickerMode, so the wishlist screen's
+    // own on-becoming-visible refresh never runs in that case. Firing on every
+    // tap also covers a tab reached through MainTabControlDelegate, which
+    // leaves currentTabIndex stale; the model drops a fetch that is already in
+    // flight, so switching to the tab still only makes one request.
+    if (index is int &&
+        index < tabData.length &&
+        tabData[index].layout == RouteList.wishlist) {
+      Provider.of<ProductWishListModel>(context, listen: false)
+          .getLocalWishlist();
+    }
     currentTabIndex = index;
 
     _emitChildTabName();

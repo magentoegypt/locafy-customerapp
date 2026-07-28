@@ -14,6 +14,8 @@ class ProductWishListModel extends ChangeNotifier {
 
   List<Product> products = [];
 
+  bool _isFetching = false;
+
   List<Product> getWishList() => products;
 
   int get wishlistCount => products.length;
@@ -66,7 +68,13 @@ class ProductWishListModel extends ChangeNotifier {
   /// request (a flaky network, or the backend 401 that the integration token
   /// currently gets) emptied the wishlist and nothing refilled it until the
   /// next login.
+  ///
+  /// A fetch that is already running wins: opening the wishlist tab triggers
+  /// this from both the tab tap and the screen becoming visible, and that
+  /// should still be one request.
   Future<void> getLocalWishlist() async {
+    if (_isFetching) return;
+    _isFetching = true;
     try {
       // Nothing to fetch for a signed-out customer, and whatever is in memory
       // belongs to whoever was signed in before — drop it.
@@ -82,6 +90,8 @@ class ProductWishListModel extends ChangeNotifier {
       }
     } catch (err, trace) {
       printError(err, trace, '[ProductWishListModel] getLocalWishlist error');
+    } finally {
+      _isFetching = false;
     }
   }
 
