@@ -59,12 +59,25 @@ class ProductWishListModel extends ChangeNotifier {
     }
   }
 
+  /// Pull the wishlist from the server. Safe to call on every wishlist open:
+  /// the current list is replaced only after a successful fetch.
+  ///
+  /// It used to clear first, which also wiped the saved copy — so a failed
+  /// request (a flaky network, or the backend 401 that the integration token
+  /// currently gets) emptied the wishlist and nothing refilled it until the
+  /// next login.
   Future<void> getLocalWishlist() async {
     try {
-      await clearWishList();
+      // Nothing to fetch for a signed-out customer, and whatever is in memory
+      // belongs to whoever was signed in before — drop it.
+      if (!UserBox().isLoggedIn) {
+        await clearWishList();
+        return;
+      }
       final wishList = await Services().api.getWishList();//UserBox().wishList;
       if (wishList != null) {
         products = wishList;
+        await saveWishlist(products);
         notifyListeners();
       }
     } catch (err, trace) {

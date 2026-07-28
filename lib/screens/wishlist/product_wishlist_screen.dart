@@ -36,10 +36,34 @@ class _WishListState extends State<ProductWishListScreen> with AppBarMixin {
     return imageWidth + fixedSlots * textScale + chrome;
   }
 
+  bool _wasVisible = false;
+
   @override
   void initState() {
     super.initState();
     screenScrollController = _scrollController;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Re-fetch every time the wishlist becomes visible, so items added or
+    // removed on the website / another device show up without restarting the
+    // app. initState is not enough: the wishlist is a bottom-nav tab, and
+    // maintab keeps a visited tab mounted (an Offstage stack), so it only ever
+    // runs on the first visit. That same stack wraps each tab in
+    // `TickerMode(enabled: active)`, so depending on TickerMode here gives a
+    // reliable "this tab is now on screen" signal — and it is simply true for
+    // the pushed-route case.
+    final isVisible = TickerMode.valuesOf(context).enabled;
+    if (isVisible && !_wasVisible) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Provider.of<ProductWishListModel>(context, listen: false)
+            .getLocalWishlist();
+      });
+    }
+    _wasVisible = isVisible;
   }
 
   @override

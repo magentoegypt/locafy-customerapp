@@ -257,6 +257,9 @@ class AppState extends State<App>
     }
     cartModel.model.clearAddress();
     cartModel.model.clearCart(false);
+    // The wishlist is per-customer, so it must not survive the session — it
+    // used to linger on screen until the next successful fetch.
+    _wishlist.clearWishList();
     _user.logout();
     if (isRequiredLogin || Services().widget.isRequiredLogin) {
       NavigateTools.navigateToLogin(
