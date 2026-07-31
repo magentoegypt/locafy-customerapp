@@ -46,6 +46,15 @@ class ProductModel with ChangeNotifier {
   List<ProductVariation> variations = [];
   List<String> variationsFeatureImages = [];
   ProductVariation? selectedVariation;
+
+  /// Variant options ({attribute_code: option value id}) the detail screen
+  /// should open with already chosen — set when a configurable is opened from
+  /// the shopping cart, so the parent PDP shows the variant the customer
+  /// already picked instead of the default one (86d3g2npa #7). Consumed by the
+  /// variant widgets once the variations have loaded, then left in place for
+  /// the lifetime of the screen and cleared with the variations.
+  Map<String?, String?>? preselectedVariantOptions;
+
   List<Product>? lstGroupedProduct;
   String? cardPriceRange;
   String detailPriceRange = '';
@@ -59,6 +68,7 @@ class ProductModel with ChangeNotifier {
     variations.clear();
     variationsFeatureImages = [];
     selectedVariation = null;
+    preselectedVariantOptions = null;
     notifyListeners();
   }
 

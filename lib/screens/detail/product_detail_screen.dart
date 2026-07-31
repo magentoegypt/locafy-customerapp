@@ -8,7 +8,7 @@ import '../../common/constants.dart';
 import '../../common/tools/flash.dart';
 import '../../generated/l10n.dart';
 import '../../models/index.dart'
-    show AppModel, Product, ProductWishListModel, UserModel;
+    show AppModel, Product, ProductModel, ProductWishListModel, UserModel;
 import '../../routes/flux_navigate.dart';
 import '../../services/index.dart';
 import '../base_screen.dart';
@@ -19,11 +19,25 @@ export 'themes/full_size_image_type.dart';
 export 'themes/half_size_image_type.dart';
 export 'themes/simple_type.dart';
 
+/// Route arguments for [ProductDetailScreen] when the caller needs to open the
+/// page with a variant already chosen — currently only the shopping cart, which
+/// opens the *parent* configurable with the line's selected options applied
+/// (86d3g2npa #7). Passing a bare [Product] still works and is the common case.
+class ProductDetailArguments {
+  final Product product;
+  final Map<String?, String?>? preselectedOptions;
+
+  const ProductDetailArguments(this.product, {this.preselectedOptions});
+}
+
 class ProductDetailScreen extends StatefulWidget {
   final Product? product;
   final String? id;
 
-  const ProductDetailScreen({this.product, this.id});
+  /// {attribute_code: option value id} to start the variant picker on.
+  final Map<String?, String?>? preselectedOptions;
+
+  const ProductDetailScreen({this.product, this.id, this.preselectedOptions});
 
   static void showMenu(BuildContext context, Product? product,
       {bool isLoading = false}) {
@@ -145,6 +159,13 @@ class _ProductDetailPageState extends BaseScreen<ProductDetailScreen>
   @override
   void initState() {
     screenScrollController = _scrollController;
+    // Hand the selection to the variant widgets before they load; they apply it
+    // once the variations arrive.
+    final preselected = widget.preselectedOptions;
+    if (preselected != null && preselected.isNotEmpty) {
+      Provider.of<ProductModel>(context, listen: false)
+          .preselectedVariantOptions = Map.of(preselected);
+    }
     WidgetsBinding.instance.endOfFrame.then((_) async {
       if (mounted) {
         await _loadProduct();

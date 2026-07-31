@@ -801,7 +801,12 @@ abstract class BaseServices {
     return null;
   }
 
-  Future<String?>? addUpdateItemsToCart(Product product,String sku,int qty,bool isUpdate) async {
+  /// [options] are the selected configurable super attributes, keyed by
+  /// attribute code. When present, [sku] is the *parent* sku and [fallbackSku]
+  /// is the child sku to fall back to if the options cannot be resolved.
+  Future<String?>? addUpdateItemsToCart(
+      Product product, String sku, int qty, bool isUpdate,
+      {Map? options, String? fallbackSku}) async {
     return null;
   }
 

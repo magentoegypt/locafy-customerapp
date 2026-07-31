@@ -186,8 +186,16 @@ class CartModelMagento
     } else {
       message = 'Currently we only have $stockQuantity of this product';
     }
-    String? skuString = variation != null ? variation.sku : product.sku;
-    final messageBody = await Services().api.addUpdateItemsToCart(product,skuString ?? "", quantity, true);
+    // A qty update targets an existing line by item_id, but Magento still
+    // revalidates the payload — send the same sku/options shape the line was
+    // created with so a configurable is not silently rewritten to a simple.
+    final options = productsMetaDataInCart[key];
+    final hasOptions = options is Map && options.isNotEmpty;
+    String? skuString =
+        (variation != null && !hasOptions) ? variation.sku : product.sku;
+    final messageBody = await Services().api.addUpdateItemsToCart(
+        product, skuString ?? "", quantity, true,
+        options: hasOptions ? options : null, fallbackSku: variation?.sku);
     if((messageBody ?? "").isNotEmpty){
       return (messageBody ?? "");
     }
@@ -202,13 +210,24 @@ class CartModelMagento
   // Removes an item from the cart.
   void removeItemFromCart(String key) {
     if (productsInCart.containsKey(key)) {
-      shoppingList.forEach((element){
-        if(element.id == key || element.sku == key){
-          Services().api.deleteItemInCart(element.itemID ?? "");
-        }
-      });
+      // Resolve the server line through the cart key itself. Matching on
+      // `element.sku == key` broke as soon as configurable lines became
+      // "parentSku|attr=value" keys — the DELETE never fired and the item came
+      // back on the next sync (86d3g2npa #3/#4).
+      final itemId = item[key]?.itemID;
+      if (itemId != null && itemId.isNotEmpty) {
+        Services().api.deleteItemInCart(itemId);
+      } else {
+        shoppingList.forEach((element) {
+          if (element.id == key || element.sku == key) {
+            Services().api.deleteItemInCart(element.itemID ?? "");
+          }
+        });
+      }
       productsInCart.remove(key);
+      item.remove(key);
       productVariationInCart.remove(key);
+      productsMetaDataInCart.remove(key);
       productSkuInCart.remove(key);
       removeProductLocal(key);
     }
@@ -227,6 +246,7 @@ class CartModelMagento
     productsInCart.clear();
     item.clear();
     productVariationInCart.clear();
+    productsMetaDataInCart.clear();
     productSkuInCart.clear();
     shippingMethod = null;
     paymentMethod = null;
@@ -289,13 +309,20 @@ class CartModelMagento
     if (product!.type == 'configurable' && variation == null) {
       return S.of(context).loading;
     }
-    String? skuString = variation != null ? variation.sku : product.sku;
+    // Configurables go to Magento as the *parent* sku plus the selected super
+    // attributes (see addUpdateItemsToCart) — posting the child sku made
+    // Magento store a plain simple-product line, which is why the variant was
+    // invisible on the website and the other app, and why opening the line
+    // landed on the child instead of the parent (86d3g2npa #7/#9).
+    final hasOptions = options != null && options.isNotEmpty;
+    String? skuString =
+        (variation != null && !hasOptions) ? variation.sku : product.sku;
     if(!isFromApi) {
       // Re-adding a SKU that is already in the server cart must be sent as an
       // update (absolute qty): POSTing the same SKU again makes Magento sum
       // the quantities server-side and reject the request with "The requested
       // qty is not available" whenever stock can't cover the sum.
-      final cartKey = skuString ?? product.id.toString();
+      final cartKey = buildCartItemKey(product, variation, options);
       final existingQty = productsInCart[cartKey] ?? 0;
       final existingItemId = item[cartKey]?.itemID ?? product.itemID;
 
@@ -312,34 +339,29 @@ class CartModelMagento
       if (existingQty > 0 && (existingItemId?.isNotEmpty ?? false)) {
         product.itemID = existingItemId;
         messagebody = await Services().api.addUpdateItemsToCart(
-            product, skuString ?? "", existingQty + (quantity ?? 1), true);
+            product, skuString ?? "", existingQty + (quantity ?? 1), true,
+            options: options, fallbackSku: variation?.sku);
       } else {
         messagebody = await Services().api.addUpdateItemsToCart(
-            product, skuString ?? "", quantity!, false);
+            product, skuString ?? "", quantity!, false,
+            options: options, fallbackSku: variation?.sku);
       }
       if (!(messagebody ?? "").isEmpty) {
         return messagebody ?? "";
       }
     }
+    // `options` was being dropped here, so productsMetaDataInCart stayed null
+    // even for a locally added configurable and the cart row could not resolve
+    // its "Size: …" label from the parent's attributes.
     var message = super.addProductToCart(
         product: product,
         quantity: quantity,
         variation: variation,
+        options: options,
         isSaveLocal: isSaveLocal,
         notify: notifyListeners);
 
-    var key = product.id.toString();
-    if (variation != null) {
-      if (variation.id != null) {
-        key += '-${variation.id}';
-      }
-      for (var attribute in variation.attributes) {
-        if (attribute.id == null) {
-          key += '-${attribute.name!}${attribute.option!}';
-        }
-      }
-    }
-    productSkuInCart[skuString ?? key] = variation != null ? variation.sku : product.sku;
+    productSkuInCart[buildCartItemKey(product, variation, options)] = skuString;
     return message;
   }
 

@@ -3231,12 +3231,15 @@ class MagentoService extends BaseServices {
   }
 
   @override
-  Future<String> addUpdateItemsToCart(Product product,String sku,int qty,bool isUpdate) async {
+  Future<String> addUpdateItemsToCart(
+      Product product, String sku, int qty, bool isUpdate,
+      {Map? options, String? fallbackSku}) async {
     if(!UserBox().isLoggedIn){
       return "";
     }
     try {
-      var res = await _sendCartItemRequest(product, sku, qty, isUpdate);
+      var res = await _sendCartItemRequest(product, sku, qty, isUpdate,
+          options: options, fallbackSku: fallbackSku);
       var body = convert.jsonDecode(res.body);
       var message = body is Map ? MagentoHelper.getErrorMessage(body) : null;
 
@@ -3280,7 +3283,8 @@ class MagentoService extends BaseServices {
             if (created.isNotEmpty) {
               return created;
             }
-            res = await _sendCartItemRequest(product, sku, qty, false);
+            res = await _sendCartItemRequest(product, sku, qty, false,
+                options: options, fallbackSku: fallbackSku);
             body = convert.jsonDecode(res.body);
             message = body is Map ? MagentoHelper.getErrorMessage(body) : null;
           } catch (_) {
@@ -3305,15 +3309,86 @@ class MagentoService extends BaseServices {
     }
   }
 
+  /// Resolves the selected super attributes into the shape Magento expects on
+  /// a configurable cart line:
+  /// `[{option_id: <numeric attribute_id>, option_value: <option value id>}]`.
+  ///
+  /// [options] is keyed by attribute *code* (that is what the variant picker
+  /// produces), but the REST payload wants the numeric attribute id. The id is
+  /// only exposed on `extension_attributes.configurable_product_options`, whose
+  /// entries carry no attribute code — so each entry is matched by the option
+  /// value it owns (`values[].value_index`, globally unique in Magento), and
+  /// falls back to matching its `label` against the parent's attributes.
+  ///
+  /// Returns null when nothing could be resolved, so the caller degrades to the
+  /// plain sku payload instead of failing the add.
+  List<Map<String, dynamic>>? _buildConfigurableItemOptions(
+      Product product, Map? options) {
+    if (options == null || options.isEmpty) return null;
+    final groups = product.configurable_product_options;
+    if (groups is! List || groups.isEmpty) return null;
+
+    // attribute code -> label, used for the fallback match below.
+    final labelByCode = <String, String>{};
+    for (final a in product.attributes ?? const <ProductAttribute>[]) {
+      if (a.name != null && a.label != null) {
+        labelByCode[a.name!.toLowerCase()] = a.label!.toLowerCase();
+      }
+    }
+
+    final result = <Map<String, dynamic>>[];
+    options.forEach((code, value) {
+      if (code == null || value == null) return;
+      final valueId = '$value';
+      String? attributeId;
+      for (final group in groups) {
+        if (group is! Map) continue;
+        final values = group['values'];
+        if (values is List &&
+            values.any((v) => v is Map && '${v['value_index']}' == valueId)) {
+          attributeId = group['attribute_id']?.toString();
+          break;
+        }
+        final label = group['label']?.toString().toLowerCase();
+        if (label != null && label == labelByCode['$code'.toLowerCase()]) {
+          attributeId = group['attribute_id']?.toString();
+        }
+      }
+      if (attributeId != null && attributeId.isNotEmpty) {
+        result.add({'option_id': attributeId, 'option_value': valueId});
+      }
+    });
+    return result.isEmpty ? null : result;
+  }
+
   Future<dynamic> _sendCartItemRequest(
-      Product product, String sku, int qty, bool isUpdate) {
+      Product product, String sku, int qty, bool isUpdate,
+      {Map? options, String? fallbackSku}) {
     final params = <String, dynamic>{};
     params['qty'] = qty;
     if (isUpdate) {
       params['item_id'] = product.itemID;
     }
-    params['sku'] = sku;
     params['quote_id'] = quoteId;
+    // Without this a configurable is stored as a plain simple-product line, so
+    // the website and the other app show no selected variant and the line
+    // cannot be traced back to its parent (86d3g2npa #7/#9).
+    final configurableOptions = _buildConfigurableItemOptions(product, options);
+    if (configurableOptions != null) {
+      params['sku'] = sku;
+      params['product_option'] = {
+        'extension_attributes': {
+          'configurable_item_options': configurableOptions,
+        }
+      };
+    } else {
+      // Could not resolve the numeric attribute ids — the parent sku alone
+      // would be rejected ("You need to choose options for your item"), so
+      // degrade to the child sku, which is the behaviour before this change.
+      params['sku'] = (options != null && options.isNotEmpty)
+          ? (fallbackSku?.isNotEmpty ?? false ? fallbackSku! : sku)
+          : sku;
+    }
     final url = isUpdate
         ? MagentoHelper.buildUrl(domain, 'carts/mine/items/${product.itemID}')!
         : MagentoHelper.buildUrl(domain, 'carts/mine/items')!;
@@ -3854,8 +3929,49 @@ class MagentoService extends BaseServices {
           model.productsMetaDataInCart.clear();
         }
         model.shoppingList = list;
+        // Resolve each configurable line's selected super attributes against
+        // the parent's attributes *before* adding it, so the cart key matches
+        // the one a local add produces and the "Size: 12 Years" label renders
+        // even for a cart filled on the website or the other app (86d3g2npa #9).
+        final resolvedOptions = <Product, Map<String, String>>{};
+        for (final product in list) {
+          final raw = product.configurableItemOptions;
+          if (raw == null || raw.isEmpty || (product.sku?.isEmpty ?? true)) {
+            continue;
+          }
+          try {
+            final attributes =
+                await getConfigurableproductsAttributes(product.sku!);
+            if (attributes.isEmpty) continue;
+            product.attributes = attributes;
+            final selections = <String, String>{};
+            for (final entry in raw) {
+              final valueId = entry['option_value']?.toString();
+              if (valueId == null) continue;
+              // Option value ids are globally unique in Magento, so the owning
+              // attribute can be found by membership alone — the options/list
+              // endpoint does not expose attribute_id to match option_id on.
+              for (final attr in attributes) {
+                final hasValue = (attr.options ?? const []).any(
+                    (o) => o is Map && '${o['value']}' == valueId);
+                if (hasValue && attr.name != null) {
+                  selections[attr.name!] = valueId;
+                  break;
+                }
+              }
+            }
+            if (selections.isNotEmpty) resolvedOptions[product] = selections;
+          } catch (_) {
+            // A failed attribute lookup just means no variant label for this
+            // line; never let it blank the whole cart.
+          }
+        }
         list.forEach((product){
-          model.addProductToCart(product: product,quantity: product.shopQuantity,isFromApi: true);
+          model.addProductToCart(
+              product: product,
+              quantity: product.shopQuantity,
+              options: resolvedOptions[product],
+              isFromApi: true);
         });
         if (replace) {
           for (final key in model.productsInCart.keys) {

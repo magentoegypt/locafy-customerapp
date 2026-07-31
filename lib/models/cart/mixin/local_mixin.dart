@@ -122,8 +122,7 @@ mixin LocalMixin on CartMixin {
     isSaveLocal = true,
   }) async {
     var message = '';
-    String? skuString = variation != null ? variation.sku : product.sku;
-    var key = skuString ?? product.id.toString();
+    var key = buildCartItemKey(product, variation, options);
     // if (variation != null) {
     //   if (variation.id != null) {
     //     key += '-${variation.id}';

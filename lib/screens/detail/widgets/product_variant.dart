@@ -84,6 +84,17 @@ class _StateProductVariant extends State<ProductVariant> {
               notify: false,
             );
             productVariation = variation;
+            // Opened from a cart line: start on the variant that line was
+            // added with instead of the default one (86d3g2npa #7).
+            final preselected = model.preselectedVariantOptions;
+            if (preselected != null && preselected.isNotEmpty) {
+              this.mapAttribute!.addAll(preselected);
+              final matched = services.widget
+                  .updateVariation(variations, this.mapAttribute!);
+              if (matched != null) {
+                productVariation = matched;
+              }
+            }
             // Don't overwrite a selection the user already made (the bottom
             // bar runs this same flow and may finish later).
             if (model.selectedVariation == null) {

@@ -90,8 +90,16 @@ class ShoppingCartRow extends StatelessWidget with ActionButtonMixin {
                       if (onRemove != null)
                         Expanded(
                           child: GestureDetector(
-                            onTap: () =>
-                                onTapProduct(context, product: product!),
+                            // The line stores the *parent* configurable, so
+                            // this opens the parent PDP; carry the selected
+                            // options over so it opens on that variant rather
+                            // than the default one (86d3g2npa #7).
+                            onTap: () => onTapProduct(
+                              context,
+                              product: product!,
+                              preselectedOptions: options?.map((k, v) =>
+                                  MapEntry(k?.toString(), v?.toString())),
+                            ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
@@ -191,11 +199,18 @@ class ShoppingCartRow extends StatelessWidget with ActionButtonMixin {
                                               .widget
                                               .renderOptionsCartItem(
                                                   product!, options),
-                                        if (variation != null)
+                                        // A cart line rebuilt from the server
+                                        // has no variation object — only the
+                                        // selected options — so gating on
+                                        // `variation != null` hid the variant
+                                        // for carts filled on another platform
+                                        // (86d3g2npa #9).
+                                        if (variation != null ||
+                                            (options?.isNotEmpty ?? false))
                                           Services()
                                               .widget
                                               .renderVariantCartItem(context,
-                                                  product, variation!, options),
+                                                  product, variation, options),
                                         if (addonsOptions?.isNotEmpty ?? false)
                                           Services()
                                               .widget

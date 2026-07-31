@@ -2,6 +2,34 @@ import '../../../common/config.dart';
 import '../../../common/tools.dart';
 import '../../index.dart';
 
+/// The in-memory key a cart line is stored under, in every map on [CartMixin].
+///
+/// Configurable products are sent to Magento as the *parent* sku plus the
+/// selected super attributes (`configurable_item_options`), which is what makes
+/// the selection visible on the website and the other app (86d3g2npa #9). That
+/// means a cart rebuilt from `carts/mine/items` only ever sees the parent sku
+/// and has no variation object, so two variants of the same parent would
+/// collapse into a single row if the sku alone were the key.
+///
+/// Keying configurables on `parentSku|attr=value,...` instead keeps the locally
+/// added line and the server-rebuilt line under the *same* key, so a refresh
+/// preserves the variation/attribute context rather than duplicating rows.
+/// Lines with no selected options keep the plain sku key they have always had.
+String buildCartItemKey(
+    Product product, ProductVariation? variation, Map? options) {
+  if (options != null && options.isNotEmpty) {
+    final parts = options.entries
+        .where((e) => e.key != null && e.value != null)
+        .map((e) => '${e.key}=${e.value}')
+        .toList()
+      ..sort();
+    if (parts.isNotEmpty) {
+      return '${product.sku ?? product.id}|${parts.join(',')}';
+    }
+  }
+  return variation?.sku ?? product.sku ?? product.id.toString();
+}
+
 mixin CartMixin {
   User? user;
   double taxesTotal = 0;

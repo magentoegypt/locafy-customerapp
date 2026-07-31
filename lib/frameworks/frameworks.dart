@@ -88,7 +88,7 @@ abstract class BaseFrameworks {
   Widget renderVariantCartItem(
     BuildContext context,
     Product? product,
-    ProductVariation variation,
+    ProductVariation? variation,
     Map? options,
   ) =>
       const SizedBox();
@@ -183,6 +183,15 @@ abstract class BaseFrameworks {
     required Map<String?, String?> mapAttribute,
     required Function onFinish,
   }) {}
+
+  /// Resolves the variation matching a whole attribute selection at once.
+  /// Overridden by [ProductVariantMixin]; declared here so callers can apply a
+  /// preselection (e.g. reopening a cart line) without knowing the framework.
+  ProductVariation? updateVariation(
+    List<ProductVariation> variations,
+    Map<String?, String?> mapAttribute,
+  ) =>
+      null;
 
   List<Widget> getProductAttributeWidget(
     String lang,

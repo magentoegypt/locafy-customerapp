@@ -80,6 +80,14 @@ class Product {
   List<ConfigurableSwatch>? swatches;
   dynamic configurable_product_options;
   dynamic configurable_product_links;
+
+  /// Selected configurable options carried on a *cart line* coming back from
+  /// the server, as Magento returns them under
+  /// `product_option.extension_attributes.configurable_item_options`:
+  /// `[{option_id: <attribute_id>, option_value: <option value id>}]`.
+  /// Only ever populated by [Product.fromShopJson] — this is what lets a cart
+  /// filled on another platform still show "Size: 12 Years" (86d3g2npa #9).
+  List<Map<String, dynamic>>? configurableItemOptions;
   int? shopQuantity;
   int? stockQuantity;
   int? minQuantity;
@@ -1668,6 +1676,25 @@ class Product {
     imageFeature = images.isNotEmpty ? images[0] : null;
     attributes = [];
     configurable_product_options = [];
+    // A configurable line carries its selected super attributes here. Keep the
+    // raw {option_id, option_value} pairs; the service layer resolves them to
+    // attribute codes/labels against the parent's attributes.
+    final rawOptions = productJson['product_option']?['extension_attributes']
+        ?['configurable_item_options'];
+    if (rawOptions is List && rawOptions.isNotEmpty) {
+      final parsed = rawOptions
+          .whereType<Map>()
+          .map((e) => <String, dynamic>{
+                'option_id': e['option_id']?.toString(),
+                'option_value': e['option_value']?.toString(),
+              })
+          .where((e) => e['option_value'] != null)
+          .toList();
+      // Stay null rather than empty so callers only have to test for null.
+      if (parsed.isNotEmpty) {
+        configurableItemOptions = parsed;
+      }
+    }
   }
 
   ///----FLUXSTORE LISTING----////

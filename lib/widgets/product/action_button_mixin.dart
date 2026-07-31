@@ -11,6 +11,7 @@ import '../../models/entities/product_variation.dart';
 import '../../models/recent_product_model.dart';
 import '../../modules/dynamic_layout/config/product_config.dart';
 import '../../routes/flux_navigate.dart';
+import '../../screens/detail/product_detail_screen.dart';
 import '../../services/index.dart';
 
 mixin ActionButtonMixin {
@@ -19,6 +20,11 @@ mixin ActionButtonMixin {
     bool isFromSearchScreen = false,
     required Product product,
     ProductConfig? config,
+
+    /// {attribute_code: option value id} to open the variant picker on. Set by
+    /// the cart so a configurable line reopens on the variant that was added
+    /// (86d3g2npa #7).
+    Map<String?, String?>? preselectedOptions,
   }) {
     if (product.imageFeature == '') return;
 
@@ -26,10 +32,15 @@ mixin ActionButtonMixin {
 
     Provider.of<RecentModel>(context, listen: false).addRecentProduct(product);
 
+    final arguments = (preselectedOptions?.isNotEmpty ?? false)
+        ? ProductDetailArguments(product,
+            preselectedOptions: preselectedOptions)
+        : product;
+
     if (isFromSearchScreen) {
       Navigator.of(context).pushNamed(
         RouteList.productDetail,
-        arguments: product,
+        arguments: arguments,
       );
       return;
     }
@@ -40,7 +51,7 @@ mixin ActionButtonMixin {
     // );
     Navigator.of(context).pushNamed(
       RouteList.productDetail,
-      arguments: product,
+      arguments: arguments,
     );
   }
 

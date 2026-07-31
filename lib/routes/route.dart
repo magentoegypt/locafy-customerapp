@@ -194,6 +194,20 @@ class Routes {
       case RouteList.productDetail:
         Product? product;
 
+        /// Opened from the cart: the parent product plus the options the cart
+        /// line was added with, so the variant picker starts on that variant.
+        if (settings.arguments is ProductDetailArguments) {
+          final args = settings.arguments as ProductDetailArguments;
+          return _buildRoute(
+            settings,
+            (_) => ProductDetailScreen(
+              product: args.product,
+              id: args.product.id,
+              preselectedOptions: args.preselectedOptions,
+            ),
+          );
+        }
+
         /// The product detail is product
         if (settings.arguments is Product) {
           product = settings.arguments as Product?;
