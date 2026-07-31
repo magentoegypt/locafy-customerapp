@@ -154,6 +154,11 @@ class _FullSizeLayoutState extends State<FullSizeLayout>
                           ),
                         Expanded(
                           child: SingleChildScrollView(
+                            // Lets a short product page still overscroll, so
+                            // the RefreshIndicator in ProductDetailScreen
+                            // fires. The title scroller above stays
+                            // NeverScrollable on purpose.
+                            physics: const AlwaysScrollableScrollPhysics(),
                             child: ProductCommonInfo(
                               product: widget.product,
                               isLoading: widget.isLoading,

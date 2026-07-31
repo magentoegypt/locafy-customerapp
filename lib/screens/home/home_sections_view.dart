@@ -83,12 +83,22 @@ class HomeSectionsView extends StatefulWidget {
 }
 
 class _HomeSectionsViewState extends State<HomeSectionsView> {
-  late final Future<List<HomeSection>> _future;
+  // Not `late final`: pull-to-refresh re-issues the request, so the future has
+  // to be replaceable.
+  Future<List<HomeSection>>? _future;
 
   @override
   void initState() {
     super.initState();
     _future = _fetchSections(context);
+  }
+
+  /// Pull-to-refresh: re-fetch the homepage sections so banners, categories
+  /// and featured brands changed in admin appear without restarting the app.
+  Future<void> _reload() async {
+    final future = _fetchSections(context);
+    setState(() => _future = future);
+    await future;
   }
 
   @override
@@ -104,7 +114,13 @@ class _HomeSectionsViewState extends State<HomeSectionsView> {
           final banners = sections.where((s) => s.isBanner).toList();
           final categories = sections.where((s) => s.isCategory).toList();
           final brands = sections.where((s) => s.isBrands).toList();
-          return SingleChildScrollView(
+          return RefreshIndicator(
+            onRefresh: _reload,
+            child: SingleChildScrollView(
+            // The home sections rarely fill the viewport on a tall device (and
+            // never do while the shimmer is up), so without this the pull is
+            // not reported and the indicator never fires.
+            physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               children: [
                 // Only the Login/Register buttons scroll away — the logo +
@@ -131,6 +147,7 @@ class _HomeSectionsViewState extends State<HomeSectionsView> {
                   const SizedBox(height: 24),
                 ],
               ],
+            ),
             ),
           );
         },

@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart'
         CupertinoAlertDialog,
         CupertinoDialogAction,
         CupertinoIcons,
+        CupertinoSliverRefreshControl,
         showCupertinoDialog;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
@@ -31,6 +32,7 @@ import '../../modules/dynamic_layout/config/app_config.dart';
 import '../../routes/flux_navigate.dart';
 import '../../services/index.dart';
 import '../../widgets/common/index.dart';
+import '../../widgets/common/refresh_scroll_physics.dart';
 import '../../widgets/general/index.dart';
 import '../checkout/choose_address_screen.dart';
 import '../checkout/widgets/shipping_address.dart';
@@ -179,6 +181,20 @@ class SettingScreenState extends State<SettingScreen>
         Provider.of<NotificationModel>(context, listen: false).checkGranted();
       }
     });
+  }
+
+  /// Pull-to-refresh: re-read the account from the server (name, email and
+  /// phone can change on the website) and re-check the OS notification
+  /// permission, which is what [initState] does on open.
+  Future<void> _reload() async {
+    final userModel = Provider.of<UserModel>(context, listen: false);
+    if (userModel.loggedIn) {
+      await userModel.getUser();
+    }
+    if (mounted) {
+      await Provider.of<NotificationModel>(context, listen: false)
+          .checkGranted();
+    }
   }
 
   @override
@@ -1076,8 +1092,12 @@ class SettingScreenState extends State<SettingScreen>
         // ),
         child: CustomScrollView(
           controller: _scrollController,
+          // RefreshScrollPhysics so the pull is reported even when the account
+          // list is shorter than the viewport.
+          physics: const RefreshScrollPhysics(),
           slivers: <Widget>[
             //appBarWidget,
+            CupertinoSliverRefreshControl(onRefresh: _reload),
             SliverToBoxAdapter(
                 child: SafeArea(child: (user == null || items.isNotEmpty) ? HeaderSettingScreen(items: items,onBack: () {
                   items.clear();

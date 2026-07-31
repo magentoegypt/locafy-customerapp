@@ -257,6 +257,9 @@ class _SimpleLayoutState extends State<SimpleLayout>
                 ),
                 body: SingleChildScrollView(
                   controller: _scrollController,
+                  // Lets a short product page still overscroll, so the
+                  // RefreshIndicator in ProductDetailScreen fires.
+                  physics: const AlwaysScrollableScrollPhysics(),
                   child: Column(
                     children: <Widget>[
                       // SliverAppBar(

@@ -86,7 +86,9 @@ class OrderHistoryDetailModel extends ChangeNotifier {
     });
   }
 
-  void getOrderNote() async {
+  // Returns a Future so pull-to-refresh can await the fetch and keep the
+  // spinner up until the notes actually arrive.
+  Future<void> getOrderNote() async {
     _orderNoteLoading = true;
     notifyListeners();
     _listOrderNote =

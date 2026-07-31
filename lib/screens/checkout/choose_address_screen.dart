@@ -18,8 +18,7 @@ class ChooseAddressScreen extends StatefulWidget {
   final void Function(Address?) callback;
   final bool isFromAddrssHistory;
 
-  const ChooseAddressScreen(this.callback,this.isFromAddrssHistory);
-
+  const ChooseAddressScreen(this.callback, this.isFromAddrssHistory);
 
   @override
   BaseScreen<ChooseAddressScreen> createState() => _StateChooseAddress();
@@ -62,6 +61,17 @@ class _StateChooseAddress extends BaseScreen<ChooseAddressScreen> {
         });
       }
     }
+  }
+
+  /// Pull-to-refresh. Goes to the network deliberately rather than re-reading
+  /// UserBox: an address edited on the website must show up here. Mirrors the
+  /// logged-in branch of [afterFirstLayout].
+  Future<void> _reload() async {
+    final loggedIn = Provider.of<UserModel>(context, listen: false).loggedIn;
+    if (!loggedIn) return;
+    await getUserInfo();
+    getDataFromLocal();
+    await getDataFromNetwork();
   }
 
   Future<void> getUserInfo() async {
@@ -140,8 +150,7 @@ class _StateChooseAddress extends BaseScreen<ChooseAddressScreen> {
   String? _localizeGovernorate(String? state) {
     if (state == null || state.trim().isEmpty) return state;
     final saved = state.trim().toLowerCase();
-    final isArabic =
-        (SettingsBox().languageCode ?? 'en').toLowerCase() == 'ar';
+    final isArabic = (SettingsBox().languageCode ?? 'en').toLowerCase() == 'ar';
     for (final g in _governorates) {
       if ((g.name ?? '').trim().toLowerCase() == saved ||
           (g.regionName ?? '').trim().toLowerCase() == saved) {
@@ -331,147 +340,158 @@ class _StateChooseAddress extends BaseScreen<ChooseAddressScreen> {
           child: const Icon(Icons.arrow_back_ios),
         ),
         actions: <Widget>[
-          if(widget.isFromAddrssHistory)
-          IconButton(
-            icon: Icon(
-              Icons.add,
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      ShippingAddress(isFromAddrssHistory: true,isFromCheckout: false,),
-                ),
-              ).then((_) async {
-                getDataFromLocal();
-              });
-            },
-          )
+          if (widget.isFromAddrssHistory)
+            IconButton(
+              icon: Icon(
+                Icons.add,
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ShippingAddress(
+                      isFromAddrssHistory: true,
+                      isFromCheckout: false,
+                    ),
+                  ),
+                ).then((_) async {
+                  getDataFromLocal();
+                });
+              },
+            )
         ],
         title: Text(
           S.of(context).selectAddress,
           style: TextStyle(color: Theme.of(context).colorScheme.secondary),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: <Widget>[
-            // Only in the checkout picker. On Magento, User.billing and
-            // User.shipping are both built from the SAME default address
-            // (user.dart:191-199), so these two cards render identical content
-            // under two different headings — and the saved-address list below
-            // shows that same address a third time. In the address book that is
-            // pure duplication; in checkout they stay, as the quick way to pick
-            // the default without scrolling.
-            if (!widget.isFromAddrssHistory) ...[
-              _renderBillingAddress(),
-              _renderShippingAddress(),
-            ],
-            Column(
-              children: [
-                if (listAddress.isEmpty && !isLoading)
-                  Center(
-                    child: Image.asset(
-                      kEmptySearch,
-                      width: 120,
-                      height: 120,
+      body: RefreshIndicator(
+        onRefresh: _reload,
+        child: SingleChildScrollView(
+          // An account with one or two addresses does not fill the viewport, so
+          // without this the pull gesture is never reported.
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: <Widget>[
+              // Only in the checkout picker. On Magento, User.billing and
+              // User.shipping are both built from the SAME default address
+              // (user.dart:191-199), so these two cards render identical content
+              // under two different headings — and the saved-address list below
+              // shows that same address a third time. In the address book that is
+              // pure duplication; in checkout they stay, as the quick way to pick
+              // the default without scrolling.
+              if (!widget.isFromAddrssHistory) ...[
+                _renderBillingAddress(),
+                _renderShippingAddress(),
+              ],
+              Column(
+                children: [
+                  if (listAddress.isEmpty && !isLoading)
+                    Center(
+                      child: Image.asset(
+                        kEmptySearch,
+                        width: 120,
+                        height: 120,
+                      ),
                     ),
-                  ),
-                if (listAddress.isEmpty && isLoading)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: kLoadingWidget(context),
-                  ),
-                ...List.generate(listAddress.length, (index) {
-                  return Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
-                      child: GestureDetector(
-                        onTap: () {
-                          if(widget.isFromAddrssHistory){
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ShippingAddress(address: listAddress[index],isFromAddrssHistory: true,isFromCheckout: false),
+                  if (listAddress.isEmpty && isLoading)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: kLoadingWidget(context),
+                    ),
+                  ...List.generate(listAddress.length, (index) {
+                    return Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(3),
+                        child: GestureDetector(
+                          onTap: () {
+                            if (widget.isFromAddrssHistory) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ShippingAddress(
+                                      address: listAddress[index],
+                                      isFromAddrssHistory: true,
+                                      isFromCheckout: false),
+                                ),
+                              ).then((_) async {
+                                getDataFromLocal();
+                              });
+                            } else {
+                              Provider.of<CartModel>(context, listen: false)
+                                  .setAddress(listAddress[index]);
+                              Navigator.of(context).pop();
+                              widget.callback(listAddress[index]);
+                            }
+                          },
+                          child: Container(
+                            width: MediaQuery.of(context).size.width,
+                            decoration: BoxDecoration(
+                                color: Theme.of(context).primaryColorLight),
+                            child: Padding(
+                              padding: const EdgeInsets.all(10),
+                              child: Row(
+                                children: <Widget>[
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10),
+                                    child: Icon(
+                                      Icons.home,
+                                      color: Theme.of(context).primaryColor,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: convertToCard(
+                                        context, listAddress[index]!),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () async {
+                                      // saveUserInfo throws on any API failure —
+                                      // an expired customer token surfaces as
+                                      // "The consumer isn't authorized to access
+                                      // self". Uncaught, that was an unhandled
+                                      // exception and the row just stayed put
+                                      // with no explanation.
+                                      try {
+                                        await Services().api.saveUserInfo(
+                                            listAddress[index]!, true);
+                                        getDataFromLocal();
+                                      } catch (e) {
+                                        if (!mounted) return;
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(e
+                                                .toString()
+                                                .replaceFirst(
+                                                    RegExp(r'^Exception:\s*'),
+                                                    '')),
+                                          ),
+                                        );
+                                      }
+                                      // removeData(index);
+                                    },
+                                    child: Icon(
+                                      Icons.delete,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                ],
                               ),
-                            ).then((_) async {
-                              getDataFromLocal();
-                            });
-                          }else{
-                            Provider.of<CartModel>(context, listen: false)
-                                .setAddress(listAddress[index]);
-                            Navigator.of(context).pop();
-                            widget.callback(listAddress[index]);
-                          }
-                        },
-                        child: Container(
-                          width: MediaQuery.of(context).size.width,
-                          decoration: BoxDecoration(
-                              color: Theme.of(context).primaryColorLight),
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Row(
-                              children: <Widget>[
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10),
-                                  child: Icon(
-                                    Icons.home,
-                                    color: Theme.of(context).primaryColor,
-                                    size: 18,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: convertToCard(
-                                      context, listAddress[index]!),
-                                ),
-                                GestureDetector(
-                                  onTap: () async {
-                                    // saveUserInfo throws on any API failure —
-                                    // an expired customer token surfaces as
-                                    // "The consumer isn't authorized to access
-                                    // self". Uncaught, that was an unhandled
-                                    // exception and the row just stayed put
-                                    // with no explanation.
-                                    try {
-                                      await Services()
-                                          .api
-                                          .saveUserInfo(listAddress[index]!, true);
-                                      getDataFromLocal();
-                                    } catch (e) {
-                                      if (!mounted) return;
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(e
-                                              .toString()
-                                              .replaceFirst(
-                                                  RegExp(r'^Exception:\s*'), '')),
-                                        ),
-                                      );
-                                    }
-                                   // removeData(index);
-                                  },
-                                  child: Icon(
-                                    Icons.delete,
-                                    color: Theme.of(context).primaryColor,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                              ],
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                })
-              ],
-            ),
-          ],
+                    );
+                  })
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

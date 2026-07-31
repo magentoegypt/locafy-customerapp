@@ -100,6 +100,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> with AppBarMixin {
       return RefreshIndicator(
         onRefresh: _load,
         child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
             SizedBox(height: MediaQuery.of(context).size.height * 0.3),
             Center(
@@ -115,6 +116,9 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> with AppBarMixin {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.builder(
+        // Without this a short list (fewer reviews than fill the screen) never
+        // reports an overscroll, so the RefreshIndicator above never fires.
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(12.0),
         itemCount: _reviews!.length,
         itemBuilder: (context, index) => _reviewCard(_reviews![index]),

@@ -40,8 +40,7 @@ class _ReturnDetailScreenState extends BaseScreen<ReturnDetailScreen> {
 
   void _snack(String msg) {
     if (!mounted || msg.isEmpty) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   String _money(num? value, String? currencyCode) => value == null
@@ -157,8 +156,15 @@ class _ReturnDetailScreenState extends BaseScreen<ReturnDetailScreen> {
   }
 
   bool _canMessage(ReturnRequest r) {
-    const closed = ['canceled', 'cancelled', 'refunded', 'completed', 'closed',
-        'rejected', 'resolved'];
+    const closed = [
+      'canceled',
+      'cancelled',
+      'refunded',
+      'completed',
+      'closed',
+      'rejected',
+      'resolved'
+    ];
     return !closed.contains((r.status ?? '').toLowerCase());
   }
 
@@ -203,17 +209,23 @@ class _ReturnDetailScreenState extends BaseScreen<ReturnDetailScreen> {
               if (model.actionInProgress)
                 const LinearProgressIndicator(minHeight: 2),
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  children: [
-                    _header(context, r),
-                    if (r.needsCustomerReply) _replyBanner(context),
-                    _itemsCard(context, r, currencyCode),
-                    _summaryCard(context, r, currencyCode),
-                    if (r.tracks.isNotEmpty) _tracksCard(context, r),
-                    if (r.timeline.isNotEmpty) _timelineCard(context, r),
-                    _actionButtons(context, r),
-                  ],
+                child: RefreshIndicator(
+                  onRefresh: model.load,
+                  child: ListView(
+                    // Needed so a short return (one item, no tracks/timeline)
+                    // still overscrolls far enough to trigger the indicator.
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(bottom: 16),
+                    children: [
+                      _header(context, r),
+                      if (r.needsCustomerReply) _replyBanner(context),
+                      _itemsCard(context, r, currencyCode),
+                      _summaryCard(context, r, currencyCode),
+                      if (r.tracks.isNotEmpty) _tracksCard(context, r),
+                      if (r.timeline.isNotEmpty) _timelineCard(context, r),
+                      _actionButtons(context, r),
+                    ],
+                  ),
                 ),
               ),
               if (_canMessage(r)) _commentBar(context, r),
@@ -332,7 +344,8 @@ class _ReturnDetailScreenState extends BaseScreen<ReturnDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(item.name ?? item.sku ?? '',
-                            style: const TextStyle(fontWeight: FontWeight.w600)),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
                         const SizedBox(height: 2),
                         Text(
                           [
@@ -342,8 +355,7 @@ class _ReturnDetailScreenState extends BaseScreen<ReturnDetailScreen> {
                           ].join('   ·   '),
                           style: TextStyle(
                             fontSize: 12,
-                            color:
-                                theme.colorScheme.secondary.withOpacity(0.7),
+                            color: theme.colorScheme.secondary.withOpacity(0.7),
                           ),
                         ),
                       ],
@@ -407,9 +419,10 @@ class _ReturnDetailScreenState extends BaseScreen<ReturnDetailScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      [t.carrierTitle ?? t.carrierCode ?? '', t.trackNumber ?? '']
-                          .where((s) => s.isNotEmpty)
-                          .join('  ·  '),
+                      [
+                        t.carrierTitle ?? t.carrierCode ?? '',
+                        t.trackNumber ?? ''
+                      ].where((s) => s.isNotEmpty).join('  ·  '),
                     ),
                   ),
                 ],
@@ -459,7 +472,8 @@ class _ReturnDetailScreenState extends BaseScreen<ReturnDetailScreen> {
                               style: const TextStyle(fontSize: 13)),
                         if (e.createdAt != null)
                           Text(
-                            DateFormat('d MMM yyyy, HH:mm').format(e.createdAt!),
+                            DateFormat('d MMM yyyy, HH:mm')
+                                .format(e.createdAt!),
                             style: TextStyle(
                               fontSize: 11,
                               color:
@@ -561,7 +575,8 @@ class _ReturnDetailScreenState extends BaseScreen<ReturnDetailScreen> {
           ),
           Expanded(
             child: Text(value,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
           ),
         ],
       ),

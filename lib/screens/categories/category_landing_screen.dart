@@ -53,7 +53,10 @@ class CategoryLandingScreen extends StatefulWidget {
 
 class _CategoryLandingScreenState extends State<CategoryLandingScreen> {
   late final String _lang;
-  late final Future<List<Map<String, dynamic>>> _sectionsFuture;
+
+  // Not `late final`: pull-to-refresh re-issues the request, so the future has
+  // to be replaceable.
+  Future<List<Map<String, dynamic>>>? _sectionsFuture;
 
   /// Section widgets are built once from the resolved sections; caching them
   /// keeps each section's product fetch from re-firing on every rebuild.
@@ -67,6 +70,21 @@ class _CategoryLandingScreenState extends State<CategoryLandingScreen> {
     _sectionsFuture = api is MagentoService
         ? api.fetchMainCategorySections(widget.categoryId, lang: _lang)
         : Future.value(const <Map<String, dynamic>>[]);
+  }
+
+  /// Pull-to-refresh. Clears the cached [_children] as well as the sections
+  /// future — otherwise the section widgets (and their per-section product
+  /// fetches) would be reused and nothing would actually re-load.
+  Future<void> _reload() async {
+    final api = Services().api;
+    final future = api is MagentoService
+        ? api.fetchMainCategorySections(widget.categoryId, lang: _lang)
+        : Future.value(const <Map<String, dynamic>>[]);
+    setState(() {
+      _children = null;
+      _sectionsFuture = future;
+    });
+    await future;
   }
 
   Category? _categoryById(String id) =>
@@ -214,7 +232,12 @@ class _CategoryLandingScreenState extends State<CategoryLandingScreen> {
           final children = _children ??= sections.isNotEmpty
               ? _sectionWidgets(sections)
               : _fallbackWidgets();
-          return ListView(
+          return RefreshIndicator(
+            onRefresh: _reload,
+            child: ListView(
+            // A landing page with only one or two sections does not fill the
+            // viewport, so without this the pull is never reported.
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 24),
             children: [
               ...children,
@@ -222,6 +245,7 @@ class _CategoryLandingScreenState extends State<CategoryLandingScreen> {
               // (from mstore/homepage-sections).
               const LandingBrandsSection(),
             ],
+            ),
           );
         },
       ),

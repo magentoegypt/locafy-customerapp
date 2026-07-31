@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:inspireui/extensions.dart';
 import 'package:intl/intl.dart';
@@ -15,6 +16,7 @@ import '../../menu/index.dart' show MainTabControlDelegate;
 import '../../models/index.dart' show AppModel, CartModel, Product, UserModel;
 import '../../routes/flux_navigate.dart';
 import '../../services/index.dart';
+import '../../widgets/common/refresh_scroll_physics.dart';
 import '../../widgets/product/cart_item.dart';
 import '../../widgets/product/product_bottom_sheet.dart';
 import '../checkout/checkout_screen.dart';
@@ -137,6 +139,15 @@ class _MyCartState extends State<MyCart> with SingleTickerProviderStateMixin {
         validateCartStockAndQuantities(cartModel);
       }
     });
+  }
+
+  /// Pull-to-refresh: same pair [initState] runs on open, so a cart changed on
+  /// the website or another device is picked up without leaving the screen.
+  Future<void> _reload() async {
+    await cartModel.reloadCartFromServer();
+    if (mounted) {
+      validateCartStockAndQuantities(cartModel);
+    }
   }
 
   void _loginWithResult(BuildContext context) async {
@@ -283,6 +294,9 @@ class _MyCartState extends State<MyCart> with SingleTickerProviderStateMixin {
               ),
               Expanded(child: CustomScrollView(
                 controller: widget.scrollController,
+                // RefreshScrollPhysics (not plain Bouncing) so a one-line cart
+                // still overscrolls enough to trigger the control below.
+                physics: const RefreshScrollPhysics(),
                 slivers: [
                   MediaQuery.removePadding(
                     context: context,
@@ -313,6 +327,9 @@ class _MyCartState extends State<MyCart> with SingleTickerProviderStateMixin {
                       actions: const [],
                     ),
                   ),
+                  // Sits below the pinned SliverAppBar so the spinner appears
+                  // under the bar rather than pushing it down.
+                  CupertinoSliverRefreshControl(onRefresh: _reload),
                   SliverToBoxAdapter(
                     child: Selector<CartModel, int>(
                       selector: (_, cartModel) => cartModel.totalCartQuantity,

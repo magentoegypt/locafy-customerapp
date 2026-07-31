@@ -147,42 +147,49 @@ class _ProductDetailPageState extends BaseScreen<ProductDetailScreen>
     screenScrollController = _scrollController;
     WidgetsBinding.instance.endOfFrame.then((_) async {
       if (mounted) {
-        try {
-          if (widget.product is Product) {
-            /// Get more detail info from product
-            setState(() {
-              product = widget.product;
-            });
-            final check = await _checkProductPermission(widget.product);
-            if (check) {
-              // Keep the product we already have if the detail fetch fails or
-              // returns null. Products opened from the wishlist/local storage
-              // can be missing fields (e.g. configurable_product_options), which
-              // made getProductDetail throw and left the page stuck on a blank
-              // loading spinner forever.
-              final full =
-                  await Services().widget.getProductDetail(context, product);
-              if (full != null) {
-                product = full;
-              }
-            }
-          } else {
-            /// Request the product by Product ID which is using for web param
-            product = await Services().api.getProduct(widget.id);
-            await _checkProductPermission(product);
-          }
-        } catch (_) {
-          // Fall back to whatever product we already have so the page renders
-          // with partial data instead of hanging on a blank loader.
-        } finally {
-          isLoading = false;
-          if (mounted) {
-            setState(() {});
-          }
-        }
+        await _loadProduct();
       }
     });
     super.initState();
+  }
+
+  /// The detail fetch, shared by the initial load and pull-to-refresh so a
+  /// price, stock or option change made server-side shows up without leaving
+  /// the page.
+  Future<void> _loadProduct() async {
+    try {
+      if (widget.product is Product) {
+        /// Get more detail info from product
+        setState(() {
+          product = widget.product;
+        });
+        final check = await _checkProductPermission(widget.product);
+        if (check) {
+          // Keep the product we already have if the detail fetch fails or
+          // returns null. Products opened from the wishlist/local storage
+          // can be missing fields (e.g. configurable_product_options), which
+          // made getProductDetail throw and left the page stuck on a blank
+          // loading spinner forever.
+          final full =
+              await Services().widget.getProductDetail(context, product);
+          if (full != null) {
+            product = full;
+          }
+        }
+      } else {
+        /// Request the product by Product ID which is using for web param
+        product = await Services().api.getProduct(widget.id);
+        await _checkProductPermission(product);
+      }
+    } catch (_) {
+      // Fall back to whatever product we already have so the page renders
+      // with partial data instead of hanging on a blank loader.
+    } finally {
+      isLoading = false;
+      if (mounted) {
+        setState(() {});
+      }
+    }
   }
 
   Future<bool> _checkProductPermission(Product? p) async {
@@ -273,7 +280,15 @@ class _ProductDetailPageState extends BaseScreen<ProductDetailScreen>
                     ? EdgeInsets.zero
                     : null,
               ),
-              child: layout,
+              // Wrapped here rather than inside each detail theme: the layout
+              // comes from Services().widget.renderDetailScreen, and
+              // RefreshIndicator picks up scroll notifications from whichever
+              // scrollable that factory returns. The themes only need
+              // AlwaysScrollableScrollPhysics for short pages to overscroll.
+              child: RefreshIndicator(
+                onRefresh: _loadProduct,
+                child: layout,
+              ),
             ),
           ),
         ],
@@ -290,5 +305,4 @@ class _ProductDetailPageState extends BaseScreen<ProductDetailScreen>
       child: layout,
     );
   }
-
 }
