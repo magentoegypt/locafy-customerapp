@@ -4065,19 +4065,6 @@ class MagentoService extends BaseServices {
         // Snapshot what this device already knows — keyed by the cart key,
         // which is the child SKU on both the local and the rebuilt path — and
         // re-attach it below for lines that are still in the cart.
-        var savedVariations = <String, dynamic>{};
-        var savedOptions = <String, dynamic>{};
-        var savedItems = <String, dynamic>{};
-        if (replace) {
-          savedVariations = Map<String, dynamic>.from(model.productVariationInCart);
-          savedOptions = Map<String, dynamic>.from(model.productsMetaDataInCart);
-          savedItems = Map<String, dynamic>.from(model.item);
-          model.productsInCart.clear();
-          model.item.clear();
-          model.productVariationInCart.clear();
-          model.productsMetaDataInCart.clear();
-        }
-        model.shoppingList = list;
         // Resolve each configurable line's selected super attributes against
         // the parent's attributes *before* adding it, so the cart key matches
         // the one a local add produces and the "Size: 12 Years" label renders
@@ -4119,6 +4106,23 @@ class MagentoService extends BaseServices {
             // line; never let it blank the whole cart.
           }
         }
+        // Everything above is resolved BEFORE the cart is cleared: the
+        // lookups are network calls, and clearing first left the cart empty
+        // for the whole round trip — a pull-to-refresh visibly emptied the
+        // cart, and any throw in that window left it empty for good.
+        var savedVariations = <String, dynamic>{};
+        var savedOptions = <String, dynamic>{};
+        var savedItems = <String, dynamic>{};
+        if (replace) {
+          savedVariations = Map<String, dynamic>.from(model.productVariationInCart);
+          savedOptions = Map<String, dynamic>.from(model.productsMetaDataInCart);
+          savedItems = Map<String, dynamic>.from(model.item);
+          model.productsInCart.clear();
+          model.item.clear();
+          model.productVariationInCart.clear();
+          model.productsMetaDataInCart.clear();
+        }
+        model.shoppingList = list;
         list.forEach((product){
           model.addProductToCart(
               product: product,
