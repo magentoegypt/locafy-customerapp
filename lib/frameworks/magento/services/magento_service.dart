@@ -757,6 +757,126 @@ class MagentoService extends BaseServices {
     }
   }
 
+  /// Parent sku of a configurable cart line, keyed by the child sku.
+  final Map<String, Future<String?>> _parentSkuCache = {};
+
+  /// Finds the configurable parent for a cart line.
+  ///
+  /// `carts/mine/items` reports the *child* sku for a configurable line even
+  /// though the line itself is configurable, and Magento exposes no child ->
+  /// parent link on the product. What the line does carry is the parent's
+  /// name, so search configurables by that name and confirm the match by
+  /// checking the candidate's `configurable_product_links` really contains this
+  /// child — that guards against two parents sharing a name.
+  ///
+  /// Without this the cart row would open the child simple product (no variant
+  /// picker) instead of the parent (86d3g2npa #7), and the rebuilt line would
+  /// key on the child sku while a locally added one keys on the parent, so a
+  /// refresh would not line up with the row it replaced.
+  Future<String?> getConfigurableParentSku(
+      String childSku, String? parentName, String? childEntityId) {
+    final cached = _parentSkuCache[childSku];
+    if (cached != null) return cached;
+    final future = () async {
+      if (parentName == null || parentName.isEmpty) return null;
+      try {
+        final url = MagentoHelper.buildUrl(domain, 'products')!.replace(
+          queryParameters: {
+            'searchCriteria[filterGroups][0][filters][0][field]': 'name',
+            'searchCriteria[filterGroups][0][filters][0][value]': parentName,
+            'searchCriteria[filterGroups][1][filters][0][field]': 'type_id',
+            'searchCriteria[filterGroups][1][filters][0][value]': 'configurable',
+            'searchCriteria[pageSize]': '10',
+          },
+        );
+        final response = await httpGet(url,
+            headers: {'Authorization': 'Bearer $accessToken'});
+        final body = convert.jsonDecode(response.body);
+        final items = (body is Map) ? body['items'] : null;
+        if (items is! List || items.isEmpty) return null;
+        for (final item in items) {
+          if (item is! Map) continue;
+          final links =
+              item['extension_attributes']?['configurable_product_links'];
+          if (links is List &&
+              childEntityId != null &&
+              links.any((l) => '$l' == childEntityId)) {
+            return item['sku']?.toString();
+          }
+        }
+        // Exactly one configurable carries this name — take it even though the
+        // link check could not confirm it (links are omitted on some responses).
+        return items.length == 1 ? items.first['sku']?.toString() : null;
+      } catch (_) {
+        return null;
+      }
+    }();
+    _parentSkuCache[childSku] = future;
+    future.then((v) {
+      if (v == null) _parentSkuCache.remove(childSku);
+    }, onError: (_) => _parentSkuCache.remove(childSku));
+    return future;
+  }
+
+  /// Attribute lookups keyed by code *or* numeric id. Attributes are stable for
+  /// a session and a cart can repeat the same ones across lines, so cache.
+  final Map<String, Future<ProductAttribute?>> _attributeByKeyCache = {};
+
+  /// Resolves a configurable attribute from the id Magento puts in a cart
+  /// line's `configurable_item_options.option_id`.
+  ///
+  /// The cart line only ever gives the *child* sku, so the parent's
+  /// `configurable-products/{sku}/options/list` cannot be used to name the
+  /// selection — that endpoint returns nothing for a simple product. Going
+  /// through the attribute itself works from the line alone, and Magento
+  /// localizes the option labels per store view, so the value still reads
+  /// "Green"/"12 yrs" (or the Arabic equivalents) (86d3g2npa #9).
+  Future<ProductAttribute?> getAttributeByIdOrCode(String key) {
+    final cached = _attributeByKeyCache[key];
+    if (cached != null) return cached;
+    final future = () async {
+      try {
+        final response = await httpGet(
+            MagentoHelper.buildUrl(
+                domain, 'products/attributes/$key', SettingsBox().languageCode)!,
+            headers: {'Authorization': 'Bearer $accessToken'});
+        final body = convert.jsonDecode(response.body);
+        if (body is! Map || body['attribute_code'] == null) return null;
+        final attr = ProductAttribute()
+          ..id = body['attribute_id']?.toString()
+          ..name = body['attribute_code']?.toString()
+          ..options = body['options'] is List ? body['options'] : [];
+        // default_frontend_label is often just the raw code (e.g. "all_color");
+        // the per-store frontend_labels carry the human title ("Color").
+        final defaultLabel = body['default_frontend_label']?.toString();
+        String? label =
+            (defaultLabel != null && defaultLabel != attr.name && defaultLabel.trim().isNotEmpty)
+                ? defaultLabel
+                : null;
+        if (label == null && body['frontend_labels'] is List) {
+          for (final l in body['frontend_labels']) {
+            final candidate = (l is Map) ? l['label']?.toString() : null;
+            if (candidate != null &&
+                candidate.trim().isNotEmpty &&
+                candidate != attr.name) {
+              label = candidate;
+              break;
+            }
+          }
+        }
+        attr.label = label ?? attr.name;
+        return attr;
+      } catch (_) {
+        return null;
+      }
+    }();
+    _attributeByKeyCache[key] = future;
+    future.then((v) {
+      if (v == null) _attributeByKeyCache.remove(key);
+    }, onError: (_) => _attributeByKeyCache.remove(key));
+    return future;
+  }
+
   Future<ProductAttribute> getProductAttributes(String attributeCode) async {
     try {
       var response = await httpGet(
@@ -3322,12 +3442,16 @@ class MagentoService extends BaseServices {
   ///
   /// Returns null when nothing could be resolved, so the caller degrades to the
   /// plain sku payload instead of failing the add.
-  List<Map<String, dynamic>>? _buildConfigurableItemOptions(
-      Product product, Map? options) {
-    if (options == null || options.isEmpty) return null;
-    final groups = product.configurable_product_options;
-    if (groups is! List || groups.isEmpty) return null;
+  /// attribute code -> numeric attribute_id, for codes that had to be looked up
+  /// against products/attributes/{code}. Stable per store, so cache for the
+  /// session.
+  final Map<String, String?> _attributeIdCache = {};
 
+  Future<List<Map<String, dynamic>>?> _buildConfigurableItemOptions(
+      Product product, Map? options) async {
+    if (options == null || options.isEmpty) return null;
+
+    final groups = product.configurable_product_options;
     // attribute code -> label, used for the fallback match below.
     final labelByCode = <String, String>{};
     for (final a in product.attributes ?? const <ProductAttribute>[]) {
@@ -3337,33 +3461,57 @@ class MagentoService extends BaseServices {
     }
 
     final result = <Map<String, dynamic>>[];
-    options.forEach((code, value) {
-      if (code == null || value == null) return;
+    for (final entry in options.entries) {
+      final code = entry.key;
+      final value = entry.value;
+      if (code == null || value == null) continue;
       final valueId = '$value';
       String? attributeId;
-      for (final group in groups) {
-        if (group is! Map) continue;
-        final values = group['values'];
-        if (values is List &&
-            values.any((v) => v is Map && '${v['value_index']}' == valueId)) {
-          attributeId = group['attribute_id']?.toString();
-          break;
-        }
-        final label = group['label']?.toString().toLowerCase();
-        if (label != null && label == labelByCode['$code'.toLowerCase()]) {
-          attributeId = group['attribute_id']?.toString();
+
+      if (groups is List) {
+        for (final group in groups) {
+          if (group is! Map) continue;
+          final values = group['values'];
+          if (values is List &&
+              values.any((v) => v is Map && '${v['value_index']}' == valueId)) {
+            attributeId = group['attribute_id']?.toString();
+            break;
+          }
+          final label = group['label']?.toString().toLowerCase();
+          if (label != null && label == labelByCode['$code'.toLowerCase()]) {
+            attributeId = group['attribute_id']?.toString();
+          }
         }
       }
+
+      // A product opened from search/the cart often carries no
+      // configurable_product_options (getProductDetail only fills `attributes`),
+      // so resolve the id from the attribute itself rather than silently
+      // degrading to the child-sku payload.
+      if (attributeId == null || attributeId.isEmpty) {
+        final key = '$code';
+        if (!_attributeIdCache.containsKey(key)) {
+          try {
+            final attr = await getProductAttributes(key);
+            _attributeIdCache[key] =
+                (attr.id != null && attr.id != 'null') ? attr.id : null;
+          } catch (_) {
+            _attributeIdCache[key] = null;
+          }
+        }
+        attributeId = _attributeIdCache[key];
+      }
+
       if (attributeId != null && attributeId.isNotEmpty) {
         result.add({'option_id': attributeId, 'option_value': valueId});
       }
-    });
+    }
     return result.isEmpty ? null : result;
   }
 
   Future<dynamic> _sendCartItemRequest(
       Product product, String sku, int qty, bool isUpdate,
-      {Map? options, String? fallbackSku}) {
+      {Map? options, String? fallbackSku}) async {
     final params = <String, dynamic>{};
     params['qty'] = qty;
     if (isUpdate) {
@@ -3373,7 +3521,8 @@ class MagentoService extends BaseServices {
     // Without this a configurable is stored as a plain simple-product line, so
     // the website and the other app show no selected variant and the line
     // cannot be traced back to its parent (86d3g2npa #7/#9).
-    final configurableOptions = _buildConfigurableItemOptions(product, options);
+    final configurableOptions =
+        await _buildConfigurableItemOptions(product, options);
     if (configurableOptions != null) {
       params['sku'] = sku;
       params['product_option'] = {
@@ -3940,27 +4089,31 @@ class MagentoService extends BaseServices {
             continue;
           }
           try {
-            final attributes =
-                await getConfigurableproductsAttributes(product.sku!);
-            if (attributes.isEmpty) continue;
-            product.attributes = attributes;
+            final attributes = <ProductAttribute>[];
             final selections = <String, String>{};
             for (final entry in raw) {
               final valueId = entry['option_value']?.toString();
-              if (valueId == null) continue;
-              // Option value ids are globally unique in Magento, so the owning
-              // attribute can be found by membership alone — the options/list
-              // endpoint does not expose attribute_id to match option_id on.
-              for (final attr in attributes) {
-                final hasValue = (attr.options ?? const []).any(
-                    (o) => o is Map && '${o['value']}' == valueId);
-                if (hasValue && attr.name != null) {
-                  selections[attr.name!] = valueId;
-                  break;
-                }
+              final attributeId = entry['option_id']?.toString();
+              if (valueId == null || attributeId == null) continue;
+              final attr = await getAttributeByIdOrCode(attributeId);
+              if (attr?.name == null) continue;
+              attributes.add(attr!);
+              selections[attr.name!] = valueId;
+            }
+            if (selections.isNotEmpty) {
+              // The rebuilt product has no attributes of its own; attach the
+              // ones the row needs to turn option ids into labels.
+              product.attributes = attributes;
+              resolvedOptions[product] = selections;
+              // Swap the child sku Magento reports for the parent's, so the row
+              // opens the configurable (with its variant picker) and keys the
+              // same way a locally added line does.
+              final parentSku = await getConfigurableParentSku(
+                  product.sku!, product.name, product.id);
+              if (parentSku != null && parentSku.isNotEmpty) {
+                product.sku = parentSku;
               }
             }
-            if (selections.isNotEmpty) resolvedOptions[product] = selections;
           } catch (_) {
             // A failed attribute lookup just means no variant label for this
             // line; never let it blank the whole cart.

@@ -296,7 +296,13 @@ class _ProductImageCarasoulState extends State<ProductImageCarasoul> {
                 activeDotColor: Colors.black,
                 dotColor: Colors.grey,
                 dotHeight: 1.5,
-                dotWidth: (size.width/imagesList.length) - 15,
+                // Dots share the width between them, so a product with many
+                // images drives this negative — which trips an assertion in
+                // SmoothPageIndicator and replaces the whole product page with
+                // an error box in debug builds. A configurable parent carries
+                // every variant's images, so it hits this easily.
+                dotWidth:
+                    ((size.width / imagesList.length) - 15).clamp(2.0, 60.0),
               ),
             ),
           ),

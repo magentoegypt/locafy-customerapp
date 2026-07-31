@@ -191,7 +191,13 @@ class _HalfSizeLayoutState extends State<HalfSizeLayout>
                   color: Theme.of(context).colorScheme.background.withOpacity(0.8),
                   borderRadius: BorderRadius.circular(10.0)),
               child: ChangeNotifierProvider(
-                create: (_) => ProductModel(),
+                // This screen runs on its own ProductModel, so carry over any
+                // preselection the route set on the outer one — otherwise a
+                // configurable opened from the cart loses the variant it was added
+                // with (86d3g2npa #7).
+                create: (_) => ProductModel()
+                  ..preselectedVariantOptions =
+                      context.read<ProductModel>().preselectedVariantOptions,
                 child: SingleChildScrollView(
                   controller: _scrollController,
                   physics: const NeverScrollableScrollPhysics(),

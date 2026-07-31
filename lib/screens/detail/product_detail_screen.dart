@@ -161,11 +161,13 @@ class _ProductDetailPageState extends BaseScreen<ProductDetailScreen>
     screenScrollController = _scrollController;
     // Hand the selection to the variant widgets before they load; they apply it
     // once the variations arrive.
+    // Always assign — clearing matters as much as setting, or the next product
+    // opened from somewhere without a preselection would inherit this one's.
     final preselected = widget.preselectedOptions;
-    if (preselected != null && preselected.isNotEmpty) {
-      Provider.of<ProductModel>(context, listen: false)
-          .preselectedVariantOptions = Map.of(preselected);
-    }
+    Provider.of<ProductModel>(context, listen: false).preselectedVariantOptions =
+        (preselected != null && preselected.isNotEmpty)
+            ? Map.of(preselected)
+            : null;
     WidgetsBinding.instance.endOfFrame.then((_) async {
       if (mounted) {
         await _loadProduct();

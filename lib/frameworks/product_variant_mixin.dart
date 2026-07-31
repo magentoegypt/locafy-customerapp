@@ -447,17 +447,33 @@ mixin ProductVariantMixin {
       return false;
     }
 
+    productVariation =
+        Provider.of<ProductModel>(context, listen: false).selectedVariation;
+
+    // The selected variation is the source of truth for what the customer
+    // picked — it is what decides the child sku. The caller's mapAttribute can
+    // be stale or empty: each of the two widgets running this flow keeps its
+    // own copy, and getProductVariations returns early without calling onLoad
+    // when the attributes have not loaded yet, leaving it null. Deriving the
+    // options from the variation keeps the cart payload correct either way;
+    // without this the configurable silently degrades to a child-sku simple
+    // line and the variant is lost on the other platforms (86d3g2npa #7/#9).
     final mapAttr = <String, String>{};
-    for (var entry in mapAttribute.entries) {
-      final key = entry.key;
-      final value = entry.value;
-      if (key != null && value != null) {
-        mapAttr[key] = value;
+    for (final attr in productVariation?.attributes ?? const []) {
+      if (attr.name != null && attr.option != null) {
+        mapAttr[attr.name!] = attr.option!;
+      }
+    }
+    if (mapAttr.isEmpty) {
+      for (var entry in mapAttribute.entries) {
+        final key = entry.key;
+        final value = entry.value;
+        if (key != null && value != null) {
+          mapAttr[key] = value;
+        }
       }
     }
 
-    productVariation =
-        Provider.of<ProductModel>(context, listen: false).selectedVariation;
     String message;
     try {
       message = await cartModel.addProductToCart(

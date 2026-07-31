@@ -31,8 +31,13 @@ import 'widgets/wishlist.dart';
 void validateCartStockAndQuantities(CartModel model) {
   // ignore: curly_braces_in_flow_control_structures
   model.productsInCart.forEach((key, value) async {
-    var productCheck = await Services().api.getStockStatus(key);
     var product = model.getProductById(key);
+    // The cart key is not a sku for a configurable line — it is
+    // "parentSku|attr=value" so two variants stay separate rows. Ask about the
+    // variant's own sku (falling back to the product's), otherwise every
+    // configurable line 404s here and silently skips stock validation.
+    final sku = model.getProductVariationById(key)?.sku ?? product?.sku ?? key;
+    var productCheck = await Services().api.getStockStatus(sku);
 
     // Only drop the line when the server EXPLICITLY reports the product out of
     // stock. Previously any inconclusive stock response (non-200 -> null, or a

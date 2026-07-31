@@ -149,7 +149,13 @@ class _SimpleLayoutState extends State<SimpleLayout>
         bottom: false,
         //top: kProductDetail.safeArea,
         child: ChangeNotifierProvider(
-          create: (_) => ProductModel(),
+          // This screen runs on its own ProductModel, so carry over any
+          // preselection the route set on the outer one — otherwise a
+          // configurable opened from the cart loses the variant it was added
+          // with (86d3g2npa #7).
+          create: (_) => ProductModel()
+            ..preselectedVariantOptions =
+                context.read<ProductModel>().preselectedVariantOptions,
           child: Stack(
             children: <Widget>[
               Scaffold(
