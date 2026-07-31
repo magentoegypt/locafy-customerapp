@@ -88,6 +88,12 @@ class Product {
   /// Only ever populated by [Product.fromShopJson] — this is what lets a cart
   /// filled on another platform still show "Size: 12 Years" (86d3g2npa #9).
   List<Map<String, dynamic>>? configurableItemOptions;
+
+  /// The child sku of a configurable cart line. [sku] is swapped to the parent
+  /// so the row opens the configurable, but stock lives on the child — a
+  /// configurable parent reports qty 0 — so anything asking about availability
+  /// must use this.
+  String? variantSku;
   int? shopQuantity;
   int? stockQuantity;
   int? minQuantity;

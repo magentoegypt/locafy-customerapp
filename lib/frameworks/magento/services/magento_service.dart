@@ -4098,6 +4098,8 @@ class MagentoService extends BaseServices {
               final parentSku = await getConfigurableParentSku(
                   product.sku!, product.name, product.id);
               if (parentSku != null && parentSku.isNotEmpty) {
+                // Keep the child sku: it is the one that actually carries stock.
+                product.variantSku = product.sku;
                 product.sku = parentSku;
               }
             }

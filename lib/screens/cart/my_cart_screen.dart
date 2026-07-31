@@ -34,9 +34,12 @@ void validateCartStockAndQuantities(CartModel model) {
     var product = model.getProductById(key);
     // The cart key is not a sku for a configurable line — it is
     // "parentSku|attr=value" so two variants stay separate rows. Ask about the
-    // variant's own sku (falling back to the product's), otherwise every
-    // configurable line 404s here and silently skips stock validation.
-    final sku = model.getProductVariationById(key)?.sku ?? product?.sku ?? key;
+    // *child*: the key 404s, and the configurable parent reports qty 0, which
+    // clamped the line to zero and emptied the cart on every refresh.
+    final sku = model.getProductVariationById(key)?.sku ??
+        product?.variantSku ??
+        product?.sku ??
+        key;
     var productCheck = await Services().api.getStockStatus(sku);
 
     // Only drop the line when the server EXPLICITLY reports the product out of
