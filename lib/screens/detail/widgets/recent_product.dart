@@ -4,9 +4,9 @@ import 'package:provider/provider.dart';
 import '../../../generated/l10n.dart';
 import '../../../models/index.dart';
 import '../../../modules/dynamic_layout/config/index.dart';
-import '../../../modules/dynamic_layout/product/product_list_default.dart';
 import '../../../modules/dynamic_layout/product/product_recent_placeholder.dart';
 import '../../../services/index.dart';
+import '../../../widgets/product/product_card_view.dart';
 
 class RecentProducts extends StatelessWidget {
   final Product? excludeProduct;
@@ -44,13 +44,34 @@ class RecentProducts extends StatelessWidget {
             ),
           ),
         ),
-        ServerConfig().isBuilder
-            ? ProductRecentPlaceholder()
-            : ProductListDefault(
-                products: products,
-                config: ProductConfig.empty(),
-                maxWidth: MediaQuery.of(context).size.width,
+        if (ServerConfig().isBuilder)
+          ProductRecentPlaceholder()
+        else
+          LayoutBuilder(
+            builder: (context, constraint) => SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              // Cards carry a variable number of swatch/size rows, so they
+              // have different natural heights and ended up staggered
+              // (86d3wchq2). Same fix as the related products list
+              // (86d3r0k6x): IntrinsicHeight sizes the row to the tallest
+              // card and `stretch` makes every card take that height, so
+              // tops and bottoms line up.
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (Product item in products)
+                      ProductCard(
+                        item: item,
+                        width: constraint.maxWidth * 0.35,
+                        config: ProductConfig.empty(),
+                      )
+                  ],
+                ),
               ),
+            ),
+          ),
       ],
     );
   }
