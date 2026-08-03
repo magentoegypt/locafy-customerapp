@@ -182,17 +182,37 @@ class _ProductDetailPageState extends BaseScreen<ProductDetailScreen>
   Future<void> _loadProduct() async {
     try {
       if (widget.product is Product) {
+        var initial = widget.product!;
+
+        /// A product handed over by the wishlist is a display stub — the
+        /// wishlist feed carries a name, a price and a couple of image names,
+        /// nothing else. Rendered as-is the page showed a placeholder image,
+        /// "out of stock", and a buy button stuck on LOADING forever, because
+        /// the variant picker bails out when the product has no attributes and
+        /// only ever runs on the product it is first built with. So fetch the
+        /// catalog record BEFORE the first render (86d3uqvmx #2); the stub is
+        /// kept only if that fetch comes back empty, so the page still shows
+        /// something offline.
+        if (initial.isPartial) {
+          final catalogProduct = await Services().api.getProduct(initial.id);
+          if (catalogProduct != null) {
+            /// Carry the wishlist item id across — it is not part of the
+            /// catalog payload, and removing from the wishlist needs it.
+            catalogProduct.itemID ??= initial.itemID;
+            initial = catalogProduct;
+          }
+        }
+        if (!mounted) return;
+
         /// Get more detail info from product
         setState(() {
-          product = widget.product;
+          product = initial;
         });
-        final check = await _checkProductPermission(widget.product);
+        final check = await _checkProductPermission(initial);
         if (check) {
           // Keep the product we already have if the detail fetch fails or
-          // returns null. Products opened from the wishlist/local storage
-          // can be missing fields (e.g. configurable_product_options), which
-          // made getProductDetail throw and left the page stuck on a blank
-          // loading spinner forever.
+          // returns null, so the page renders with what it has instead of
+          // hanging on a blank loading spinner forever.
           final full =
               await Services().widget.getProductDetail(context, product);
           if (full != null) {

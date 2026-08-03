@@ -40,10 +40,15 @@ class ProductWishListModel extends ChangeNotifier {
   }
 
   Future<void> removeToWishlist(Product product) async {
-    final isExist = products.indexWhere((item) => item.id == product.id) != -1;
-    if (isExist) {
+    final index = products.indexWhere((item) => item.id == product.id);
+    if (index != -1) {
+      // The wishlist *item* id is what the remove endpoint takes, and only the
+      // wishlist feed carries it — a product opened from a listing or a search
+      // result has none, so the heart button on the product page removed
+      // nothing server-side. Take the id from our own copy of the entry.
+      final itemID = product.itemID ?? products[index].itemID ?? '';
       products = products.where((item) => item.id != product.id).toList();
-      final message = await Services().api.removeProductToWishList(product.itemID ?? "");
+      final message = await Services().api.removeProductToWishList(itemID);
       if((message ?? "").isEmpty){
         saveWishlist(products);
         notifyListeners();

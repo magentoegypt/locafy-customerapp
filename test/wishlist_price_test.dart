@@ -86,6 +86,57 @@ void main() {
       expect(product.salePrice, isNull);
     });
 
+    test('marks the product as a stub for the detail page to replace', () {
+      // The feed carries no description, no configurable options and image
+      // names that don't resolve, so ProductDetailScreen re-fetches the catalog
+      // record by id before rendering (86d3uqvmx #2). Without this flag the
+      // page showed a placeholder image, "out of stock" and a buy button stuck
+      // on LOADING.
+      final product =
+          wishlistProduct(regular: 'EGP 950.00', special: 'EGP 760.00');
+
+      expect(product.isPartial, isTrue);
+      // Empty, never null: the variant widgets dereference both with `!`.
+      expect(product.attributes, isEmpty);
+      expect(product.configurable_product_options, isEmpty);
+    });
+
+    test('builds usable image URLs and drops the unusable references', () {
+      // `product_image` is absolute; the image-role names are media-relative
+      // and may come without the leading slash, as 'no_selection', or absent.
+      // Concatenating them blind gave `…/catalog/productnull`, which 404s.
+      final json = jsonDecode('''
+        {"product_id": "1", "product_name": "T",
+         "product_image": "https://cdn.example.com/media/catalog/product/a/b/x.jpg",
+         "thumbnail": "a/b/x.jpg",
+         "small_image": "/c/d/y.jpg",
+         "swatch_image": "no_selection"}
+      ''') as Map<String, dynamic>;
+      final product = Product.fromWislitJson(json, 'https://example.com');
+
+      expect(product.imageFeature,
+          'https://cdn.example.com/media/catalog/product/a/b/x.jpg');
+      // The media host comes from the active server config (kMediaDomain), not
+      // from the domain argument, so assert on the paths.
+      expect(product.images, hasLength(3), reason: 'no_selection is dropped');
+      expect(product.images.first,
+          'https://cdn.example.com/media/catalog/product/a/b/x.jpg');
+      expect(product.images[1], endsWith('/media/catalog/product/a/b/x.jpg'),
+          reason: 'a name with no leading slash still resolves');
+      expect(product.images[2], endsWith('/media/catalog/product/c/d/y.jpg'));
+    });
+
+    test('leaves the image fields empty when the feed sends none', () {
+      final json =
+          jsonDecode('{"product_id": "1", "product_name": "T"}') as Map<String, dynamic>;
+      final product = Product.fromWislitJson(json, 'https://example.com');
+
+      // Null, not '': ActionButtonMixin treats an empty string as "no image,
+      // don't open this product".
+      expect(product.imageFeature, isNull);
+      expect(product.images, isEmpty);
+    });
+
     test('does not set onSale, so the original price renders only once', () {
       // ProductPricing has two strike-through routes: one above the price keyed
       // on original_price, one inline keyed on onSale. Enabling both would show

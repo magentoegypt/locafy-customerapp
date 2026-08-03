@@ -118,6 +118,14 @@ class Product {
   bool isPurchased = false;
   bool? isDownloadable = false;
 
+  /// True when this instance came from a feed that only returns the handful of
+  /// fields a tile needs (currently the wishlist) rather than the full catalog
+  /// payload. Such a product has no description, no configurable options and
+  /// image names that don't resolve, so any screen that shows more than a tile
+  /// — the product detail page — must re-fetch the catalog record by [id]
+  /// first (86d3uqvmx #2).
+  bool isPartial = false;
+
   /// is to check the type affiliate, simple, variant
   String? type;
   String? affiliateUrl;
@@ -1612,7 +1620,28 @@ class Product {
     sku = skuString;
   }
 
+  /// One image reference from the wishlist feed, as an absolute URL — or null
+  /// when there is no usable image to build one from.
+  static String? _wishlistImageUrl(dynamic value, String domain) {
+    if (value is! String) return null;
+    final ref = value.trim();
+    // Magento's sentinel for "this image role is unset".
+    if (ref.isEmpty || ref == 'no_selection') return null;
+    if (ref.startsWith('http')) return ref;
+    return MagentoHelper.getProductImageUrlByName(
+        domain, ref.startsWith('/') ? ref : '/$ref');
+  }
+
   Product.fromWislitJson(Map<String, dynamic> productJson,String domain): id = productJson['product_id'].toString() {
+    // The wishlist endpoint returns a display stub, not a catalog product: no
+    // description, no configurable options, no media gallery. Flag it so the
+    // detail page fetches the real record instead of rendering this.
+    isPartial = true;
+    // Empty rather than null, matching the other stub parsers: the variant
+    // widgets dereference both with `!`, so a null here is a crash the moment
+    // a wishlist product reaches them.
+    attributes = [];
+    configurable_product_options = [];
     itemID = productJson['wishlist_item_id'];
     stockQuantity = productJson['qty'];//(double.parse()).toInt();
     // Preserve the Magento product type so the wishlist's "Add to cart" can
@@ -1646,12 +1675,23 @@ class Product {
     minPrice = productJson['min_price'];
     maxPrice = productJson['max_price'];
     name = _decodeName(productJson['product_name']);
-    var list = <String>[];
-    list.add( MagentoHelper.getProductImageUrlByName(domain, productJson['thumbnail']));
-    list.add(MagentoHelper.getProductImageUrlByName(domain, productJson['small_image']));
-    list.add(MagentoHelper.getProductImageUrlByName(domain, productJson['swatch_image']));
-    imageFeature = productJson['product_image'];
-    images = list;
+    // The feed mixes shapes: `product_image` is a ready-to-use URL (it is what
+    // the tile renders), while `thumbnail` / `small_image` / `swatch_image` are
+    // media-relative names that may arrive without the leading slash the media
+    // path needs, as literal 'no_selection', or absent entirely. Concatenating
+    // them blind produced URLs like `…/catalog/productnull`, so every one of
+    // these images 404'd.
+    imageFeature = _wishlistImageUrl(productJson['product_image'], domain);
+    images = [
+      productJson['product_image'],
+      productJson['thumbnail'],
+      productJson['small_image'],
+      productJson['swatch_image'],
+    ]
+        .map((ref) => _wishlistImageUrl(ref, domain))
+        .whereType<String>()
+        .toSet()
+        .toList();
     status = productJson['status'];
     featured = productJson['featured'];
   }

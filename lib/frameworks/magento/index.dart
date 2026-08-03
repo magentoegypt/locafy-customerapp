@@ -498,7 +498,12 @@ class MagentoWidget extends BaseFrameworks
   @override
   Future<Product?> getProductDetail(context, Product? product) async {
     try {
-      if (product?.configurable_product_options.length > 0) {
+      // Null-safe on purpose: `configurable_product_options` is dynamic and
+      // several parsers never set it, so `.length` on null threw a
+      // NoSuchMethodError out of this method and skipped everything below it —
+      // stock, the details rows and the swatches — for the whole product.
+      final configurableOptions = product?.configurable_product_options;
+      if (configurableOptions is List && configurableOptions.isNotEmpty) {
         /// Seed the configurable attributes from the same options/list call
         /// the variation loader uses. This used to walk
         /// configurable_product_options itself, which cost one attribute
@@ -525,8 +530,7 @@ class MagentoWidget extends BaseFrameworks
           }
 
           /// Backs getColorCode()'s last-resort hex lookup in BasicSelection.
-          final attributeId =
-              '${product?.configurable_product_options[0]["attribute_id"]}';
+          final attributeId = '${configurableOptions[0]["attribute_id"]}';
           product?.productOptions =
               await api.getProductAttributesWithOption(attributeId);
         } catch (e) {
