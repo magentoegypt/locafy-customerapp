@@ -4,6 +4,8 @@ import 'dart:io' as file;
 import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:extended_image/extended_image.dart'
+    show clearDiskCachedImage, clearMemoryImageCache;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -108,6 +110,47 @@ class ImageTools {
 
   static NetworkImage networkImage(String? url, [kSize size = kSize.medium]) {
     return NetworkImage(formatImage(url, size) ?? kDefaultImage);
+  }
+
+  /// Drops the cached bytes behind these product images, so the next paint
+  /// downloads them again.
+  ///
+  /// Pull-to-refresh already busts the catalog cache, but that holds the
+  /// product *JSON*. The image bytes live in a second, independent cache keyed
+  /// by URL — and replacing a photo on the backend does not change its URL. So
+  /// a refresh re-fetched the JSON, got the same URL back, and the widget
+  /// repainted from the old bytes: the picture never updated. Worse, once the
+  /// store placeholder has been cached against a URL it stays there, so a
+  /// product whose images the backend has since generated keeps showing blank
+  /// on that device until the entry is evicted (86d3x5ex6).
+  ///
+  /// Only for an explicit refresh — it costs a re-download of exactly the
+  /// images being refreshed, which is what the shopper just asked for.
+  static Future<void> evictProductImages(Iterable<String?> urls) async {
+    final targets = <String>{};
+    for (final url in urls) {
+      if (url == null || !url.startsWith('http')) continue;
+      // Widgets request a resized sibling rather than the URL itself, so the
+      // original is not the key any of them actually cached under.
+      targets.add(url);
+      for (final size in kSize.values) {
+        final resized = formatImage(url, size);
+        if (resized != null && resized.isNotEmpty) targets.add(resized);
+      }
+    }
+    if (targets.isEmpty) return;
+    for (final target in targets) {
+      try {
+        await clearDiskCachedImage(target);
+      } catch (_) {
+        // No entry for this variant is the normal case (nothing ever requested
+        // that size). A refresh must never fail over it.
+      }
+    }
+    // Decoded bitmaps are keyed by the provider's full config — cacheWidth
+    // differs per widget — so there is no dependable per-URL memory eviction.
+    // Drop them and let the visible ones decode again.
+    clearMemoryImageCache();
   }
 
   /// cache avatar for the chat

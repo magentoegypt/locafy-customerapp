@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../common/config.dart';
 import '../../common/constants.dart';
 import '../../common/tools/flash.dart';
+import '../../common/tools/image_tools.dart';
 import '../../generated/l10n.dart';
 import '../../models/index.dart'
     show AppModel, Product, ProductModel, ProductWishListModel, UserModel;
@@ -179,7 +180,11 @@ class _ProductDetailPageState extends BaseScreen<ProductDetailScreen>
   /// The detail fetch, shared by the initial load and pull-to-refresh so a
   /// price, stock or option change made server-side shows up without leaving
   /// the page.
-  Future<void> _loadProduct() async {
+  /// [refresh] is set only by the pull-to-refresh gesture, never by the
+  /// initial load: it additionally drops the cached image bytes, which is
+  /// worth a re-download when the shopper explicitly asked for current data
+  /// but not every time the page opens.
+  Future<void> _loadProduct({bool refresh = false}) async {
     try {
       if (widget.product is Product) {
         var initial = widget.product!;
@@ -228,6 +233,14 @@ class _ProductDetailPageState extends BaseScreen<ProductDetailScreen>
       // Fall back to whatever product we already have so the page renders
       // with partial data instead of hanging on a blank loader.
     } finally {
+      // The gallery URLs do not change when the photos behind them do, so a
+      // refresh has to evict the bytes as well or the carousel repaints from
+      // the cache and looks unchanged (86d3x5ex6).
+      if (refresh) {
+        final images = product?.images ?? const <String>[];
+        await ImageTools.evictProductImages(
+            [product?.imageFeature, ...images]);
+      }
       isLoading = false;
       if (mounted) {
         setState(() {});
@@ -329,7 +342,7 @@ class _ProductDetailPageState extends BaseScreen<ProductDetailScreen>
               // scrollable that factory returns. The themes only need
               // AlwaysScrollableScrollPhysics for short pages to overscroll.
               child: RefreshIndicator(
-                onRefresh: _loadProduct,
+                onRefresh: () => _loadProduct(refresh: true),
                 child: layout,
               ),
             ),

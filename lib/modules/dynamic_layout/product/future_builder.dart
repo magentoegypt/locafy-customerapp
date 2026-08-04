@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../common/config.dart';
 import '../../../common/constants.dart';
+import '../../../common/tools/image_tools.dart';
 import '../../../models/index.dart' show AppModel, Product, RecentModel;
 import '../../../models/user_model.dart';
 import '../../../services/index.dart';
@@ -67,7 +68,17 @@ class _ProductListLayoutState extends State<ProductFutureBuilder> {
           refreshCache: widget.cleanCache,
         );
     // printLog('[getProductLayout]', startTime);
-    return result;
+    if (!widget.cleanCache) return result;
+    // Same reason as the product list: refreshing the home screen has to drop
+    // the cached image bytes too, or a replaced photo keeps repainting from
+    // the old ones under its unchanged URL (86d3x5ex6).
+    return result.then((products) async {
+      if (products != null && products.isNotEmpty) {
+        await ImageTools.evictProductImages(
+            products.map((product) => product.imageFeature));
+      }
+      return products;
+    });
   }
 
   @override

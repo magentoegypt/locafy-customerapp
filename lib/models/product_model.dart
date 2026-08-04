@@ -252,6 +252,15 @@ class ProductModel with ChangeNotifier {
 
       final products = await _cancelLoadProduct!.value;
 
+      // A pull-to-refresh busts the catalog cache, but the image bytes sit in
+      // their own URL-keyed cache — and a replaced photo keeps its URL, so
+      // without this the refreshed list repaints from the old bytes and the
+      // picture never changes (86d3x5ex6).
+      if (refresh && products != null && products.isNotEmpty) {
+        await ImageTools.evictProductImages(
+            products.map((product) => product.imageFeature));
+      }
+
       // Real category/brand total from the API's `total_count`, exposed by the
       // Magento service after each fetch (falls back to the loaded count for
       // frameworks that don't provide it).
