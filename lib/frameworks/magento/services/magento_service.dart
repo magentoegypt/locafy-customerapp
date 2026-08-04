@@ -760,24 +760,81 @@ class MagentoService extends BaseServices {
   /// Parent sku of a configurable cart line, keyed by the child sku.
   final Map<String, Future<String?>> _parentSkuCache = {};
 
+  /// sku of the configurable with this entity id, or null when the id is
+  /// missing/unknown or names a product that is not a configurable — a simple
+  /// line must keep its own sku.
+  final Map<String, Future<String?>> _skuByEntityIdCache = {};
+
+  Future<String?> _configurableSkuByEntityId(String? entityId) {
+    if (entityId == null || entityId.isEmpty || entityId == '0') {
+      return Future.value(null);
+    }
+    final cached = _skuByEntityIdCache[entityId];
+    if (cached != null) return cached;
+    final future = () async {
+      try {
+        final url = MagentoHelper.buildUrl(domain, 'products')!.replace(
+          queryParameters: {
+            'searchCriteria[filterGroups][0][filters][0][field]': 'entity_id',
+            'searchCriteria[filterGroups][0][filters][0][value]': entityId,
+            'searchCriteria[filterGroups][0][filters][0][condition_type]': 'eq',
+            'searchCriteria[pageSize]': '1',
+          },
+        );
+        final response = await httpGet(url,
+            headers: {'Authorization': 'Bearer $accessToken'});
+        final body = convert.jsonDecode(response.body);
+        final items = (body is Map) ? body['items'] : null;
+        if (items is! List || items.isEmpty) return null;
+        final item = items.first;
+        if (item is! Map) return null;
+        if (item['type_id']?.toString() != 'configurable') return null;
+        return item['sku']?.toString();
+      } catch (_) {
+        return null;
+      }
+    }();
+    _skuByEntityIdCache[entityId] = future;
+    future.then((v) {
+      if (v == null) _skuByEntityIdCache.remove(entityId);
+    }, onError: (_) => _skuByEntityIdCache.remove(entityId));
+    return future;
+  }
+
   /// Finds the configurable parent for a cart line.
   ///
   /// `carts/mine/items` reports the *child* sku for a configurable line even
-  /// though the line itself is configurable, and Magento exposes no child ->
-  /// parent link on the product. What the line does carry is the parent's
-  /// name, so search configurables by that name and confirm the match by
-  /// checking the candidate's `configurable_product_links` really contains this
-  /// child — that guards against two parents sharing a name.
+  /// though the line itself is configurable, so without this the cart row would
+  /// open the child simple product (no variant picker) instead of the parent
+  /// (86d3g2npa #7), and the rebuilt line would key on the child sku while a
+  /// locally added one keys on the parent, so a refresh would not line up with
+  /// the row it replaced.
   ///
-  /// Without this the cart row would open the child simple product (no variant
-  /// picker) instead of the parent (86d3g2npa #7), and the rebuilt line would
-  /// key on the child sku while a locally added one keys on the parent, so a
-  /// refresh would not line up with the row it replaced.
-  Future<String?> getConfigurableParentSku(
-      String childSku, String? parentName, String? childEntityId) {
+  /// The line does say which parent it belongs to:
+  /// `extension_attributes.entity_id` is the *configurable's* entity id, not
+  /// the child's (verified on live quotes — child sku amari-store_221225_6 is
+  /// catalog id 33985 while the line reports 33987, the configurable whose
+  /// `configurable_product_links` contains 33985). [parentEntityId] is that
+  /// value, and resolving through it is exact and language-independent.
+  ///
+  /// The previous implementation searched configurables by the line's *name*
+  /// instead. That is what made this fail for a cart filled on the website:
+  /// Magento snapshots the item name into the quote in the store view the
+  /// shopper used, so a line added on the Arabic storefront carries the Arabic
+  /// title, while this lookup runs against eg-en where the product is titled in
+  /// English — no match, no parent, and the row opened the variant. (It also
+  /// passed the parent's own id as `childEntityId`, so the
+  /// `configurable_product_links` confirmation could never match either, and
+  /// every resolution leaned on the "exactly one product has this name"
+  /// fallback.) The name search is kept below only for lines that arrive
+  /// without an entity id.
+  Future<String?> getConfigurableParentSku(String childSku, String? parentName,
+      {String? parentEntityId}) {
     final cached = _parentSkuCache[childSku];
     if (cached != null) return cached;
     final future = () async {
+      final byId = await _configurableSkuByEntityId(parentEntityId);
+      if (byId != null) return byId;
       if (parentName == null || parentName.isEmpty) return null;
       try {
         final url = MagentoHelper.buildUrl(domain, 'products')!.replace(
@@ -794,18 +851,8 @@ class MagentoService extends BaseServices {
         final body = convert.jsonDecode(response.body);
         final items = (body is Map) ? body['items'] : null;
         if (items is! List || items.isEmpty) return null;
-        for (final item in items) {
-          if (item is! Map) continue;
-          final links =
-              item['extension_attributes']?['configurable_product_links'];
-          if (links is List &&
-              childEntityId != null &&
-              links.any((l) => '$l' == childEntityId)) {
-            return item['sku']?.toString();
-          }
-        }
-        // Exactly one configurable carries this name — take it even though the
-        // link check could not confirm it (links are omitted on some responses).
+        // Exactly one configurable carries this name — anything ambiguous is
+        // left unresolved rather than guessed at.
         return items.length == 1 ? items.first['sku']?.toString() : null;
       } catch (_) {
         return null;
@@ -1378,6 +1425,65 @@ class MagentoService extends BaseServices {
     }
   }
 
+  /// One page of catalog-search hits, in the relevance order the website uses.
+  ///
+  /// The search *preview* already matches locafy.market because it calls the
+  /// same MageWorx autocomplete the website's header uses. The results page
+  /// behind "SEE ALL" did not: it ran a plain `name LIKE %keyword%` over the
+  /// catalog, which is a different engine entirely — for "dress" that is 24
+  /// products against the website's 158, and for "shirt" 108 against 208
+  /// (86d3xea48). Anything matched on description, sku, attributes or by
+  /// stemming/synonyms was simply invisible.
+  ///
+  /// `V1/search` with `quick_search_container` is the request the storefront
+  /// itself runs, so its `total_count` and ordering match the website exactly
+  /// (verified against /eg-en/catalogsearch/result on all three keywords).
+  /// It returns ids only, so the caller hydrates them through `mstore/products`.
+  ///
+  /// NOTE `currentPage` is a 0-based offset here, unlike every other
+  /// searchCriteria endpoint in this file: page 0 returns the website's first
+  /// results and page 1 already skips [perPage] of them. Callers pass a
+  /// 1-based page, so it is decremented below — without that the first
+  /// [perPage] hits are never shown.
+  Future<({List<String> ids, int total})?> searchProductIds(
+    String keyword, {
+    int page = 1,
+    int perPage = 20,
+    String? lang,
+  }) async {
+    if (keyword.trim().isEmpty) return null;
+    try {
+      final url = MagentoHelper.buildUrl(domain, 'search', lang)!.replace(
+        queryParameters: {
+          'searchCriteria[requestName]': 'quick_search_container',
+          'searchCriteria[filter_groups][0][filters][0][field]': 'search_term',
+          'searchCriteria[filter_groups][0][filters][0][value]': keyword,
+          'searchCriteria[pageSize]': '$perPage',
+          'searchCriteria[currentPage]': '${page > 0 ? page - 1 : 0}',
+        },
+      );
+      final response =
+          await httpGet(url, headers: {'Authorization': 'Bearer $accessToken'});
+      if (response.statusCode != 200) return null;
+      final body = convert.jsonDecode(response.body);
+      if (body is! Map) return null;
+      final items = body['items'];
+      if (items is! List) return null;
+      final ids = <String>[];
+      for (final item in items) {
+        final id = (item is Map) ? item['id']?.toString() : null;
+        if (id != null && id.isNotEmpty) ids.add(id);
+      }
+      final rawTotal = body['total_count'];
+      final total = rawTotal is int ? rawTotal : int.tryParse('$rawTotal') ?? 0;
+      return (ids: ids, total: total);
+    } catch (_) {
+      // Never fail the whole listing over search: the caller falls back to the
+      // old name-LIKE filter.
+      return null;
+    }
+  }
+
   @override
   Future<List<Product>> getProducts({userId}) async {
     try {
@@ -1515,6 +1621,27 @@ class MagentoService extends BaseServices {
       bool refreshCache = false}) async {
     try {
       var endPoint = '?';
+      // A keyword search resolves through the storefront's own search engine
+      // first, so the results page returns what locafy.market returns instead
+      // of a name-LIKE approximation (86d3xea48). The ids come back already
+      // paged and in relevance order; `mstore/products` is then only used to
+      // hydrate them, so its own paging and sorting must be left off below.
+      final relevance = isBlank(search)
+          ? null
+          : await searchProductIds(search!,
+              page: (page is int && page > 0) ? page : 1,
+              perPage: perPage ?? apiPageSize,
+              lang: lang);
+      final useRelevance = relevance != null && relevance.ids.isNotEmpty;
+      // No hits on this page means the end of the results (or a keyword that
+      // matches nothing). Stop here rather than falling through to the
+      // name-LIKE branch below, which would answer a *different* query and so
+      // resurrect the list every time the shopper scrolled past the last page.
+      // Only a failed lookup (relevance == null) is allowed to fall back.
+      if (relevance != null && relevance.ids.isEmpty) {
+        lastCategoryProductsTotal = relevance.total;
+        return <Product>[];
+      }
       if (categoryId != null) {
         // The synthesized "Brands" menu node has no catalog category of its
         // own: attachBrandsAtTopLevel gives it the id "-<parentCategoryId>".
@@ -1564,7 +1691,13 @@ class MagentoService extends BaseServices {
         // whole query string and causing the backend to 404 on searches
         // performed from within a category.
         if (endPoint != '?') endPoint += '&';
-        if (kAdvanceConfig.enableSkuSearch) {
+        if (useRelevance) {
+          // Hydrate exactly the hits the search engine returned for this page.
+          endPoint +=
+              'searchCriteria[filter_groups][4][filters][0][field]=entity_id'
+              '&searchCriteria[filter_groups][4][filters][0][value]=${relevance.ids.join(',')}'
+              '&searchCriteria[filter_groups][4][filters][0][condition_type]=in';
+        } else if (kAdvanceConfig.enableSkuSearch) {
           endPoint +=
               'searchCriteria[filter_groups][4][filters][0][field]=name&searchCriteria[filter_groups][4][filters][0][value]=%$search%&searchCriteria[filter_groups][4][filters][0][condition_type]=like&searchCriteria[filter_groups][4][filters][1][field]=sku&searchCriteria[filter_groups][4][filters][1][value]=%$search%&searchCriteria[filter_groups][4][filters][1][condition_type]=like';
         } else {
@@ -1595,32 +1728,37 @@ class MagentoService extends BaseServices {
           groupIndex++;
         });
       }
-      if (page != null) {
+      // The relevance path has already paged: the ids ARE this page, so asking
+      // mstore/products for page N of them would return nothing.
+      if (page != null && !useRelevance) {
         endPoint += '&searchCriteria[currentPage]=$page';
       }
 
-      endPoint +=
-          '&searchCriteria[sortOrders][1][field]=${getOrderByKey(orderBy)}';
+      // Likewise, a sort would throw away the relevance ranking the website
+      // orders search results by — only send one the shopper actually picked.
+      if (!useRelevance || orderBy != null) {
+        endPoint +=
+            '&searchCriteria[sortOrders][1][field]=${getOrderByKey(orderBy)}';
 
-      endPoint +=
-          '&searchCriteria[sortOrders][1][direction]=${getOrderDirection(order)}';
+        endPoint +=
+            '&searchCriteria[sortOrders][1][direction]=${getOrderDirection(order)}';
+      }
 
       if (onSale == true) {
         endPoint +=
             '&searchCriteria[filter_groups][3][filters][0][field]=special_price&searchCriteria[filter_groups][3][filters][0][condition_type]=notnull';
       }
-      endPoint += '&searchCriteria[pageSize]=${perPage ?? apiPageSize}';
+      endPoint +=
+          '&searchCriteria[pageSize]=${useRelevance ? relevance.ids.length : (perPage ?? apiPageSize)}';
 
       endPoint +=
           '&searchCriteria[filter_groups][1][filters][0][field]=visibility&searchCriteria[filter_groups][1][filters][0][value]=4';
-      if (searchText != null && searchText.isNotEmpty) {
-        final encodedSearch = Uri.encodeComponent(searchText);
-        if (endPoint == '?') {
-          endPoint += 'q=$encodedSearch';
-        } else {
-          endPoint += '&q=$encodedSearch';
-        }
-      }
+      // `searchText` used to be appended here as mstore/products' full-text
+      // `q=` parameter. That endpoint 500s as soon as `q` is combined with any
+      // searchCriteria filter — including the visibility filter every call
+      // above adds — so it could only ever blank the listing. Keyword search
+      // now goes through searchProductIds above; the parameter is kept in the
+      // signature because the shared BaseServices API declares it.
       // Short-TTL catalog cache: opening a product and coming back re-uses the
       // list instantly; a pull-to-refresh passes refreshCache to bypass it.
       var response = await httpCache(
@@ -1640,6 +1778,20 @@ class MagentoService extends BaseServices {
             in (decoded is Map ? decoded['items'] : null) ?? const []) {
           var product = parseProductFromJson(item, brandLabels: brandLabels);
           list.add(product);
+        }
+        if (useRelevance) {
+          // `entity_id in (...)` comes back in id order, not the order it was
+          // asked for, so put the search engine's ranking back — that ranking
+          // is what makes the first screen match the website's first screen.
+          final rank = <String, int>{
+            for (var i = 0; i < relevance.ids.length; i++) relevance.ids[i]: i
+          };
+          list.sort((a, b) => (rank[a.id] ?? relevance.ids.length)
+              .compareTo(rank[b.id] ?? relevance.ids.length));
+          // The count beside the title has to be the number of hits, not the
+          // size of this page — and it is what the preview shows too, so the
+          // two finally agree (86d3xea48).
+          lastCategoryProductsTotal = relevance.total;
         }
       }
       return list;
@@ -4095,8 +4247,11 @@ class MagentoService extends BaseServices {
               // Swap the child sku Magento reports for the parent's, so the row
               // opens the configurable (with its variant picker) and keys the
               // same way a locally added line does.
+              // product.id is the line's extension_attributes.entity_id, which
+              // for a configurable line is the *parent's* id (86d3g2npa #7).
               final parentSku = await getConfigurableParentSku(
-                  product.sku!, product.name, product.id);
+                  product.sku!, product.name,
+                  parentEntityId: product.id);
               if (parentSku != null && parentSku.isNotEmpty) {
                 // Keep the child sku: it is the one that actually carries stock.
                 product.variantSku = product.sku;

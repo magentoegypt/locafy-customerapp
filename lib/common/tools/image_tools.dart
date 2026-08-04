@@ -70,6 +70,15 @@ class ImageTools {
     }
 
     if (ServerConfig().isCacheImage ?? kAdvanceConfig.kIsResizeImage) {
+      // A Magento `/media/catalog/product/cache/<hash>/…` URL is already a
+      // resized rendition. There is no `-medium` sibling *of a rendition*, and
+      // Magento answers a missing media file with HTTP 200 + the store
+      // placeholder rather than a 404 — so appending the suffix here does not
+      // fail loudly, it silently swaps the product photo for the placeholder.
+      // Hand these back untouched (86d3x5ex6).
+      if (url != null && url.contains('/media/catalog/product/cache/')) {
+        return url;
+      }
       var pathWithoutExt = p.withoutExtension(url!);
       var ext = p.extension(url);
       String? imageURL = url;
