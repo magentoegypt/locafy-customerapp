@@ -1548,6 +1548,13 @@ class MagentoService extends BaseServices {
       var response = await httpCache(
         MagentoHelper.buildUrl(domain, 'mstore/products$endPoint', lang)!,
         headers: {'Authorization': 'Bearer $accessToken'},
+        // Same catalog payload the grid fetches, so it belongs on the same
+        // short TTL. Without this the home carousels sat in the 1h store while
+        // the grid used 5m, so the identical product could show a stale price,
+        // stock state or image URL for twelve times as long on the home screen
+        // as it did one tap away — and a role/image change on the backend took
+        // an hour to surface there.
+        shortLived: true,
         refreshCache: refreshCache,
       );
 
