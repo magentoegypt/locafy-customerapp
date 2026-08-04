@@ -1445,11 +1445,18 @@ class MagentoService extends BaseServices {
   /// results and page 1 already skips [perPage] of them. Callers pass a
   /// 1-based page, so it is decremented below — without that the first
   /// [perPage] hits are never shown.
+  ///
+  /// [categoryId] narrows the search to one category. It has to be applied
+  /// *here* rather than to the hydrating query: the ids are already one page,
+  /// so filtering them afterwards drops rows out of that page — searching
+  /// "shirt" inside a category returned 12 rows for a page of 20 while the
+  /// header still claimed 208 — and the count would still be the unscoped one.
   Future<({List<String> ids, int total})?> searchProductIds(
     String keyword, {
     int page = 1,
     int perPage = 20,
     String? lang,
+    String? categoryId,
   }) async {
     if (keyword.trim().isEmpty) return null;
     try {
@@ -1458,6 +1465,11 @@ class MagentoService extends BaseServices {
           'searchCriteria[requestName]': 'quick_search_container',
           'searchCriteria[filter_groups][0][filters][0][field]': 'search_term',
           'searchCriteria[filter_groups][0][filters][0][value]': keyword,
+          if (categoryId != null && categoryId.isNotEmpty) ...{
+            'searchCriteria[filter_groups][1][filters][0][field]':
+                'category_ids',
+            'searchCriteria[filter_groups][1][filters][0][value]': categoryId,
+          },
           'searchCriteria[pageSize]': '$perPage',
           'searchCriteria[currentPage]': '${page > 0 ? page - 1 : 0}',
         },
@@ -1628,17 +1640,46 @@ class MagentoService extends BaseServices {
       bool refreshCache = false}) async {
     try {
       var endPoint = '?';
+      // The synthesized "Brands" menu node has no catalog category of its own
+      // (see below), and a brand node filters on `brand` rather than
+      // `category_id` — so resolve both up front, the search engine needs the
+      // real category id before the query is built.
+      final isBrandNode = categoryId != null && brandIds.contains(categoryId);
+      String? resolvedCategoryId;
+      if (categoryId != null) {
+        resolvedCategoryId = '$categoryId';
+        if (resolvedCategoryId.startsWith('-') &&
+            int.tryParse(resolvedCategoryId.substring(1)) != null) {
+          resolvedCategoryId = resolvedCategoryId.substring(1);
+        }
+      }
+
       // A keyword search resolves through the storefront's own search engine
       // first, so the results page returns what locafy.market returns instead
       // of a name-LIKE approximation (86d3xea48). The ids come back already
       // paged and in relevance order; `mstore/products` is then only used to
       // hydrate them, so its own paging and sorting must be left off below.
-      final relevance = isBlank(search)
+      //
+      // Narrowing that cannot be pushed into the search engine is the one case
+      // this must not be used for. The ids are already a single page, so a
+      // filter applied while hydrating removes rows *from that page* and the
+      // count still describes the unfiltered search — short pages under a
+      // number that does not match them. The category is pushed into the
+      // search itself; brand/price/attribute/on-sale narrowing is not
+      // expressible there, so those fall back to the name match, which is less
+      // faithful to the website but at least agrees with its own count.
+      final hasUnpushableFilter = isBrandNode ||
+          minPrice != null ||
+          maxPrice != null ||
+          onSale == true ||
+          (attributeFilters != null && attributeFilters.isNotEmpty);
+      final relevance = (isBlank(search) || hasUnpushableFilter)
           ? null
           : await searchProductIds(search!,
               page: (page is int && page > 0) ? page : 1,
               perPage: perPage ?? apiPageSize,
-              lang: lang);
+              lang: lang,
+              categoryId: resolvedCategoryId);
       final useRelevance = relevance != null && relevance.ids.isNotEmpty;
       // No hits on this page means the end of the results (or a keyword that
       // matches nothing). Stop here rather than falling through to the
@@ -1649,7 +1690,9 @@ class MagentoService extends BaseServices {
         lastCategoryProductsTotal = relevance.total;
         return <Product>[];
       }
-      if (categoryId != null) {
+      // Skipped when the search engine already scoped the ids to this category
+      // — re-applying it here could only ever remove rows from the page.
+      if (categoryId != null && !useRelevance) {
         // The synthesized "Brands" menu node has no catalog category of its
         // own: attachBrandsAtTopLevel gives it the id "-<parentCategoryId>".
         // Querying that literally sent category_id=-192, which matches nothing,
@@ -1657,12 +1700,7 @@ class MagentoService extends BaseServices {
         // strip rendered fine. Resolve it back to the parent category and show
         // that category's products; the brand strip then narrows by brand.
         // (86d3qecbf / brands submenu blank.)
-        var resolvedCategoryId = '$categoryId';
-        if (resolvedCategoryId.startsWith('-') &&
-            int.tryParse(resolvedCategoryId.substring(1)) != null) {
-          resolvedCategoryId = resolvedCategoryId.substring(1);
-        }
-        if(brandIds.contains(categoryId)){
+        if (isBrandNode) {
           endPoint +=
           'searchCriteria[filter_groups][0][filters][0][field]=brand&searchCriteria[filter_groups][0][filters][0][value]=$categoryId&searchCriteria[filter_groups][0][filters][0][condition_type]=eq';
         }else{

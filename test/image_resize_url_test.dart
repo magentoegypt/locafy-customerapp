@@ -61,4 +61,40 @@ void main() {
       expect(ImageTools.formatImage(null, kSize.medium), isNull);
     });
   });
+
+  // Pull-to-refresh feeds this the product list, which arrives from a
+  // CancelableOperation declared without a type argument — so the call is
+  // statically dynamic and no cast is checked until runtime. An
+  // Iterable<String?> parameter compiled cleanly and then threw
+  // "MappedListIterable<Product, dynamic> is not a subtype of
+  // Iterable<String?>" on device, inside the try block that loads products, so
+  // the list came back empty and every search rendered "No Product".
+  group('evictProductImages accepts what the callers actually pass', () {
+    setUpAll(() {
+      // clearMemoryImageCache() reaches PaintingBinding.instance.
+      TestWidgetsFlutterBinding.ensureInitialized();
+      ServerConfig().setConfig({'type': 'magento'});
+    });
+
+    test('a dynamic iterable of urls does not throw', () async {
+      final dynamic urls = <Object?>[
+        '$media/s/e/one.jpg',
+        '$cachePrefix/s/e/two.jpg',
+      ].map((e) => e);
+
+      await expectLater(ImageTools.evictProductImages(urls), completes);
+    });
+
+    test('nulls and non-strings are skipped rather than throwing', () async {
+      await expectLater(
+        ImageTools.evictProductImages(<dynamic>[null, 42, '', 'not-a-url']),
+        completes,
+      );
+    });
+
+    test('an empty list is a no-op', () async {
+      await expectLater(
+          ImageTools.evictProductImages(const <dynamic>[]), completes);
+    });
+  });
 }

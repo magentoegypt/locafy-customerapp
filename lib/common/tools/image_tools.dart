@@ -126,10 +126,19 @@ class ImageTools {
   ///
   /// Only for an explicit refresh — it costs a re-download of exactly the
   /// images being refreshed, which is what the shopper just asked for.
-  static Future<void> evictProductImages(Iterable<String?> urls) async {
+  ///
+  /// Takes `dynamic` deliberately. The product list arrives from a
+  /// `CancelableOperation` declared without a type argument, so the list — and
+  /// therefore `.map((p) => p.imageFeature)` over it — is statically dynamic.
+  /// Declaring `Iterable<String?>` here compiled fine and then threw
+  /// "MappedListIterable<Product, dynamic> is not a subtype of
+  /// Iterable<String?>" at runtime, inside the try block that loads products:
+  /// the list came back empty and every search showed "No Product". Anything
+  /// that is not a usable URL is skipped below instead.
+  static Future<void> evictProductImages(Iterable<dynamic> urls) async {
     final targets = <String>{};
     for (final url in urls) {
-      if (url == null || !url.startsWith('http')) continue;
+      if (url is! String || !url.startsWith('http')) continue;
       // Widgets request a resized sibling rather than the URL itself, so the
       // original is not the key any of them actually cached under.
       targets.add(url);
