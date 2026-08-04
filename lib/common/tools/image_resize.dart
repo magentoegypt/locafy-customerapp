@@ -100,7 +100,43 @@ class ImageResize extends StatelessWidget {
 
     final resolvedUrl = isResize ? ImageTools.formatImage(url, size)! : url!;
 
-    final image = ExtendedImage.network(
+    // The "-small"/"-medium"/"-large" sibling only exists once the backend's
+    // resize job has processed the file. A photo uploaded or swapped in the
+    // admin has none until then, and the request is a hard 404 — which used to
+    // paint the empty box below, so the product page showed a blank frame in
+    // the carousel while the original was sitting there perfectly fine
+    // (86d3x5ex6). Cards avoid this by using Magento's on-demand rendition,
+    // but that is not an option here: renditions only exist for images
+    // carrying a role, and a carousel is mostly the extra shots that carry
+    // none — measured 17 of 37 gallery files resolving, the rest returning the
+    // store placeholder. So fall back to the original file, which always
+    // exists. It costs a bigger download, but only for the images the resize
+    // job has not caught up with yet.
+    final image = _build(context, resolvedUrl,
+        cacheWidth: cacheWidth,
+        fallbackUrl: resolvedUrl != url ? url : null);
+
+    if (forceWhiteBackground && url!.toLowerCase().endsWith('.png')) {
+      return Container(
+        color: Colors.white,
+        child: image,
+      );
+    }
+
+    return image;
+  }
+
+  Widget _build(
+    BuildContext context,
+    String resolvedUrl, {
+    required int cacheWidth,
+    String? fallbackUrl,
+  }) {
+    var width = this.width ?? 200;
+    var ratioImage = kAdvanceConfig.ratioProductImage;
+    var height = this.height ?? width * ratioImage;
+
+    return ExtendedImage.network(
       resolvedUrl,
       // A pull-to-refresh empties the image caches, but the URL is unchanged so
       // the rebuilt widget's provider still compares equal and Flutter keeps
@@ -161,6 +197,13 @@ class ImageResize extends StatelessWidget {
           //   duration: const Duration(milliseconds: 250),
           // );
           case LoadState.failed:
+            // Retry once on the un-suffixed original before giving up, so a
+            // missing resized variant does not leave an empty frame. The
+            // fallback is built with fallbackUrl null, so a genuine dead image
+            // still lands on the placeholder below instead of looping.
+            if (fallbackUrl != null) {
+              return _build(context, fallbackUrl, cacheWidth: cacheWidth);
+            }
             widget = Container(
               width: width,
               height: height,
@@ -171,14 +214,5 @@ class ImageResize extends StatelessWidget {
         return widget;
       },
     );
-
-    if (forceWhiteBackground && url!.toLowerCase().endsWith('.png')) {
-      return Container(
-        color: Colors.white,
-        child: image,
-      );
-    }
-
-    return image;
   }
 }
