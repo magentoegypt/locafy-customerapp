@@ -1439,8 +1439,17 @@ class MagentoService extends BaseServices {
   @override
   Future<SearchResponse?> searchProductsResult(String? search) async {
     try {
-      final url =
-          '$domain/eg-en/mageworx_searchsuiteautocomplete/ajax/index/?q=${Uri.encodeComponent(search ?? '')}';
+      // Follow the app language into the matching store view. This was pinned
+      // to eg-en, so the Arabic app previewed the *English* catalogue: "shirt"
+      // offered 208 products where the Arabic storefront — and the app's own
+      // results page, which already honours the language — both say 193. The
+      // preview and the page it leads to disagreed by 15 products purely
+      // because of the store view (86d3xea48).
+      final url = MagentoHelper.storefrontUrl(
+          domain,
+          'mageworx_searchsuiteautocomplete/ajax/index/'
+              '?q=${Uri.encodeComponent(search ?? '')}',
+          SettingsBox().languageCode);
       printLog(url);
       var response = await httpGet(Uri.parse(url),
           headers: {'Authorization': 'Bearer $accessToken'});
