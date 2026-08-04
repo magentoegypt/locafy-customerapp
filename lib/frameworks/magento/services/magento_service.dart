@@ -155,15 +155,12 @@ class MagentoService extends BaseServices {
     var images = kEnableProductThumbnail
         ? [MagentoHelper.getProductImageUrl(domain, productJson, 'thumbnail')]
         : <String>[];
-    if (mediaGalleryEntries != null &&
-            (kEnableProductThumbnail && mediaGalleryEntries.length > 1) ||
-        (!kEnableProductThumbnail && mediaGalleryEntries.length > 0)) {
-      for (var item in mediaGalleryEntries) {
-        printLog('========================item: $item');
-        images
-            .add(MagentoHelper.getProductImageUrlByName(domain, item['file']));
-      }
-    }
+    // Role-first, so the card shows the photo Magento marks as the product
+    // image rather than whatever happens to be first in the gallery
+    // (86d3x5ex6). Also replaces an `&&`/`||` precedence bug here that
+    // dereferenced mediaGalleryEntries.length even when it was null.
+    images.addAll(MagentoHelper.orderedGalleryFiles(mediaGalleryEntries)
+        .map((file) => MagentoHelper.getProductImageUrlByName(domain, file)));
     var product = Product.fromMagentoJson(productJson);
     final description = MagentoHelper.getCustomAttribute(
         productJson['custom_attributes'], 'description');
@@ -248,7 +245,18 @@ class MagentoService extends BaseServices {
       product.salePrice = minimalPrice;
     }
     product.images = images;
-    product.imageFeature = images.isNotEmpty ? images[0] : null;
+    // Every card in the app — PLP grids, home carousels, search results —
+    // shows the `small_image` role, the same one the website's listings use.
+    // Take it from the attribute rather than inferring it from the gallery:
+    // the gallery is not returned role-first, so the first entry is often not
+    // the product photo at all ("test image product" leads with a stray logo
+    // whose `types` is empty, which is what put the wrong image on every grid
+    // — 86d3x5ex6). The ordered gallery is only the fallback.
+    final smallImage =
+        MagentoHelper.getProductImageUrl(domain, productJson, 'small_image');
+    product.imageFeature = smallImage.isNotEmpty
+        ? smallImage
+        : (images.isNotEmpty ? images[0] : null);
 
     final brandId =
         MagentoHelper.getCustomAttribute(productJson['custom_attributes'], 'brand');

@@ -85,6 +85,47 @@ class MagentoHelper {
     return value;
   }
 
+  /// The gallery entries of a product, ordered the way the storefront orders
+  /// them: the image carrying the `image`/`small_image`/`thumbnail` role first,
+  /// then everything else by `position`.
+  ///
+  /// Magento does not return the gallery role-first, and the roles are what
+  /// decide which photo represents the product — `media_gallery_entries[0]` is
+  /// simply whichever row came back first. On this catalogue those disagree:
+  /// "test image product" carries a stray logo at position 1 with `types: []`
+  /// and its real photo at position 2 with all four roles, so the app showed
+  /// the logo on every grid while the website and the search suggestions —
+  /// both of which read the role — showed the photo (86d3x5ex6).
+  ///
+  /// Returns the raw `file` paths; callers turn them into URLs.
+  static List<String> orderedGalleryFiles(dynamic entries) {
+    if (entries is! List) return const [];
+    final rows = <Map>[];
+    for (final entry in entries) {
+      if (entry is Map && entry['file'] != null) rows.add(entry);
+    }
+    if (rows.isEmpty) return const [];
+
+    int position(Map row) {
+      final raw = row['position'];
+      return raw is int ? raw : int.tryParse('$raw') ?? 1 << 30;
+    }
+
+    bool hasRole(Map row) {
+      final types = row['types'];
+      if (types is! List) return false;
+      return types.any((t) =>
+          t == 'image' || t == 'small_image' || t == 'thumbnail');
+    }
+
+    rows.sort((a, b) => position(a).compareTo(position(b)));
+    // A stable partition rather than a sort key, so the roled image wins
+    // outright and everything else keeps catalogue order.
+    final roled = rows.where(hasRole).toList();
+    final rest = rows.where((r) => !hasRole(r)).toList();
+    return [...roled, ...rest].map((r) => '${r['file']}').toList();
+  }
+
   static String getProductImageUrlByName(domain, imageName) {
     // Media is served by the CDN (kMediaDomain), not the API domain, because
     // staging has no media files. Same host is used for live and staging.

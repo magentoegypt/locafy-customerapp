@@ -1711,13 +1711,12 @@ class Product {
       salePrice = minimalPrice;
     }
     if (extensionAttributes != null) {
-      final mediaGalleryEntries = extensionAttributes['media_gallery_entries'];
-      if (mediaGalleryEntries != null) {
-        for (var item in mediaGalleryEntries) {
-          images.add(
-              MagentoHelper.getProductImageUrlByName(domain, item['file']));
-        }
-      }
+      // Role-first: a cart line's gallery comes back in catalogue order, and
+      // the roled photo is regularly not the first row — cart rows were
+      // showing a stray gallery image instead of the product (86d3x5ex6).
+      images.addAll(MagentoHelper.orderedGalleryFiles(
+              extensionAttributes['media_gallery_entries'])
+          .map((file) => MagentoHelper.getProductImageUrlByName(domain, file)));
     }
     imageFeature = images.isNotEmpty ? images[0] : null;
     attributes = [];
