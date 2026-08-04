@@ -254,8 +254,28 @@ class MagentoService extends BaseServices {
     // — 86d3x5ex6). The ordered gallery is only the fallback.
     final smallImage =
         MagentoHelper.getProductImageUrl(domain, productJson, 'small_image');
-    product.imageFeature = smallImage.isNotEmpty
-        ? smallImage
+    // Take Magento's own rendition of it where there is one. The `thumbnail`
+    // attribute is a /media/catalog/product/cache/<hash>/… URL, and Magento
+    // builds those on demand from the original, so they exist the moment an
+    // image is uploaded. The -small/-medium/-large siblings do not: they are
+    // written by the resize job, and until it runs they 404 — which renders as
+    // an empty card, because a failed load draws nothing. Swapping a photo in
+    // the admin used to leave that blank until the job caught up (86d3x5ex6);
+    // measured on the 30 newest products, the -medium sibling was missing for
+    // one and the rendition URL resolved for all 30.
+    //
+    // formatImage leaves cache URLs alone, so this is used as-is rather than
+    // having a suffix appended to it.
+    final thumbnail =
+        MagentoHelper.getProductImageUrl(domain, productJson, 'thumbnail');
+    // …but not when it is the store's stand-in for "no image at all", which
+    // would hide a product that does have a usable gallery photo.
+    final preferred =
+        (thumbnail.isNotEmpty && !thumbnail.contains('/placeholder/'))
+            ? thumbnail
+            : smallImage;
+    product.imageFeature = preferred.isNotEmpty
+        ? preferred
         : (images.isNotEmpty ? images[0] : null);
 
     final brandId =
