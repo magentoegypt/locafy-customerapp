@@ -96,5 +96,19 @@ void main() {
       await expectLater(
           ImageTools.evictProductImages(const <dynamic>[]), completes);
     });
+
+    // Emptying the caches alone left the old photo on screen: the URL is
+    // unchanged, so the rebuilt widget's provider compares equal and Flutter
+    // keeps the stream it already resolved. ImageResize mixes this counter
+    // into each image's key so a refresh produces a fresh element.
+    test('a refresh advances the generation the image keys are built from',
+        () async {
+      final before = ImageTools.refreshGeneration;
+
+      await ImageTools.evictProductImages(
+          <dynamic>['$media/s/e/one.jpg']);
+
+      expect(ImageTools.refreshGeneration, greaterThan(before));
+    });
   });
 }

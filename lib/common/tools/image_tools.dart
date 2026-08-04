@@ -160,7 +160,28 @@ class ImageTools {
     // differs per widget — so there is no dependable per-URL memory eviction.
     // Drop them and let the visible ones decode again.
     clearMemoryImageCache();
+    _refreshGeneration++;
   }
+
+  /// Incremented every time [evictProductImages] runs; [ImageResize] mixes it
+  /// into the widget key of each product image.
+  ///
+  /// Emptying the caches is not enough on its own. The URL does not change
+  /// when the photo behind it does, so after a refresh the rebuilt widget
+  /// carries an ImageProvider equal to the old one — Flutter then keeps the
+  /// already-attached ImageStream and never re-resolves, so the picture on
+  /// screen stays the old one even though the bytes have just been deleted and
+  /// the next resolve would fetch the new file. Verified on device: a
+  /// pull-to-refresh removed 8 entries from the disk cache while the visible
+  /// image did not change.
+  ///
+  /// Changing the key forces a fresh element, and its resolve then misses both
+  /// caches and downloads again. Doing it this way rather than by appending a
+  /// cache-buster to the URL keeps the cache keyed by the real URL, so the
+  /// re-downloaded bytes are still reused everywhere else in the app.
+  static int _refreshGeneration = 0;
+
+  static int get refreshGeneration => _refreshGeneration;
 
   /// cache avatar for the chat
   static CachedNetworkImage getCachedAvatar(String avatarUrl) {

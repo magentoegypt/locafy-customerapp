@@ -98,8 +98,17 @@ class ImageResize extends StatelessWidget {
         ? (this.width! * devicePixelRatio).round()
         : kCacheImageWidth;
 
+    final resolvedUrl = isResize ? ImageTools.formatImage(url, size)! : url!;
+
     final image = ExtendedImage.network(
-      isResize ? ImageTools.formatImage(url, size)! : url!,
+      resolvedUrl,
+      // A pull-to-refresh empties the image caches, but the URL is unchanged so
+      // the rebuilt widget's provider still compares equal and Flutter keeps
+      // the stream it already resolved — the old photo stays on screen. Mixing
+      // the refresh generation into the key gives a fresh element, whose
+      // resolve misses the (now empty) caches and downloads the new file
+      // (86d3x5ex6).
+      key: ValueKey('$resolvedUrl#${ImageTools.refreshGeneration}'),
       width: width,
       height: height,
       fit: fit,
