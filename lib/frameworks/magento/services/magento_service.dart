@@ -3452,6 +3452,37 @@ class MagentoService extends BaseServices {
         params['sku'] = cartModel.productSkuInCart[key];
        // params['order_currency_code'] = "SAR";
 
+        // productSkuInCart holds the *parent* sku for a configurable (see
+        // addProductToCart), so re-adding the line here has to carry the
+        // selected super attributes too — exactly like _sendCartItemRequest
+        // does on the original add. Without them Magento rejects the parent sku
+        // with "You need to choose options for your item", and since this runs
+        // as part of doCheckout (after the server lines have been deleted) the
+        // checkout page never opened for any configurable (86d4266v6).
+        final product = cartModel.item[key];
+        final metaData = cartModel.productsMetaDataInCart[key];
+        final options = metaData is Map && metaData.isNotEmpty ? metaData : null;
+        final configurableOptions = product != null
+            ? await _buildConfigurableItemOptions(product, options)
+            : null;
+        if (configurableOptions != null) {
+          params['product_option'] = {
+            'extension_attributes': {
+              'configurable_item_options': configurableOptions,
+            }
+          };
+        } else if (options != null) {
+          // Numeric attribute ids could not be resolved — degrade to the child
+          // sku, which Magento accepts on its own. A line rebuilt from the
+          // server carries no ProductVariation, but getShoppingList keeps the
+          // child sku it replaced with the parent's in `variantSku`.
+          final childSku = cartModel.productVariationInCart[key]?.sku ??
+              product?.variantSku;
+          if (childSku != null && childSku.isNotEmpty) {
+            params['sku'] = childSku;
+          }
+        }
+
         final res = await httpPost(
             guestCartId == null
                 ? MagentoHelper.buildUrl(domain, 'carts/mine/items')!
@@ -3471,6 +3502,12 @@ class MagentoService extends BaseServices {
         } else if (body['message'] != null) {
           throw MagentoHelper.getErrorMessage(body)!;
         } else {
+          // These lines were just re-created, so the item ids the cart is
+          // holding are stale — refresh them, otherwise the next qty update or
+          // remove PUT/DELETEs a dead item_id.
+          if (body is Map && body['item_id'] != null) {
+            product?.itemID = body['item_id'].toString();
+          }
           printLog(body);
           return;
         }
