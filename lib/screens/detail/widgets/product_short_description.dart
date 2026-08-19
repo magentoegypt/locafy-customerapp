@@ -1,11 +1,11 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:html/parser.dart';
 import 'package:inspireui/inspireui.dart';
 
 import '../../../generated/l10n.dart';
 import '../../../models/index.dart' show Product;
+import '../../../widgets/product/widgets/product_html_content.dart';
 
 
 class ProductShortDescription extends StatelessWidget {
@@ -73,20 +73,14 @@ class ProductShortDescription extends StatelessWidget {
           color: Theme.of(context).primaryColorLight.withOpacity(0.7),
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Text(
-          _htmlToString(product.shortDescription!),
+        // Rendered as HTML rather than reduced to plain text: merchants embed
+        // images here (Page Builder blocks, inline data: URIs) and flattening
+        // the markup threw every one of them away.
+        child: ProductHtmlContent(
+          product.shortDescription!,
+          textColor: Theme.of(context).textTheme.bodyMedium?.color,
         ),
       ),
     );
-  }
-
-  /// Magento sends the short description as HTML — show plain text.
-  String _htmlToString(String htmlData) {
-    try {
-      var document = parse(htmlData);
-      return parse(document.body!.text).documentElement!.text.trim();
-    } catch (_) {
-      return htmlData;
-    }
   }
 }

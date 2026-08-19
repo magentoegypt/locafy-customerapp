@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:html/parser.dart';
-import 'package:provider/provider.dart';
 
 import '../../../common/config.dart';
 import '../../../generated/l10n.dart';
 import '../../../models/index.dart' show Product;
-import '../../../services/index.dart';
 import '../../../widgets/common/index.dart';
+import '../../../widgets/product/widgets/product_html_content.dart';
 import 'additional_information.dart';
 
 class ProductDescription extends StatelessWidget {
@@ -58,9 +56,13 @@ class ProductDescription extends StatelessWidget {
               const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Services()
-                    .widget
-                    .renderProductDescription(context, htmlToString(product!.description!)),
+                // Rendered as HTML, not flattened to text: the description is
+                // Page Builder markup, and stripping it to a string dropped
+                // every image and video before they reached the screen.
+                child: ProductHtmlContent(
+                  product!.description!,
+                  textColor: Theme.of(context).textTheme.bodyMedium?.color,
+                ),
               ),
               const SizedBox(height: 20),
             ],
@@ -77,12 +79,6 @@ class ProductDescription extends StatelessWidget {
           ),
       ],
     );
-  }
-
-  String htmlToString(String htmlData) {
-    var document = parse(htmlData);
-    String parsedString = parse(document.body!.text).documentElement!.text;
-    return parsedString;
   }
 
 }
