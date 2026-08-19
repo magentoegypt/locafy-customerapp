@@ -101,6 +101,14 @@ class _ProductTitleState extends BaseScreen<ProductTitle> {
             widget.product!.isVariableProduct &&
             productVariation != null);
 
+    /// Same two routes as on the card: the "before" price is struck through
+    /// above the current price (keyed on `original_price`) and again below it
+    /// (keyed on `isSaleOff`). Catalog-price-rule discounts set both, so show
+    /// the upper one only.
+    final showsOriginalAbove = widget.product?.original_price != null &&
+        !isEqual(widget.product?.price ?? '',
+            widget.product?.original_price ?? '');
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,22 +185,24 @@ class _ProductTitleState extends BaseScreen<ProductTitle> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              Text(
-                PriceTools.getCurrencyFormatted(
-                  regularPrice,
-                  currencyRate,
-                  currency: currency,
-                )!,
-                style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .secondary
-                          .withOpacity(0.6),
-                      fontWeight: FontWeight.w400,
-                      decoration: TextDecoration.lineThrough,
-                    ),
-              ),
-              const SizedBox(width: 10),
+              if (!showsOriginalAbove) ...[
+                Text(
+                  PriceTools.getCurrencyFormatted(
+                    regularPrice,
+                    currencyRate,
+                    currency: currency,
+                  )!,
+                  style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .secondary
+                            .withOpacity(0.6),
+                        fontWeight: FontWeight.w400,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                ),
+                const SizedBox(width: 10),
+              ],
               if (isShowCountDown) ...[
                 const Spacer(),
                 Padding(

@@ -240,6 +240,16 @@ class MagentoService extends BaseServices {
       final minimalPriceValue = double.tryParse(minimalPrice) ?? 0;
       if (currentPriceValue > minimalPriceValue) {
         product.original_price = product.price;
+        // This catalogue discounts through CATALOG PRICE RULES, which reach the
+        // app as `minimal_price` alone — no `special_price`, no date window. So
+        // `onSale` above is computed from special_price and stays false, and
+        // every widget keyed on it went quiet: the "-XX%" badge on the PLP card
+        // (ProductOnSale) and the percent label on the PDP (ProductTitle). The
+        // strikethrough still rendered, because that route keys on
+        // `original_price` instead — which is why the cards showed a cut price
+        // with no badge next to it. A minimal_price that genuinely undercuts
+        // the list price IS a sale, whatever produced it.
+        product.onSale = true;
       }
       product.price = minimalPrice;
       product.salePrice = minimalPrice;
@@ -3370,8 +3380,16 @@ class MagentoService extends BaseServices {
     var endPoint =
         '?searchCriteria[filterGroups][0][filters][0][field]=entity_id&searchCriteria[filterGroups][0][filters][0][condition_type]=eq';
     endPoint += '&searchCriteria[filterGroups][0][filters][0][value]=$id';
+    // `mstore/products`, not plain `products`: this catalogue discounts through
+    // catalog price rules, and only the mstore module applies them — the stock
+    // endpoint returns the undiscounted `price` with no `minimal_price` at all,
+    // so the product page showed the full price with no strikethrough and no
+    // percent label while the grid (already on mstore) showed the cut price.
+    // Verified on testing.locafy.market that mstore returns a strict superset
+    // of the stock payload: same description, short_description, media gallery
+    // and extension_attributes, plus minimal_price.
     var response = await httpGet(
-        MagentoHelper.buildUrl(domain, 'products$endPoint')!,
+        MagentoHelper.buildUrl(domain, 'mstore/products$endPoint')!,
         headers: {'Authorization': 'Bearer $accessToken'});
     var products = convert.jsonDecode(response.body)['items'];
     if (products.isEmpty) return null;
@@ -3394,8 +3412,9 @@ class MagentoService extends BaseServices {
         '&searchCriteria[filterGroups][0][filters][0][condition_type]=eq'
         '&searchCriteria[filterGroups][0][filters][0][value]='
         '${Uri.encodeQueryComponent(sku)}';
+    // mstore, for the catalog-price-rule reason documented in getProduct above.
     final response = await httpGet(
-        MagentoHelper.buildUrl(domain, 'products$endPoint')!,
+        MagentoHelper.buildUrl(domain, 'mstore/products$endPoint')!,
         headers: {'Authorization': 'Bearer $accessToken'});
     final products = convert.jsonDecode(response.body)['items'];
     if (products == null || products.isEmpty) return null;

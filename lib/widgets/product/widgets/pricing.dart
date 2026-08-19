@@ -41,9 +41,16 @@ class ProductPricing extends StatelessWidget {
       isSale = product.onSale ?? false;
     }
 
+    /// The "before" price has two routes into this widget: struck through above
+    /// the current price (keyed on `original_price`) and inline beside it
+    /// (keyed on `onSale`). Catalog-price-rule discounts set both, so pick one —
+    /// the stacked form is what the PLP cards already showed, and what their
+    /// fixed-height price slot is sized for.
+    final showsOriginalAbove = product.original_price != null &&
+        !isEqual(product.price ?? '', product.original_price ?? '');
+
     return Column(children: [
-       if(product.original_price != null &&
-           !isEqual(product.price ?? '',product.original_price ?? ''))
+       if(showsOriginalAbove)
          Text(
            '${ PriceTools.getOriginalPriceProduct(
                product, currencyRate, currency,
@@ -91,7 +98,7 @@ class ProductPricing extends StatelessWidget {
         ),
 
         /// Not show regular price for variant product (product.regularPrice = "").
-        if (isSale && product.type != 'variable') ...[
+        if (isSale && product.type != 'variable' && !showsOriginalAbove) ...[
           const SizedBox(width: 5),
           Text(
             product.type == 'grouped'
